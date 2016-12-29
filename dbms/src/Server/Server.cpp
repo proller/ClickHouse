@@ -188,6 +188,9 @@ static std::string getCanonicalPath(std::string && path)
 	return path;
 }
 
+std::string Server::getDefaultCorePath() {
+	return getCanonicalPath(config().getString("path")) + "cores";
+}
 
 int Server::main(const std::vector<std::string> & args)
 {

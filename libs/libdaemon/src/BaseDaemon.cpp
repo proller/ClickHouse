@@ -440,15 +440,17 @@ static std::string createDirectory(const std::string & _path)
 {
 	Poco::Path path(_path);
 	std::string str;
-	for(int j=0;j<path.depth();++j)
+	bool first_dot = _path[0] == '.';
+	for (int j=0;j<path.depth();++j)
 	{
-		str += "/";
+		if (!first_dot || j > 0)
+			str += "/";
 		str += path[j];
 
 		int res = ::mkdir(str.c_str(), 0700);
 		if( res && (errno!=EEXIST) )
 		{
-			throw std::runtime_error(std::string("Can't create dir - ") + str + " - " + strerror(errno));
+			throw std::runtime_error(std::string("Can't create dir - ") + str + " - " + strerror(errno) + "  when creating [" + _path + "]");
 		}
 	}
 
@@ -701,6 +703,10 @@ void BaseDaemon::closeLogs()
 		logger().warning("Logging to console but received signal to close log file (ignoring).");
 }
 
+std::string BaseDaemon::getDefaultCorePath () {
+	return "/opt/cores";
+}
+
 void BaseDaemon::initialize(Application& self)
 {
 	task_manager.reset(new Poco::TaskManager);
@@ -775,11 +781,12 @@ void BaseDaemon::initialize(Application& self)
 		  * Делаем это после buildLoggers, чтобы не менять текущую директорию раньше.
 		  * Это важно, если конфиги расположены в текущей директории.
 		  */
-		Poco::File opt_cores = "/opt/cores";
+
+		Poco::File opt_cores = getDefaultCorePath();
 
 		std::string core_path = config().getString("core_path",
 			opt_cores.exists() && opt_cores.isDirectory()
-				? "/opt/cores/"
+				? opt_cores.path()
 				: (!log_path.empty()
 					? log_path
 					: "/opt/"));
