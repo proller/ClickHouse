@@ -29,18 +29,18 @@ install_symlink_to_clickhouse(clickhouse-benchmark)
 
 INSTALL(
     FILES config.xml users.xml
-    DESTINATION /etc/clickhouse-server
+    DESTINATION  ${CLICKHOUSE_ETC_DIR}/clickhouse-server
     COMPONENT clickhouse)
 
 INSTALL(
     FILES ${CLICKHOUSE_PRIVATE_DIR}/Server/metrika/config.xml ${CLICKHOUSE_PRIVATE_DIR}/Server/metrika/users.xml
-    DESTINATION /etc/clickhouse-server/metrika
+    DESTINATION $${CLICKHOUSE_ETC_DIR}/clickhouse-server/metrika
     COMPONENT clickhouse
     OPTIONAL)
 
 INSTALL(
     FILES metrika.conf
-    DESTINATION /etc/security/limits.d
+    DESTINATION ${CLICKHOUSE_ETC_DIR}/security/limits.d
     COMPONENT clickhouse)
 
 # Adding init.d support
