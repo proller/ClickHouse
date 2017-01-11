@@ -34,7 +34,7 @@ INSTALL(
 
 INSTALL(
     FILES ${CLICKHOUSE_PRIVATE_DIR}/Server/metrika/config.xml ${CLICKHOUSE_PRIVATE_DIR}/Server/metrika/users.xml
-    DESTINATION $${CLICKHOUSE_ETC_DIR}/clickhouse-server/metrika
+    DESTINATION ${CLICKHOUSE_ETC_DIR}/clickhouse-server/metrika
     COMPONENT clickhouse
     OPTIONAL)
 
