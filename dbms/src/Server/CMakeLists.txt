@@ -38,11 +38,13 @@ INSTALL(
     COMPONENT clickhouse
     OPTIONAL)
 
-INSTALL(
-    FILES metrika.conf
-    DESTINATION ${CLICKHOUSE_ETC_DIR}/security/limits.d
-    COMPONENT clickhouse)
+if (NOT CMAKE_SYSTEM MATCHES "FreeBSD")
+	INSTALL(
+		FILES metrika.conf
+		DESTINATION /etc/security/limits.d
+		COMPONENT clickhouse)
 
-# Adding init.d support
-include (${ClickHouse_SOURCE_DIR}/cmake/create_init_script.cmake)
-create_init_script (clickhouse-server clickhouse-server)
+	# Adding init.d support
+	include (${ClickHouse_SOURCE_DIR}/cmake/create_init_script.cmake)
+	create_init_script (clickhouse-server clickhouse-server)
+endif ()
