@@ -11,8 +11,9 @@ include_directories (BEFORE ${ClickHouse_SOURCE_DIR}/contrib/libre2/)
 include_directories (BEFORE ${ClickHouse_BINARY_DIR}/contrib/libre2/)
 include_directories (${ClickHouse_SOURCE_DIR}/libs/libdaemon/include/)
 
-if (NOT ENABLE_LIBTCMALLOC)
-	add_definitions(-DNO_TCMALLOC)
+if (NOT NO_WERROR)
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
+	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")
 endif ()
 
 add_subdirectory (src)
