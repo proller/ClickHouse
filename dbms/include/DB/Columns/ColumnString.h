@@ -4,10 +4,10 @@
 
 #include <DB/Core/Defines.h>
 
-#include <DB/Columns/IColumn.h>
 #include <DB/Columns/ColumnsCommon.h>
-#include <DB/Common/PODArray.h>
+#include <DB/Columns/IColumn.h>
 #include <DB/Common/Arena.h>
+#include <DB/Common/PODArray.h>
 #include <DB/Common/SipHash.h>
 #include <DB/Common/memcpySmall.h>
 
@@ -17,7 +17,6 @@ class Collator;
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int PARAMETER_OUT_OF_BOUND;
@@ -39,19 +38,30 @@ private:
 	/// Байты строк, уложенные подряд. Строки хранятся с завершающим нулевым байтом.
 	Chars_t chars;
 
-	size_t __attribute__((__always_inline__)) offsetAt(size_t i) const	{ return i == 0 ? 0 : offsets[i - 1]; }
+	size_t __attribute__((__always_inline__)) offsetAt(size_t i) const
+	{
+		return i == 0 ? 0 : offsets[i - 1];
+	}
 
 	/// Размер, включая завершающий нулевой байт.
-	size_t __attribute__((__always_inline__)) sizeAt(size_t i) const	{ return i == 0 ? offsets[0] : (offsets[i] - offsets[i - 1]); }
+	size_t __attribute__((__always_inline__)) sizeAt(size_t i) const
+	{
+		return i == 0 ? offsets[0] : (offsets[i] - offsets[i - 1]);
+	}
 
 	template <bool positive>
 	friend struct lessWithCollation;
 
 public:
 	/** Создать пустой столбец строк */
-	ColumnString() {}
+	ColumnString()
+	{
+	}
 
-	std::string getName() const override { return "ColumnString"; }
+	std::string getName() const override
+	{
+		return "ColumnString";
+	}
 
 	size_t size() const override
 	{
@@ -249,8 +259,7 @@ public:
 		const ColumnString & src_concrete = static_cast<const ColumnString &>(src);
 
 		if (start + length > src_concrete.offsets.size())
-			throw Exception("Parameter out of bound in IColumnString::insertRangeFrom method.",
-				ErrorCodes::PARAMETER_OUT_OF_BOUND);
+			throw Exception("Parameter out of bound in IColumnString::insertRangeFrom method.", ErrorCodes::PARAMETER_OUT_OF_BOUND);
 
 		size_t nested_offset = src_concrete.offsetAt(start);
 		size_t nested_length = src_concrete.offsets[start + length - 1] - nested_offset;
@@ -351,9 +360,7 @@ public:
 		  * (если нулевой байт в середине строки, то то, что после него - игнорируется)
 		  * Замечу, что завершающий нулевой байт всегда есть.
 		  */
-		return strcmp(
-			reinterpret_cast<const char *>(&chars[offsetAt(n)]),
-			reinterpret_cast<const char *>(&rhs.chars[rhs.offsetAt(m)]));
+		return strcmp(reinterpret_cast<const char *>(&chars[offsetAt(n)]), reinterpret_cast<const char *>(&rhs.chars[rhs.offsetAt(m)]));
 	}
 
 	/// Версия compareAt для locale-sensitive сравнения строк
@@ -363,11 +370,12 @@ public:
 	struct less
 	{
 		const ColumnString & parent;
-		less(const ColumnString & parent_) : parent(parent_) {}
+		less(const ColumnString & parent_) : parent(parent_)
+		{
+		}
 		bool operator()(size_t lhs, size_t rhs) const
 		{
-			int res = strcmp(
-				reinterpret_cast<const char *>(&parent.chars[parent.offsetAt(lhs)]),
+			int res = strcmp(reinterpret_cast<const char *>(&parent.chars[parent.offsetAt(lhs)]),
 				reinterpret_cast<const char *>(&parent.chars[parent.offsetAt(rhs)]));
 
 			return positive ? (res < 0) : (res > 0);
@@ -434,8 +442,7 @@ public:
 				res_offsets.push_back(current_new_offset);
 
 				res_chars.resize(res_chars.size() + string_size);
-				memcpySmallAllowReadWriteOverflow15(
-					&res_chars[res_chars.size() - string_size], &chars[prev_string_offset], string_size);
+				memcpySmallAllowReadWriteOverflow15(&res_chars[res_chars.size() - string_size], &chars[prev_string_offset], string_size);
 			}
 
 			prev_replicate_offset = replicate_offsets[i];
@@ -451,11 +458,23 @@ public:
 		chars.reserve(n * DBMS_APPROX_STRING_SIZE);
 	}
 
-	Chars_t & getChars() { return chars; }
-	const Chars_t & getChars() const { return chars; }
+	Chars_t & getChars()
+	{
+		return chars;
+	}
+	const Chars_t & getChars() const
+	{
+		return chars;
+	}
 
-	Offsets_t & getOffsets() { return offsets; }
-	const Offsets_t & getOffsets() const { return offsets; }
+	Offsets_t & getOffsets()
+	{
+		return offsets;
+	}
+	const Offsets_t & getOffsets() const
+	{
+		return offsets;
+	}
 
 	void getExtremes(Field & min, Field & max) const override
 	{
@@ -463,6 +482,4 @@ public:
 		max = String();
 	}
 };
-
-
 }

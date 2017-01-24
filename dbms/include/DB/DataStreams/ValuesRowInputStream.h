@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 class Block;
 class Context;
 class ReadBuffer;
@@ -29,5 +28,4 @@ private:
 	const Context & context;
 	bool interpret_expressions;
 };
-
 }

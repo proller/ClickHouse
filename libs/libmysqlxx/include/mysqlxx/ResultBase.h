@@ -6,7 +6,6 @@
 
 namespace mysqlxx
 {
-
 class Connection;
 class Query;
 
@@ -22,11 +21,26 @@ class ResultBase
 public:
 	ResultBase(MYSQL_RES * res_, Connection * conn_, const Query * query_);
 
-	Connection * getConnection() 	{ return conn; }
-	MYSQL_FIELDS getFields() 		{ return fields; }
-	unsigned getNumFields() 		{ return num_fields; }
-	MYSQL_RES * getRes()			{ return res; }
-	const Query * getQuery() const	{ return query; }
+	Connection * getConnection()
+	{
+		return conn;
+	}
+	MYSQL_FIELDS getFields()
+	{
+		return fields;
+	}
+	unsigned getNumFields()
+	{
+		return num_fields;
+	}
+	MYSQL_RES * getRes()
+	{
+		return res;
+	}
+	const Query * getQuery() const
+	{
+		return query;
+	}
 
 	virtual ~ResultBase();
 
@@ -37,5 +51,4 @@ protected:
 	MYSQL_FIELDS fields;
 	unsigned num_fields;
 };
-
 }

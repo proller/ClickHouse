@@ -1,8 +1,8 @@
 #pragma once
 
+#include <Poco/Timespan.h>
 #include <DB/Core/Field.h>
 #include <DB/IO/WriteHelpers.h>
-#include <Poco/Timespan.h>
 
 #include <DB/Common/getNumberOfPhysicalCPUCores.h>
 
@@ -12,7 +12,6 @@
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int TYPE_MISMATCH;
@@ -39,10 +38,19 @@ struct SettingInt
 	IntType value;
 	bool changed = false;
 
-	SettingInt(IntType x = 0) : value(x) {}
+	SettingInt(IntType x = 0) : value(x)
+	{
+	}
 
-	operator IntType() const { return value; }
-	SettingInt & operator= (IntType x) { set(x); return *this; }
+	operator IntType() const
+	{
+		return value;
+	}
+	SettingInt & operator=(IntType x)
+	{
+		set(x);
+		return *this;
+	}
 
 	String toString() const
 	{
@@ -93,10 +101,19 @@ struct SettingMaxThreads
 	bool is_auto;
 	bool changed = false;
 
-	SettingMaxThreads(UInt64 x = 0) : value(x ? x : getAutoValue()), is_auto(x == 0) {}
+	SettingMaxThreads(UInt64 x = 0) : value(x ? x : getAutoValue()), is_auto(x == 0)
+	{
+	}
 
-	operator UInt64() const { return value; }
-	SettingMaxThreads & operator= (UInt64 x) { set(x); return *this; }
+	operator UInt64() const
+	{
+		return value;
+	}
+	SettingMaxThreads & operator=(UInt64 x)
+	{
+		set(x);
+		return *this;
+	}
 
 	String toString() const
 	{
@@ -164,12 +181,24 @@ struct SettingSeconds
 	Poco::Timespan value;
 	bool changed = false;
 
-	SettingSeconds(UInt64 seconds = 0) : value(seconds, 0) {}
+	SettingSeconds(UInt64 seconds = 0) : value(seconds, 0)
+	{
+	}
 
-	operator Poco::Timespan() const { return value; }
-	SettingSeconds & operator= (Poco::Timespan x) { set(x); return *this; }
+	operator Poco::Timespan() const
+	{
+		return value;
+	}
+	SettingSeconds & operator=(Poco::Timespan x)
+	{
+		set(x);
+		return *this;
+	}
 
-	Poco::Timespan::TimeDiff totalSeconds() const { return value.totalSeconds(); }
+	Poco::Timespan::TimeDiff totalSeconds() const
+	{
+		return value.totalSeconds();
+	}
 
 	String toString() const
 	{
@@ -216,12 +245,24 @@ struct SettingMilliseconds
 	Poco::Timespan value;
 	bool changed = false;
 
-	SettingMilliseconds(UInt64 milliseconds = 0) : value(milliseconds * 1000) {}
+	SettingMilliseconds(UInt64 milliseconds = 0) : value(milliseconds * 1000)
+	{
+	}
 
-	operator Poco::Timespan() const { return value; }
-	SettingMilliseconds & operator= (Poco::Timespan x) { set(x); return *this; }
+	operator Poco::Timespan() const
+	{
+		return value;
+	}
+	SettingMilliseconds & operator=(Poco::Timespan x)
+	{
+		set(x);
+		return *this;
+	}
 
-	Poco::Timespan::TimeDiff totalMilliseconds() const { return value.totalMilliseconds(); }
+	Poco::Timespan::TimeDiff totalMilliseconds() const
+	{
+		return value.totalMilliseconds();
+	}
 
 	String toString() const
 	{
@@ -268,10 +309,19 @@ struct SettingFloat
 	float value;
 	bool changed = false;
 
-	SettingFloat(float x = 0) : value(x) {}
+	SettingFloat(float x = 0) : value(x)
+	{
+	}
 
-	operator float() const { return value; }
-	SettingFloat & operator= (float x) { set(x); return *this; }
+	operator float() const
+	{
+		return value;
+	}
+	SettingFloat & operator=(float x)
+	{
+		set(x);
+		return *this;
+	}
 
 	String toString() const
 	{
@@ -299,7 +349,8 @@ struct SettingFloat
 			set(safeGet<Float64>(x));
 		}
 		else
-			throw Exception(std::string("Bad type of setting. Expected UInt64, Int64 or Float64, got ") + x.getTypeName(), ErrorCodes::TYPE_MISMATCH);
+			throw Exception(
+				std::string("Bad type of setting. Expected UInt64, Int64 or Float64, got ") + x.getTypeName(), ErrorCodes::TYPE_MISMATCH);
 	}
 
 	void set(const String & x)
@@ -337,16 +388,28 @@ struct SettingLoadBalancing
 	LoadBalancing value;
 	bool changed = false;
 
-	SettingLoadBalancing(LoadBalancing x) : value(x) {}
+	SettingLoadBalancing(LoadBalancing x) : value(x)
+	{
+	}
 
-	operator LoadBalancing() const { return value; }
-	SettingLoadBalancing & operator= (LoadBalancing x) { set(x); return *this; }
+	operator LoadBalancing() const
+	{
+		return value;
+	}
+	SettingLoadBalancing & operator=(LoadBalancing x)
+	{
+		set(x);
+		return *this;
+	}
 
 	static LoadBalancing getLoadBalancing(const String & s)
 	{
-		if (s == "random") 				return LoadBalancing::RANDOM;
-		if (s == "nearest_hostname") 	return LoadBalancing::NEAREST_HOSTNAME;
-		if (s == "in_order") 			return LoadBalancing::IN_ORDER;
+		if (s == "random")
+			return LoadBalancing::RANDOM;
+		if (s == "nearest_hostname")
+			return LoadBalancing::NEAREST_HOSTNAME;
+		if (s == "in_order")
+			return LoadBalancing::IN_ORDER;
 
 		throw Exception("Unknown load balancing mode: '" + s + "', must be one of 'random', 'nearest_hostname', 'in_order'",
 			ErrorCodes::UNKNOWN_LOAD_BALANCING);
@@ -354,7 +417,7 @@ struct SettingLoadBalancing
 
 	String toString() const
 	{
-		const char * strings[] = {"random", "nearest_hostname", "in_order"};
+		const char * strings[] = { "random", "nearest_hostname", "in_order" };
 		if (value < LoadBalancing::RANDOM || value > LoadBalancing::IN_ORDER)
 			throw Exception("Unknown load balancing mode", ErrorCodes::UNKNOWN_LOAD_BALANCING);
 		return strings[static_cast<size_t>(value)];
@@ -393,13 +456,13 @@ struct SettingLoadBalancing
 /// Какие строки включать в TOTALS.
 enum class TotalsMode
 {
-	BEFORE_HAVING			= 0, /// Считать HAVING по всем прочитанным строкам;
-								 ///  включая не попавшие в max_rows_to_group_by
-								 ///  и не прошедшие HAVING после группировки.
-	AFTER_HAVING_INCLUSIVE	= 1, /// Считать по всем строкам, кроме не прошедших HAVING;
-								 ///  то есть, включать в TOTALS все строки, не прошедшие max_rows_to_group_by.
-	AFTER_HAVING_EXCLUSIVE	= 2, /// Включать только строки, прошедшие и max_rows_to_group_by, и HAVING.
-	AFTER_HAVING_AUTO		= 3, /// Автоматически выбирать между INCLUSIVE и EXCLUSIVE,
+	BEFORE_HAVING = 0, /// Считать HAVING по всем прочитанным строкам;
+	///  включая не попавшие в max_rows_to_group_by
+	///  и не прошедшие HAVING после группировки.
+	AFTER_HAVING_INCLUSIVE = 1, /// Считать по всем строкам, кроме не прошедших HAVING;
+	///  то есть, включать в TOTALS все строки, не прошедшие max_rows_to_group_by.
+	AFTER_HAVING_EXCLUSIVE = 2, /// Включать только строки, прошедшие и max_rows_to_group_by, и HAVING.
+	AFTER_HAVING_AUTO = 3, /// Автоматически выбирать между INCLUSIVE и EXCLUSIVE,
 };
 
 struct SettingTotalsMode
@@ -407,32 +470,51 @@ struct SettingTotalsMode
 	TotalsMode value;
 	bool changed = false;
 
-	SettingTotalsMode(TotalsMode x) : value(x) {}
+	SettingTotalsMode(TotalsMode x) : value(x)
+	{
+	}
 
-	operator TotalsMode() const { return value; }
-	SettingTotalsMode & operator= (TotalsMode x) { set(x); return *this; }
+	operator TotalsMode() const
+	{
+		return value;
+	}
+	SettingTotalsMode & operator=(TotalsMode x)
+	{
+		set(x);
+		return *this;
+	}
 
 	static TotalsMode getTotalsMode(const String & s)
 	{
-		if (s == "before_having") 			return TotalsMode::BEFORE_HAVING;
-		if (s == "after_having_exclusive")	return TotalsMode::AFTER_HAVING_EXCLUSIVE;
-		if (s == "after_having_inclusive")	return TotalsMode::AFTER_HAVING_INCLUSIVE;
-		if (s == "after_having_auto")		return TotalsMode::AFTER_HAVING_AUTO;
+		if (s == "before_having")
+			return TotalsMode::BEFORE_HAVING;
+		if (s == "after_having_exclusive")
+			return TotalsMode::AFTER_HAVING_EXCLUSIVE;
+		if (s == "after_having_inclusive")
+			return TotalsMode::AFTER_HAVING_INCLUSIVE;
+		if (s == "after_having_auto")
+			return TotalsMode::AFTER_HAVING_AUTO;
 
-		throw Exception("Unknown totals mode: '" + s + "', must be one of 'before_having', 'after_having_exclusive', 'after_having_inclusive', 'after_having_auto'", ErrorCodes::UNKNOWN_TOTALS_MODE);
+		throw Exception("Unknown totals mode: '" + s
+				+ "', must be one of 'before_having', 'after_having_exclusive', 'after_having_inclusive', 'after_having_auto'",
+			ErrorCodes::UNKNOWN_TOTALS_MODE);
 	}
 
 	String toString() const
 	{
 		switch (value)
 		{
-			case TotalsMode::BEFORE_HAVING:				return "before_having";
-			case TotalsMode::AFTER_HAVING_EXCLUSIVE:	return "after_having_exclusive";
-			case TotalsMode::AFTER_HAVING_INCLUSIVE:	return "after_having_inclusive";
-			case TotalsMode::AFTER_HAVING_AUTO:			return "after_having_auto";
+		case TotalsMode::BEFORE_HAVING:
+			return "before_having";
+		case TotalsMode::AFTER_HAVING_EXCLUSIVE:
+			return "after_having_exclusive";
+		case TotalsMode::AFTER_HAVING_INCLUSIVE:
+			return "after_having_inclusive";
+		case TotalsMode::AFTER_HAVING_AUTO:
+			return "after_having_auto";
 
-			default:
-				throw Exception("Unknown TotalsMode enum value", ErrorCodes::UNKNOWN_TOTALS_MODE);
+		default:
+			throw Exception("Unknown TotalsMode enum value", ErrorCodes::UNKNOWN_TOTALS_MODE);
 		}
 	}
 
@@ -468,9 +550,9 @@ struct SettingTotalsMode
 /// Что делать, если ограничение превышено.
 enum class OverflowMode
 {
-	THROW 	= 0,	/// Кинуть исключение.
-	BREAK 	= 1,	/// Прервать выполнение запроса, вернуть что есть.
-	ANY		= 2,	/** Только для GROUP BY: не добавлять новые строки в набор,
+	THROW = 0, /// Кинуть исключение.
+	BREAK = 1, /// Прервать выполнение запроса, вернуть что есть.
+	ANY = 2, /** Только для GROUP BY: не добавлять новые строки в набор,
 						* но продолжать агрегировать для ключей, успевших попасть в набор.
 						*/
 };
@@ -481,16 +563,28 @@ struct SettingOverflowMode
 	OverflowMode value;
 	bool changed = false;
 
-	SettingOverflowMode(OverflowMode x = OverflowMode::THROW) : value(x) {}
+	SettingOverflowMode(OverflowMode x = OverflowMode::THROW) : value(x)
+	{
+	}
 
-	operator OverflowMode() const { return value; }
-	SettingOverflowMode & operator= (OverflowMode x) { set(x); return *this; }
+	operator OverflowMode() const
+	{
+		return value;
+	}
+	SettingOverflowMode & operator=(OverflowMode x)
+	{
+		set(x);
+		return *this;
+	}
 
 	static OverflowMode getOverflowModeForGroupBy(const String & s)
 	{
-		if (s == "throw") 	return OverflowMode::THROW;
-		if (s == "break") 	return OverflowMode::BREAK;
-		if (s == "any")		return OverflowMode::ANY;
+		if (s == "throw")
+			return OverflowMode::THROW;
+		if (s == "break")
+			return OverflowMode::BREAK;
+		if (s == "any")
+			return OverflowMode::ANY;
 
 		throw Exception("Unknown overflow mode: '" + s + "', must be one of 'throw', 'break', 'any'", ErrorCodes::UNKNOWN_OVERFLOW_MODE);
 	}
@@ -549,20 +643,29 @@ struct SettingCompressionMethod
 	CompressionMethod value;
 	bool changed = false;
 
-	SettingCompressionMethod(CompressionMethod x = CompressionMethod::LZ4) : value(x) {}
+	SettingCompressionMethod(CompressionMethod x = CompressionMethod::LZ4) : value(x)
+	{
+	}
 
-	operator CompressionMethod() const { return value; }
-	SettingCompressionMethod & operator= (CompressionMethod x) { set(x); return *this; }
+	operator CompressionMethod() const
+	{
+		return value;
+	}
+	SettingCompressionMethod & operator=(CompressionMethod x)
+	{
+		set(x);
+		return *this;
+	}
 
 	static CompressionMethod getCompressionMethod(const String & s)
 	{
 		if (s == "quicklz")
 		{
-		#ifdef USE_QUICKLZ
+#ifdef USE_QUICKLZ
 			return CompressionMethod::QuickLZ;
-		#else
+#else
 			throw Exception("QuickLZ compression method is disabled", ErrorCodes::UNKNOWN_COMPRESSION_METHOD);
-		#endif
+#endif
 		}
 		if (s == "lz4")
 			return CompressionMethod::LZ4;
@@ -571,7 +674,8 @@ struct SettingCompressionMethod
 		if (s == "zstd")
 			return CompressionMethod::ZSTD;
 
-		throw Exception("Unknown compression method: '" + s + "', must be one of 'quicklz', 'lz4', 'lz4hc', 'zstd'", ErrorCodes::UNKNOWN_COMPRESSION_METHOD);
+		throw Exception("Unknown compression method: '" + s + "', must be one of 'quicklz', 'lz4', 'lz4hc', 'zstd'",
+			ErrorCodes::UNKNOWN_COMPRESSION_METHOD);
 	}
 
 	String toString() const
@@ -616,10 +720,10 @@ struct SettingCompressionMethod
 /// Настройка для выполнения распределённых подзапросов внутри секций IN или JOIN.
 enum class DistributedProductMode
 {
-	DENY = 0,	/// Запретить
-	LOCAL,		/// Конвертировать в локальный запрос
-	GLOBAL,		/// Конвертировать в глобальный запрос
-	ALLOW		/// Разрешить
+	DENY = 0, /// Запретить
+	LOCAL, /// Конвертировать в локальный запрос
+	GLOBAL, /// Конвертировать в глобальный запрос
+	ALLOW /// Разрешить
 };
 
 struct SettingDistributedProductMode
@@ -627,17 +731,30 @@ struct SettingDistributedProductMode
 	DistributedProductMode value;
 	bool changed = false;
 
-	SettingDistributedProductMode(DistributedProductMode x) : value(x) {}
+	SettingDistributedProductMode(DistributedProductMode x) : value(x)
+	{
+	}
 
-	operator DistributedProductMode() const { return value; }
-	SettingDistributedProductMode & operator= (DistributedProductMode x) { set(x); return *this; }
+	operator DistributedProductMode() const
+	{
+		return value;
+	}
+	SettingDistributedProductMode & operator=(DistributedProductMode x)
+	{
+		set(x);
+		return *this;
+	}
 
 	static DistributedProductMode getDistributedProductMode(const String & s)
 	{
-		if (s == "deny") 	return DistributedProductMode::DENY;
-		if (s == "local") 	return DistributedProductMode::LOCAL;
-		if (s == "global") 	return DistributedProductMode::GLOBAL;
-		if (s == "allow")	return DistributedProductMode::ALLOW;
+		if (s == "deny")
+			return DistributedProductMode::DENY;
+		if (s == "local")
+			return DistributedProductMode::LOCAL;
+		if (s == "global")
+			return DistributedProductMode::GLOBAL;
+		if (s == "allow")
+			return DistributedProductMode::ALLOW;
 
 		throw Exception("Unknown distributed product mode: '" + s + "', must be one of 'deny', 'local', 'global', 'allow'",
 			ErrorCodes::UNKNOWN_DISTRIBUTED_PRODUCT_MODE);
@@ -645,7 +762,7 @@ struct SettingDistributedProductMode
 
 	String toString() const
 	{
-		const char * strings[] = {"deny", "local", "global", "allow"};
+		const char * strings[] = { "deny", "local", "global", "allow" };
 		if (value < DistributedProductMode::DENY || value > DistributedProductMode::ALLOW)
 			throw Exception("Unknown distributed product mode", ErrorCodes::UNKNOWN_DISTRIBUTED_PRODUCT_MODE);
 		return strings[static_cast<size_t>(value)];
@@ -683,8 +800,8 @@ struct SettingDistributedProductMode
 /// Способ выполнения глобальных распределённых подзапросов.
 enum class GlobalSubqueriesMethod
 {
-	PUSH 	= 0,	/// Отправлять данные подзапроса на все удалённые серверы.
-	PULL 	= 1,	/// Удалённые серверы будут скачивать данные подзапроса с сервера-инициатора.
+	PUSH = 0, /// Отправлять данные подзапроса на все удалённые серверы.
+	PULL = 1, /// Удалённые серверы будут скачивать данные подзапроса с сервера-инициатора.
 };
 
 struct SettingGlobalSubqueriesMethod
@@ -692,10 +809,19 @@ struct SettingGlobalSubqueriesMethod
 	GlobalSubqueriesMethod value;
 	bool changed = false;
 
-	SettingGlobalSubqueriesMethod(GlobalSubqueriesMethod x = GlobalSubqueriesMethod::PUSH) : value(x) {}
+	SettingGlobalSubqueriesMethod(GlobalSubqueriesMethod x = GlobalSubqueriesMethod::PUSH) : value(x)
+	{
+	}
 
-	operator GlobalSubqueriesMethod() const { return value; }
-	SettingGlobalSubqueriesMethod & operator= (GlobalSubqueriesMethod x) { set(x); return *this; }
+	operator GlobalSubqueriesMethod() const
+	{
+		return value;
+	}
+	SettingGlobalSubqueriesMethod & operator=(GlobalSubqueriesMethod x)
+	{
+		set(x);
+		return *this;
+	}
 
 	static GlobalSubqueriesMethod getGlobalSubqueriesMethod(const String & s)
 	{
@@ -753,10 +879,19 @@ struct SettingString
 	String value;
 	bool changed = false;
 
-	SettingString(const String & x = String{}) : value(x) {}
+	SettingString(const String & x = String{}) : value(x)
+	{
+	}
 
-	operator String() const { return value; }
-	SettingString & operator= (const String & x) { set(x); return *this; }
+	operator String() const
+	{
+		return value;
+	}
+	SettingString & operator=(const String & x)
+	{
+		set(x);
+		return *this;
+	}
 
 	String toString() const
 	{
@@ -786,5 +921,4 @@ struct SettingString
 		writeBinary(value, buf);
 	}
 };
-
 }

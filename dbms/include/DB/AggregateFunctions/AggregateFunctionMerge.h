@@ -1,14 +1,12 @@
 #pragma once
 
-#include <DB/DataTypes/DataTypeAggregateFunction.h>
 #include <DB/AggregateFunctions/IAggregateFunction.h>
 #include <DB/Columns/ColumnAggregateFunction.h>
+#include <DB/DataTypes/DataTypeAggregateFunction.h>
 
 
 namespace DB
 {
-
-
 /** Не агрегатная функция, а адаптер агрегатных функций,
   * Агрегатные функции с суффиксом Merge принимают в качестве аргумента DataTypeAggregateFunction
   *  (состояние агрегатной функции, полученное ранее с помощью применения агрегатной функции с суффиксом State)
@@ -22,7 +20,9 @@ private:
 	IAggregateFunction * nested_func;
 
 public:
-	AggregateFunctionMerge(AggregateFunctionPtr nested_) : nested_func_owner(nested_), nested_func(nested_func_owner.get()) {}
+	AggregateFunctionMerge(AggregateFunctionPtr nested_) : nested_func_owner(nested_), nested_func(nested_func_owner.get())
+	{
+	}
 
 	String getName() const override
 	{
@@ -109,7 +109,9 @@ public:
 		static_cast<const AggregateFunctionMerge &>(*that).add(place, columns, row_num, arena);
 	}
 
-	IAggregateFunction::AddFunc getAddressOfAddFunction() const override final { return &addFree; }
+	IAggregateFunction::AddFunc getAddressOfAddFunction() const override final
+	{
+		return &addFree;
+	}
 };
-
 }

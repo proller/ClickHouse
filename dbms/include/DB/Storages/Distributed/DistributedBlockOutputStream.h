@@ -1,13 +1,12 @@
 #pragma once
 
-#include <DB/Parsers/formatAST.h>
-#include <DB/DataStreams/IBlockOutputStream.h>
 #include <DB/Core/Block.h>
+#include <DB/DataStreams/IBlockOutputStream.h>
 #include <DB/Interpreters/Cluster.h>
+#include <DB/Parsers/formatAST.h>
 
 namespace DB
 {
-
 class StorageDistributed;
 
 /** Запись асинхронная - данные сначала записываются на локальную файловую систему, а потом отправляются на удалённые серверы.
@@ -41,5 +40,4 @@ private:
 	ASTPtr query_ast;
 	ClusterPtr cluster;
 };
-
 }

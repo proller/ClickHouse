@@ -1,16 +1,14 @@
 #pragma once
 
-#include <DB/Interpreters/Aggregator.h>
-#include <DB/DataStreams/IProfilingBlockInputStream.h>
+#include <condition_variable>
 #include <DB/Common/ConcurrentBoundedQueue.h>
 #include <DB/Common/ThreadPool.h>
-#include <condition_variable>
+#include <DB/DataStreams/IProfilingBlockInputStream.h>
+#include <DB/Interpreters/Aggregator.h>
 
 
 namespace DB
 {
-
-
 /** Доагрегирует потоки блоков, держа в оперативной памяти только по одному или несколько (до merging_threads) блоков из каждого источника.
   * Это экономит оперативку в случае использования двухуровневой агрегации, где в каждом источнике будет до 256 блоков с частями результата.
   *
@@ -58,12 +56,14 @@ class MergingAggregatedMemoryEfficientBlockInputStream : public IProfilingBlockI
 {
 public:
 	MergingAggregatedMemoryEfficientBlockInputStream(
-		BlockInputStreams inputs_, const Aggregator::Params & params, bool final_,
-		size_t reading_threads_, size_t merging_threads_);
+		BlockInputStreams inputs_, const Aggregator::Params & params, bool final_, size_t reading_threads_, size_t merging_threads_);
 
 	~MergingAggregatedMemoryEfficientBlockInputStream() override;
 
-	String getName() const override { return "MergingAggregatedMemoryEfficient"; }
+	String getName() const override
+	{
+		return "MergingAggregatedMemoryEfficient";
+	}
 
 	String getID() const override;
 
@@ -91,8 +91,8 @@ private:
 
 	bool started = false;
 	bool all_read = false;
-	std::atomic<bool> has_two_level {false};
-	std::atomic<bool> has_overflows {false};
+	std::atomic<bool> has_two_level{ false };
+	std::atomic<bool> has_overflows{ false };
 	int current_bucket_num = -1;
 
 	Logger * log = &Logger::get("MergingAggregatedMemoryEfficientBlockInputStream");
@@ -106,7 +106,9 @@ private:
 		std::vector<Block> splitted_blocks;
 		bool is_exhausted = false;
 
-		Input(BlockInputStreamPtr & stream_) : stream(stream_) {}
+		Input(BlockInputStreamPtr & stream_) : stream(stream_)
+		{
+		}
 	};
 
 	std::vector<Input> inputs;
@@ -129,8 +131,8 @@ private:
 		/// Сейчас один из мерджащих потоков получает следующие блоки для мерджа. Эта операция должна делаться последовательно.
 		std::mutex get_next_blocks_mutex;
 
-		std::atomic<bool> exhausted {false};	/// No more source data.
-		std::atomic<bool> finish {false};		/// Need to terminate early.
+		std::atomic<bool> exhausted{ false }; /// No more source data.
+		std::atomic<bool> finish{ false }; /// Need to terminate early.
 
 		std::exception_ptr exception;
 		/// Следует отдавать блоки стого в порядке ключа (bucket_num).
@@ -143,7 +145,9 @@ private:
 		/// Событие, с помощью которого главный поток говорят мерджащим потокам, что можно обработать следующую группу блоков.
 		std::condition_variable have_space;
 
-		ParallelMergeData(size_t max_threads) : pool(max_threads) {}
+		ParallelMergeData(size_t max_threads) : pool(max_threads)
+		{
+		}
 	};
 
 	std::unique_ptr<ParallelMergeData> parallel_merge_data;
@@ -152,5 +156,4 @@ private:
 
 	void finalize();
 };
-
 }

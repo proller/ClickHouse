@@ -6,7 +6,6 @@
 
 namespace DB
 {
-
 class IAST;
 class Context;
 
@@ -29,5 +28,4 @@ std::shared_ptr<IAST> evaluateConstantExpressionAsLiteral(std::shared_ptr<IAST> 
   * Useful in places where some name may be specified as identifier, or as result of a constant expression.
   */
 std::shared_ptr<IAST> evaluateConstantExpressionOrIdentidierAsLiteral(std::shared_ptr<IAST> & node, const Context & context);
-
 }

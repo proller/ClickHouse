@@ -2,8 +2,8 @@
 
 #include <DB/Common/HashTable/HashMap.h>
 
-#include <DB/DataTypes/DataTypesNumberFixed.h>
 #include <DB/DataTypes/DataTypeArray.h>
+#include <DB/DataTypes/DataTypesNumberFixed.h>
 
 #include <DB/AggregateFunctions/IBinaryAggregateFunction.h>
 #include <DB/AggregateFunctions/QuantilesCommon.h>
@@ -13,8 +13,6 @@
 
 namespace DB
 {
-
-
 /** В качестве состояния используется хэш-таблица вида: значение -> сколько раз встретилось.
   */
 template <typename T>
@@ -24,12 +22,11 @@ struct AggregateFunctionQuantileExactWeightedData
 	using Weight = UInt64;
 
 	/// При создании, хэш-таблица должна быть небольшой.
-	using Map = HashMap<
-		Key, Weight,
+	using Map = HashMap<Key,
+		Weight,
 		HashCRC32<Key>,
 		HashTableGrower<4>,
-		HashTableAllocatorWithStackMemory<sizeof(std::pair<Key, Weight>) * (1 << 3)>
-	>;
+		HashTableAllocatorWithStackMemory<sizeof(std::pair<Key, Weight>) * (1 << 3)>>;
 
 	Map map;
 };
@@ -42,19 +39,22 @@ struct AggregateFunctionQuantileExactWeightedData
   * Тип результата совпадает с типом аргумента.
   */
 template <typename ValueType, typename WeightType>
-class AggregateFunctionQuantileExactWeighted final
-	: public IBinaryAggregateFunction<
-		AggregateFunctionQuantileExactWeightedData<ValueType>,
-		AggregateFunctionQuantileExactWeighted<ValueType, WeightType>>
+class AggregateFunctionQuantileExactWeighted final : public IBinaryAggregateFunction<AggregateFunctionQuantileExactWeightedData<ValueType>,
+														 AggregateFunctionQuantileExactWeighted<ValueType, WeightType>>
 {
 private:
 	double level;
 	DataTypePtr type;
 
 public:
-	AggregateFunctionQuantileExactWeighted(double level_ = 0.5) : level(level_) {}
+	AggregateFunctionQuantileExactWeighted(double level_ = 0.5) : level(level_)
+	{
+	}
 
-	String getName() const override { return "quantileExactWeighted"; }
+	String getName() const override
+	{
+		return "quantileExactWeighted";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -69,15 +69,15 @@ public:
 	void setParameters(const Array & params) override
 	{
 		if (params.size() != 1)
-			throw Exception("Aggregate function " + getName() + " requires exactly one parameter.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+			throw Exception(
+				"Aggregate function " + getName() + " requires exactly one parameter.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
 		level = applyVisitor(FieldVisitorConvertToNumber<Float64>(), params[0]);
 	}
 
 	void addImpl(AggregateDataPtr place, const IColumn & column_value, const IColumn & column_weight, size_t row_num, Arena *) const
 	{
-		this->data(place)
-			.map[static_cast<const ColumnVector<ValueType> &>(column_value).getData()[row_num]]
+		this->data(place).map[static_cast<const ColumnVector<ValueType> &>(column_value).getData()[row_num]]
 			+= static_cast<const ColumnVector<WeightType> &>(column_weight).getData()[row_num];
 	}
 
@@ -162,17 +162,18 @@ public:
   * Возвращает массив результатов.
   */
 template <typename ValueType, typename WeightType>
-class AggregateFunctionQuantilesExactWeighted final
-	: public IBinaryAggregateFunction<
-		AggregateFunctionQuantileExactWeightedData<ValueType>,
-		AggregateFunctionQuantilesExactWeighted<ValueType, WeightType>>
+class AggregateFunctionQuantilesExactWeighted final : public IBinaryAggregateFunction<AggregateFunctionQuantileExactWeightedData<ValueType>,
+														  AggregateFunctionQuantilesExactWeighted<ValueType, WeightType>>
 {
 private:
 	QuantileLevels<double> levels;
 	DataTypePtr type;
 
 public:
-	String getName() const override { return "quantilesExactWeighted"; }
+	String getName() const override
+	{
+		return "quantilesExactWeighted";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -191,8 +192,7 @@ public:
 
 	void addImpl(AggregateDataPtr place, const IColumn & column_value, const IColumn & column_weight, size_t row_num, Arena *) const
 	{
-		this->data(place)
-			.map[static_cast<const ColumnVector<ValueType> &>(column_value).getData()[row_num]]
+		this->data(place).map[static_cast<const ColumnVector<ValueType> &>(column_value).getData()[row_num]]
 			+= static_cast<const ColumnVector<WeightType> &>(column_weight).getData()[row_num];
 	}
 
@@ -297,5 +297,4 @@ public:
 		}
 	}
 };
-
 }

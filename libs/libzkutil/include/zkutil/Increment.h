@@ -4,24 +4,22 @@
 
 namespace zkutil
 {
-	
 class Increment
 {
 public:
-	Increment(ZooKeeperHolderPtr zk_holder_, const std::string & path_)
-	: zookeeper_holder(zk_holder_), path(path_)
+	Increment(ZooKeeperHolderPtr zk_holder_, const std::string & path_) : zookeeper_holder(zk_holder_), path(path_)
 	{
 		zookeeper_holder->getZooKeeper()->createAncestors(path);
 	}
-	
+
 	size_t get()
 	{
 		LOG_TRACE(log, "Get increment");
-		
+
 		size_t result = 0;
 		std::string result_str;
 		zkutil::Stat stat;
-		
+
 		bool success = false;
 		auto zookeeper = zookeeper_holder->getZooKeeper();
 		do
@@ -35,15 +33,14 @@ public:
 			{
 				success = zookeeper->tryCreate(path, std::to_string(result), zkutil::CreateMode::Persistent) == ZOK;
 			}
-		}
-		while (!success);
-		
+		} while (!success);
+
 		return result;
 	}
+
 private:
 	zkutil::ZooKeeperHolderPtr zookeeper_holder;
 	std::string path;
 	Logger * log = &Logger::get("zkutil::Increment");
 };
-
 }

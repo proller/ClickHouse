@@ -1,24 +1,23 @@
 #pragma once
 
-#include <string.h>
-#include <cstddef>
 #include <algorithm>
+#include <cstddef>
 #include <memory>
+#include <string.h>
 
-#include <boost/noncopyable.hpp>
 #include <boost/iterator_adaptors.hpp>
+#include <boost/noncopyable.hpp>
 
 #include <common/likely.h>
 #include <common/strong_typedef.h>
 
 #include <DB/Common/Allocator.h>
-#include <DB/Common/Exception.h>
 #include <DB/Common/BitHelpers.h>
+#include <DB/Common/Exception.h>
 
 
 namespace DB
 {
-
 /** Динамический массив для POD-типов.
   * Предназначен для небольшого количества больших массивов (а не большого количества маленьких).
   * А точнее - для использования в ColumnVector.
@@ -37,29 +36,53 @@ namespace DB
   * Может использоваться для того, чтобы делать оптимистичное чтение, запись, копирование невыровненными SIMD-инструкциями.
   */
 template <typename T, size_t INITIAL_SIZE = 4096, typename TAllocator = Allocator<false>, size_t pad_right_ = 0>
-class PODArray : private boost::noncopyable, private TAllocator	/// empty base optimization
+class PODArray : private boost::noncopyable, private TAllocator /// empty base optimization
 {
 private:
 	/// Округление padding-а вверх до целого количества элементов, чтобы упростить арифметику.
 	static constexpr size_t pad_right = (pad_right_ + sizeof(T) - 1) / sizeof(T) * sizeof(T);
 
-	char * c_start 			= nullptr;
-	char * c_end 			= nullptr;
-	char * c_end_of_storage = nullptr;	/// Не включает в себя pad_right.
+	char * c_start = nullptr;
+	char * c_end = nullptr;
+	char * c_end_of_storage = nullptr; /// Не включает в себя pad_right.
 
-	T * t_start() 						{ return reinterpret_cast<T *>(c_start); }
-	T * t_end() 						{ return reinterpret_cast<T *>(c_end); }
-	T * t_end_of_storage() 				{ return reinterpret_cast<T *>(c_end_of_storage); }
+	T * t_start()
+	{
+		return reinterpret_cast<T *>(c_start);
+	}
+	T * t_end()
+	{
+		return reinterpret_cast<T *>(c_end);
+	}
+	T * t_end_of_storage()
+	{
+		return reinterpret_cast<T *>(c_end_of_storage);
+	}
 
-	const T * t_start() const 			{ return reinterpret_cast<const T *>(c_start); }
-	const T * t_end() const 			{ return reinterpret_cast<const T *>(c_end); }
-	const T * t_end_of_storage() const 	{ return reinterpret_cast<const T *>(c_end_of_storage); }
+	const T * t_start() const
+	{
+		return reinterpret_cast<const T *>(c_start);
+	}
+	const T * t_end() const
+	{
+		return reinterpret_cast<const T *>(c_end);
+	}
+	const T * t_end_of_storage() const
+	{
+		return reinterpret_cast<const T *>(c_end_of_storage);
+	}
 
 	/// Количество памяти, занимаемое num_elements элементов.
-	static size_t byte_size(size_t num_elements) { return num_elements * sizeof(T); }
+	static size_t byte_size(size_t num_elements)
+	{
+		return num_elements * sizeof(T);
+	}
 
 	/// Минимальное количество памяти, которое нужно выделить для num_elements элементов, включая padding.
-	static size_t minimum_memory_for_elements(size_t num_elements) { return byte_size(num_elements) + pad_right; }
+	static size_t minimum_memory_for_elements(size_t num_elements)
+	{
+		return byte_size(num_elements) + pad_right;
+	}
 
 	void alloc_for_num_elements(size_t num_elements)
 	{
@@ -110,23 +133,36 @@ private:
 public:
 	using value_type = T;
 
-	size_t allocated_size() const { return c_end_of_storage - c_start + pad_right; }
+	size_t allocated_size() const
+	{
+		return c_end_of_storage - c_start + pad_right;
+	}
 
 	/// Просто typedef нельзя, так как возникает неоднозначность для конструкторов и функций assign.
-	struct iterator : public boost::iterator_adaptor<iterator, T*>
+	struct iterator : public boost::iterator_adaptor<iterator, T *>
 	{
-		iterator() {}
-		iterator(T * ptr_) : iterator::iterator_adaptor_(ptr_) {}
+		iterator()
+		{
+		}
+		iterator(T * ptr_) : iterator::iterator_adaptor_(ptr_)
+		{
+		}
 	};
 
-	struct const_iterator : public boost::iterator_adaptor<const_iterator, const T*>
+	struct const_iterator : public boost::iterator_adaptor<const_iterator, const T *>
 	{
-		const_iterator() {}
-        const_iterator(const T * ptr_) : const_iterator::iterator_adaptor_(ptr_) {}
+		const_iterator()
+		{
+		}
+		const_iterator(const T * ptr_) : const_iterator::iterator_adaptor_(ptr_)
+		{
+		}
 	};
 
 
-	PODArray() {}
+	PODArray()
+	{
+	}
 
 	PODArray(size_t n)
 	{
@@ -162,27 +198,78 @@ public:
 		return *this;
 	}
 
-	T * data() { return t_start(); }
-	const T * data() const { return t_start(); }
+	T * data()
+	{
+		return t_start();
+	}
+	const T * data() const
+	{
+		return t_start();
+	}
 
-	size_t size() const { return t_end() - t_start(); }
-	bool empty() const { return t_end() == t_start(); }
-	size_t capacity() const { return t_end_of_storage() - t_start(); }
+	size_t size() const
+	{
+		return t_end() - t_start();
+	}
+	bool empty() const
+	{
+		return t_end() == t_start();
+	}
+	size_t capacity() const
+	{
+		return t_end_of_storage() - t_start();
+	}
 
-	T & operator[] (size_t n) 				{ return t_start()[n]; }
-	const T & operator[] (size_t n) const 	{ return t_start()[n]; }
+	T & operator[](size_t n)
+	{
+		return t_start()[n];
+	}
+	const T & operator[](size_t n) const
+	{
+		return t_start()[n];
+	}
 
-	T & front() 			{ return t_start()[0]; }
-	T & back() 				{ return t_end()[-1]; }
-	const T & front() const { return t_start()[0]; }
-	const T & back() const  { return t_end()[-1]; }
+	T & front()
+	{
+		return t_start()[0];
+	}
+	T & back()
+	{
+		return t_end()[-1];
+	}
+	const T & front() const
+	{
+		return t_start()[0];
+	}
+	const T & back() const
+	{
+		return t_end()[-1];
+	}
 
-	iterator begin() 				{ return t_start(); }
-	iterator end() 					{ return t_end(); }
-	const_iterator begin() const	{ return t_start(); }
-	const_iterator end() const		{ return t_end(); }
-	const_iterator cbegin() const	{ return t_start(); }
-	const_iterator cend() const		{ return t_end(); }
+	iterator begin()
+	{
+		return t_start();
+	}
+	iterator end()
+	{
+		return t_end();
+	}
+	const_iterator begin() const
+	{
+		return t_start();
+	}
+	const_iterator end() const
+	{
+		return t_end();
+	}
+	const_iterator cbegin() const
+	{
+		return t_start();
+	}
+	const_iterator cend() const
+	{
+		return t_end();
+	}
 
 	void reserve(size_t n)
 	{
@@ -302,8 +389,7 @@ public:
 		/// Swap two PODArray objects, arr1 and arr2, that satisfy the following conditions:
 		/// - The elements of arr1 are stored on stack.
 		/// - The elements of arr2 are stored on heap.
-		auto swap_stack_heap = [](PODArray & arr1, PODArray & arr2)
-		{
+		auto swap_stack_heap = [](PODArray & arr1, PODArray & arr2) {
 			size_t stack_size = arr1.size();
 			size_t stack_allocated = arr1.allocated_size();
 
@@ -325,8 +411,7 @@ public:
 			arr2.c_end = arr2.c_start + byte_size(stack_size);
 		};
 
-		auto do_move = [](PODArray & src, PODArray & dest)
-		{
+		auto do_move = [](PODArray & src, PODArray & dest) {
 			if (src.isAllocatedFromStack())
 			{
 				dest.dealloc();
@@ -426,7 +511,7 @@ public:
 	}
 
 
-	bool operator== (const PODArray & other) const
+	bool operator==(const PODArray & other) const
 	{
 		if (size() != other.size())
 			return false;
@@ -446,7 +531,7 @@ public:
 		return true;
 	}
 
-	bool operator!= (const PODArray & other) const
+	bool operator!=(const PODArray & other) const
 	{
 		return !operator==(other);
 	}
@@ -461,5 +546,4 @@ void swap(PODArray<T, INITIAL_SIZE, TAllocator, pad_right_> & lhs, PODArray<T, I
 /** Для столбцов. Padding-а хватает, чтобы читать и писать xmm-регистр по адресу последнего элемента. */
 template <typename T, size_t INITIAL_SIZE = 4096, typename TAllocator = Allocator<false>>
 using PaddedPODArray = PODArray<T, INITIAL_SIZE, TAllocator, 15>;
-
 }

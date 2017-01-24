@@ -7,7 +7,6 @@
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int LOGICAL_ERROR;
@@ -29,8 +28,7 @@ public:
 		ABANDONED,
 	};
 
-	AbandonableLockInZooKeeper(
-		const String & path_prefix_, const String & temp_path, zkutil::ZooKeeper & zookeeper_)
+	AbandonableLockInZooKeeper(const String & path_prefix_, const String & temp_path, zkutil::ZooKeeper & zookeeper_)
 		: zookeeper(zookeeper_), path_prefix(path_prefix_)
 	{
 		/// Создадим вспомогательную эфемерную ноду.
@@ -43,8 +41,7 @@ public:
 			throw Exception("Logical error: name of sequential node is shorter than prefix.", ErrorCodes::LOGICAL_ERROR);
 	}
 
-	AbandonableLockInZooKeeper(AbandonableLockInZooKeeper && rhs)
-		: zookeeper(rhs.zookeeper)
+	AbandonableLockInZooKeeper(AbandonableLockInZooKeeper && rhs) : zookeeper(rhs.zookeeper)
 	{
 		std::swap(path_prefix, rhs.path_prefix);
 		std::swap(path, rhs.path);
@@ -128,5 +125,4 @@ private:
 	String path;
 	String holder_path;
 };
-
 }

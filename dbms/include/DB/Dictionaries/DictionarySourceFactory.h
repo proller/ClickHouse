@@ -1,20 +1,19 @@
 #pragma once
 
-#include <DB/Dictionaries/IDictionarySource.h>
 #include <common/singleton.h>
+#include <DB/Dictionaries/IDictionarySource.h>
 
 
 namespace Poco
 {
-	namespace Util
-	{
-		class AbstractConfiguration;
-	}
+namespace Util
+{
+	class AbstractConfiguration;
+}
 }
 
 namespace DB
 {
-
 class Context;
 struct DictionaryStructure;
 
@@ -22,11 +21,12 @@ struct DictionaryStructure;
 class DictionarySourceFactory : public Singleton<DictionarySourceFactory>
 {
 public:
-    DictionarySourceFactory();
+	DictionarySourceFactory();
 
-	DictionarySourcePtr create(
-		const std::string & name, Poco::Util::AbstractConfiguration & config, const std::string & config_prefix,
-		const DictionaryStructure & dict_struct, Context & context) const;
+	DictionarySourcePtr create(const std::string & name,
+		Poco::Util::AbstractConfiguration & config,
+		const std::string & config_prefix,
+		const DictionaryStructure & dict_struct,
+		Context & context) const;
 };
-
 }

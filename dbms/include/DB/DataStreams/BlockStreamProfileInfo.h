@@ -11,7 +11,6 @@
 
 namespace DB
 {
-
 class Block;
 class ReadBuffer;
 class WriteBuffer;
@@ -20,9 +19,9 @@ class WriteBuffer;
 struct BlockStreamProfileInfo
 {
 	bool started = false;
-	Stopwatch total_stopwatch {CLOCK_MONOTONIC_COARSE};	/// Время с учётом ожидания
+	Stopwatch total_stopwatch{ CLOCK_MONOTONIC_COARSE }; /// Время с учётом ожидания
 
-	String stream_name;			/// Короткое имя потока, для которого собирается информация
+	String stream_name; /// Короткое имя потока, для которого собирается информация
 
 	size_t rows = 0;
 	size_t blocks = 0;
@@ -56,9 +55,8 @@ private:
 	void calculateRowsBeforeLimit() const;
 
 	/// Для этих полей сделаем accessor'ы, т.к. их необходимо предварительно вычислять.
-	mutable bool applied_limit = false;					/// Применялся ли LIMIT
+	mutable bool applied_limit = false; /// Применялся ли LIMIT
 	mutable size_t rows_before_limit = 0;
-	mutable bool calculated_rows_before_limit = false;	/// Вычислялось ли поле rows_before_limit
+	mutable bool calculated_rows_before_limit = false; /// Вычислялось ли поле rows_before_limit
 };
-
 }

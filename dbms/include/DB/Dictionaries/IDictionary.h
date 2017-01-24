@@ -1,15 +1,14 @@
 #pragma once
 
-#include <DB/Core/Field.h>
-#include <DB/Core/StringRef.h>
+#include <chrono>
+#include <memory>
 #include <Poco/Util/XMLConfiguration.h>
 #include <DB/Common/PODArray.h>
-#include <memory>
-#include <chrono>
+#include <DB/Core/Field.h>
+#include <DB/Core/StringRef.h>
 
 namespace DB
 {
-
 class IDictionarySource;
 
 struct IDictionaryBase;
@@ -82,5 +81,4 @@ struct IDictionary : IDictionaryBase
 		return child_id != 0;
 	}
 };
-
 }

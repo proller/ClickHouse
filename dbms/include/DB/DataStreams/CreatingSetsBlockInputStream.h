@@ -6,7 +6,6 @@
 
 namespace DB
 {
-
 /** Отдаёт без изменений данные из потока блоков, но
   * в функции readPrefix или перед чтением первого блока
   * инициализирует все переданные множества.
@@ -14,14 +13,11 @@ namespace DB
 class CreatingSetsBlockInputStream : public IProfilingBlockInputStream
 {
 public:
-	CreatingSetsBlockInputStream(
-		BlockInputStreamPtr input,
-		const SubqueriesForSets & subqueries_for_sets_,
-		const Limits & limits)
+	CreatingSetsBlockInputStream(BlockInputStreamPtr input, const SubqueriesForSets & subqueries_for_sets_, const Limits & limits)
 		: subqueries_for_sets(subqueries_for_sets_),
-		max_rows_to_transfer(limits.max_rows_to_transfer),
-		max_bytes_to_transfer(limits.max_bytes_to_transfer),
-		transfer_overflow_mode(limits.transfer_overflow_mode)
+		  max_rows_to_transfer(limits.max_rows_to_transfer),
+		  max_bytes_to_transfer(limits.max_bytes_to_transfer),
+		  transfer_overflow_mode(limits.transfer_overflow_mode)
 	{
 		for (auto & elem : subqueries_for_sets)
 			if (elem.second.source)
@@ -30,7 +26,10 @@ public:
 		children.push_back(input);
 	}
 
-	String getName() const override { return "CreatingSets"; }
+	String getName() const override
+	{
+		return "CreatingSets";
+	}
 
 	String getID() const override
 	{
@@ -74,5 +73,4 @@ private:
 	void createAll();
 	void createOne(SubqueryForSet & subquery);
 };
-
 }

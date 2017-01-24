@@ -5,16 +5,20 @@
 
 namespace DB
 {
-
 /** Поток блоков, из которого можно прочитать один блок.
   * Также смотрите BlocksListBlockInputStream.
   */
 class OneBlockInputStream : public IProfilingBlockInputStream
 {
 public:
-	OneBlockInputStream(const Block & block_) : block(block_) {}
+	OneBlockInputStream(const Block & block_) : block(block_)
+	{
+	}
 
-	String getName() const override { return "One"; }
+	String getName() const override
+	{
+		return "One";
+	}
 
 	String getID() const override
 	{
@@ -37,5 +41,4 @@ private:
 	Block block;
 	bool has_been_read = false;
 };
-
 }

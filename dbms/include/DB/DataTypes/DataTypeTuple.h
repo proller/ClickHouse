@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 /** Тип данных - кортеж.
   * Используется как промежуточный результат при вычислении выражений.
   * Также может быть использовать в качестве столбца - результата выполнения запроса.
@@ -15,11 +14,17 @@ class DataTypeTuple final : public IDataType
 {
 private:
 	DataTypes elems;
+
 public:
-	DataTypeTuple(DataTypes elems_) : elems(elems_) {}
+	DataTypeTuple(DataTypes elems_) : elems(elems_)
+	{
+	}
 
 	std::string getName() const override;
-	DataTypePtr clone() const override { return std::make_shared<DataTypeTuple>(elems); }
+	DataTypePtr clone() const override
+	{
+		return std::make_shared<DataTypeTuple>(elems);
+	}
 
 	void serializeBinary(const Field & field, WriteBuffer & ostr) const override;
 	void deserializeBinary(Field & field, ReadBuffer & istr) const override;
@@ -51,8 +56,9 @@ public:
 	ColumnPtr createConstColumn(size_t size, const Field & field) const override;
 
 	Field getDefault() const override;
-	const DataTypes & getElements() const { return elems; }
+	const DataTypes & getElements() const
+	{
+		return elems;
+	}
 };
-
 }
-

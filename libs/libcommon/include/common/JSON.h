@@ -2,8 +2,8 @@
 
 #include <typeinfo>
 #include <Poco/Exception.h>
-#include <DB/Core/StringRef.h>
 #include <common/Common.h>
+#include <DB/Core/StringRef.h>
 
 
 /** Очень простой класс для чтения JSON (или его кусочков).
@@ -60,13 +60,23 @@ public:
 		checkInit();
 	}
 
-	JSON(const JSON & rhs) : ptr_begin(rhs.ptr_begin), ptr_end(rhs.ptr_end), level(rhs.level) {}
+	JSON(const JSON & rhs) : ptr_begin(rhs.ptr_begin), ptr_end(rhs.ptr_end), level(rhs.level)
+	{
+	}
 
 	/// Для вставки в контейнеры (создаёт некорректный объект)
-	JSON() : ptr_begin(nullptr), ptr_end(ptr_begin + 1) {}
+	JSON() : ptr_begin(nullptr), ptr_end(ptr_begin + 1)
+	{
+	}
 
-	const char * data() const { return ptr_begin; }
-	const char * dataEnd() const { return ptr_end; }
+	const char * data() const
+	{
+		return ptr_begin;
+	}
+	const char * dataEnd() const
+	{
+		return ptr_end;
+	}
 
 	enum ElementType
 	{
@@ -81,14 +91,35 @@ public:
 	};
 
 	ElementType getType() const;
-	
-	bool isObject() const			{ return getType() == TYPE_OBJECT; };
-	bool isArray() const			{ return getType() == TYPE_ARRAY; };
-	bool isNumber() const			{ return getType() == TYPE_NUMBER; };
-	bool isString() const			{ return getType() == TYPE_STRING; };
-	bool isBool() const			{ return getType() == TYPE_BOOL; };
-	bool isNull() const			{ return getType() == TYPE_NULL; };
-	bool isNameValuePair() const	{ return getType() == TYPE_NAME_VALUE_PAIR; };
+
+	bool isObject() const
+	{
+		return getType() == TYPE_OBJECT;
+	};
+	bool isArray() const
+	{
+		return getType() == TYPE_ARRAY;
+	};
+	bool isNumber() const
+	{
+		return getType() == TYPE_NUMBER;
+	};
+	bool isString() const
+	{
+		return getType() == TYPE_STRING;
+	};
+	bool isBool() const
+	{
+		return getType() == TYPE_BOOL;
+	};
+	bool isNull() const
+	{
+		return getType() == TYPE_NULL;
+	};
+	bool isNameValuePair() const
+	{
+		return getType() == TYPE_NAME_VALUE_PAIR;
+	};
 
 	/// Количество элементов в массиве или объекте; если элемент - не массив или объект, то исключение.
 	size_t size() const;
@@ -97,13 +128,16 @@ public:
 	bool empty() const;
 
 	/// Получить элемент массива по индексу; если элемент - не массив, то исключение.
-	JSON operator[] (size_t n) const;
+	JSON operator[](size_t n) const;
 
 	/// Получить элемент объекта по имени; если элемент - не объект, то исключение.
-	JSON operator[] (const std::string & name) const;
+	JSON operator[](const std::string & name) const;
 
 	/// Есть ли в объекте элемент с заданным именем; если элемент - не объект, то исключение.
-	bool has(const std::string & name) const { return has(name.data(), name.size()); }
+	bool has(const std::string & name) const
+	{
+		return has(name.data(), name.size());
+	}
 	bool has(const char * data, size_t size) const;
 
 	/// Получить значение элемента; исключение, если элемент имеет неправильный тип.
@@ -114,21 +148,21 @@ public:
 	template <class T>
 	T getWithDefault(const std::string & key, const T & default_ = T()) const;
 
-	double 		getDouble() const;
-	Int64 		getInt() const;	/// Отбросить дробную часть.
-	UInt64 		getUInt() const;	/// Отбросить дробную часть. Если число отрицательное - исключение.
+	double getDouble() const;
+	Int64 getInt() const; /// Отбросить дробную часть.
+	UInt64 getUInt() const; /// Отбросить дробную часть. Если число отрицательное - исключение.
 	std::string getString() const;
-	bool 		getBool() const;
-	std::string getName() const;	/// Получить имя name-value пары.
-	JSON		getValue() const;	/// Получить значение name-value пары.
+	bool getBool() const;
+	std::string getName() const; /// Получить имя name-value пары.
+	JSON getValue() const; /// Получить значение name-value пары.
 
 	StringRef getRawString() const;
 	StringRef getRawName() const;
 
 	/// Получить значение элемента; если элемент - строка, то распарсить значение из строки; если не строка или число - то исключение.
-	double 		toDouble() const;
-	Int64 		toInt() const;
-	UInt64 		toUInt() const;
+	double toDouble() const;
+	Int64 toInt() const;
+	UInt64 toUInt() const;
 
 	/** Преобразовать любой элемент в строку.
 	  * Для строки возвращается её значение, для всех остальных элементов - сериализованное представление.
@@ -138,11 +172,23 @@ public:
 	/// Класс JSON одновременно является итератором по самому себе.
 	using iterator = JSON;
 	using const_iterator = JSON;
-	
-	iterator operator* () const { return *this; }
-	const JSON * operator-> () const { return this; }
-	bool operator== (const JSON & rhs) const { return ptr_begin == rhs.ptr_begin; }
-	bool operator!= (const JSON & rhs) const { return ptr_begin != rhs.ptr_begin; }
+
+	iterator operator*() const
+	{
+		return *this;
+	}
+	const JSON * operator->() const
+	{
+		return this;
+	}
+	bool operator==(const JSON & rhs) const
+	{
+		return ptr_begin == rhs.ptr_begin;
+	}
+	bool operator!=(const JSON & rhs) const
+	{
+		return ptr_begin != rhs.ptr_begin;
+	}
 
 	/** Если элемент - массив или объект, то begin() возвращает iterator,
 	  * который указывает на первый элемент массива или первую name-value пару объекта.
@@ -181,7 +227,10 @@ private:
 	Pos skipElement() const;
 
 	/// Найти name-value пару с заданным именем в объекте.
-	Pos searchField(const std::string & name) const { return searchField(name.data(), name.size()); }
+	Pos searchField(const std::string & name) const
+	{
+		return searchField(name.data(), name.size());
+	}
 	Pos searchField(const char * data, size_t size) const;
 
 	template <class T>

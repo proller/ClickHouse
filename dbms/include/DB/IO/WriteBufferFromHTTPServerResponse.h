@@ -1,26 +1,25 @@
 #pragma once
 
-#include <experimental/optional>
 #include <mutex>
+#include <experimental/optional>
 
 #include <Poco/Net/HTTPServerResponse.h>
 
 #include <DB/Common/Exception.h>
 
-#include <DB/IO/WriteBuffer.h>
-#include <DB/IO/BufferWithOwnMemory.h>
-#include <DB/IO/WriteBufferFromOStream.h>
-#include <DB/IO/WriteBufferFromString.h>
-#include <DB/IO/ZlibDeflatingWriteBuffer.h>
-#include <DB/IO/HTTPCommon.h>
 #include <DB/Common/NetException.h>
 #include <DB/Common/Stopwatch.h>
 #include <DB/Core/Progress.h>
+#include <DB/IO/BufferWithOwnMemory.h>
+#include <DB/IO/HTTPCommon.h>
+#include <DB/IO/WriteBuffer.h>
+#include <DB/IO/WriteBufferFromOStream.h>
+#include <DB/IO/WriteBufferFromString.h>
+#include <DB/IO/ZlibDeflatingWriteBuffer.h>
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int LOGICAL_ERROR;
@@ -52,16 +51,16 @@ private:
 	std::experimental::optional<WriteBufferFromOStream> out_raw;
 	std::experimental::optional<ZlibDeflatingWriteBuffer> deflating_buf;
 
-	WriteBuffer * out = nullptr; 	/// Uncompressed HTTP body is written to this buffer. Points to out_raw or possibly to deflating_buf.
+	WriteBuffer * out = nullptr; /// Uncompressed HTTP body is written to this buffer. Points to out_raw or possibly to deflating_buf.
 
 	bool headers_started_sending = false;
-	bool headers_finished_sending = false;	/// If true, you could not add any headers.
+	bool headers_finished_sending = false; /// If true, you could not add any headers.
 
 	Progress accumulated_progress;
 	size_t send_progress_interval_ms = 100;
 	Stopwatch progress_watch;
 
-	std::mutex mutex;	/// progress callback could be called from different threads.
+	std::mutex mutex; /// progress callback could be called from different threads.
 
 
 	/// Must be called under locked mutex.
@@ -111,11 +110,12 @@ private:
 						*response_header_ostr << "Content-Encoding: deflate\r\n";
 					else
 						throw Exception("Logical error: unknown compression method passed to WriteBufferFromHTTPServerResponse",
-										ErrorCodes::LOGICAL_ERROR);
+							ErrorCodes::LOGICAL_ERROR);
 
 					/// Use memory allocated for the outer buffer in the buffer pointed to by out. This avoids extra allocation and copy.
 					out_raw.emplace(*response_body_ostr);
-					deflating_buf.emplace(out_raw.value(), compression_method, compression_level, working_buffer.size(), working_buffer.begin());
+					deflating_buf.emplace(
+						out_raw.value(), compression_method, compression_level, working_buffer.size(), working_buffer.begin());
 					out = &deflating_buf.value();
 				}
 				else
@@ -133,13 +133,13 @@ private:
 	}
 
 public:
-	WriteBufferFromHTTPServerResponse(
-		Poco::Net::HTTPServerResponse & response_,
-		bool compress_ = false,		/// If true - set Content-Encoding header and compress the result.
+	WriteBufferFromHTTPServerResponse(Poco::Net::HTTPServerResponse & response_,
+		bool compress_ = false, /// If true - set Content-Encoding header and compress the result.
 		ZlibCompressionMethod compression_method_ = ZlibCompressionMethod::Gzip,
 		size_t size = DBMS_DEFAULT_BUFFER_SIZE)
-		: BufferWithOwnMemory<WriteBuffer>(size), response(response_),
-		compress(compress_), compression_method(compression_method_) {}
+		: BufferWithOwnMemory<WriteBuffer>(size), response(response_), compress(compress_), compression_method(compression_method_)
+	{
+	}
 
 	/// Writes progess in repeating HTTP headers.
 	void onProgress(const Progress & progress)
@@ -228,5 +228,4 @@ public:
 		}
 	}
 };
-
 }

@@ -4,13 +4,15 @@
 
 namespace DB
 {
-
 struct ASTCheckQuery : public ASTQueryWithOutput
 {
-	ASTCheckQuery(StringRange range_ = StringRange()) : ASTQueryWithOutput(range_) {};
+	ASTCheckQuery(StringRange range_ = StringRange()) : ASTQueryWithOutput(range_){};
 
 	/** Получить текст, который идентифицирует этот элемент. */
-	String getID() const override { return ("CheckQuery_" + database + "_" + table); };
+	String getID() const override
+	{
+		return ("CheckQuery_" + database + "_" + table);
+	};
 
 	ASTPtr clone() const override
 	{
@@ -37,12 +39,13 @@ protected:
 		{
 			if (!database.empty())
 			{
-				settings.ostr << (settings.hilite ? hilite_keyword : "") << indent_str << backQuoteIfNeed(database) << (settings.hilite ? hilite_none : "");
+				settings.ostr << (settings.hilite ? hilite_keyword : "") << indent_str << backQuoteIfNeed(database)
+							  << (settings.hilite ? hilite_none : "");
 				settings.ostr << ".";
 			}
-			settings.ostr << (settings.hilite ? hilite_keyword : "") << indent_str << backQuoteIfNeed(table) << (settings.hilite ? hilite_none : "");
+			settings.ostr << (settings.hilite ? hilite_keyword : "") << indent_str << backQuoteIfNeed(table)
+						  << (settings.hilite ? hilite_none : "");
 		}
 	}
 };
-
 }

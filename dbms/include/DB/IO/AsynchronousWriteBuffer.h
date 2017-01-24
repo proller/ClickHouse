@@ -10,17 +10,15 @@
 
 namespace DB
 {
-
-
 /** Записывает данные асинхронно с помощью двойной буферизации.
   */
 class AsynchronousWriteBuffer : public WriteBuffer
 {
 private:
-	WriteBuffer & out;				/// Основной буфер, отвечает за запись данных.
-	std::vector<char> memory;		/// Кусок памяти для дублирования буфера.
-	ThreadPool pool;				/// Для асинхронной записи данных.
-	bool started;					/// Была ли запущена асинхронная запись данных.
+	WriteBuffer & out; /// Основной буфер, отвечает за запись данных.
+	std::vector<char> memory; /// Кусок памяти для дублирования буфера.
+	ThreadPool pool; /// Для асинхронной записи данных.
+	bool started; /// Была ли запущена асинхронная запись данных.
 
 	/// Менять местами основной и дублирующий буферы.
 	void swapBuffers()
@@ -74,5 +72,4 @@ public:
 		out.next();
 	}
 };
-
 }

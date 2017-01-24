@@ -9,7 +9,6 @@
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int LOGICAL_ERROR;
@@ -18,35 +17,45 @@ namespace ErrorCodes
 
 namespace
 {
+	template <StreamUnionMode mode>
+	struct OutputData;
 
-template <StreamUnionMode mode>
-struct OutputData;
+	/// Блок или эксепшен.
+	template <>
+	struct OutputData<StreamUnionMode::Basic>
+	{
+		Block block;
+		std::exception_ptr exception;
 
-/// Блок или эксепшен.
-template <>
-struct OutputData<StreamUnionMode::Basic>
-{
-	Block block;
-	std::exception_ptr exception;
+		OutputData()
+		{
+		}
+		OutputData(Block & block_) : block(block_)
+		{
+		}
+		OutputData(std::exception_ptr & exception_) : exception(exception_)
+		{
+		}
+	};
 
-	OutputData() {}
-	OutputData(Block & block_) : block(block_) {}
-	OutputData(std::exception_ptr & exception_) : exception(exception_) {}
-};
+	/// Блок + дополнительнцю информацию или эксепшен.
+	template <>
+	struct OutputData<StreamUnionMode::ExtraInfo>
+	{
+		Block block;
+		BlockExtraInfo extra_info;
+		std::exception_ptr exception;
 
-/// Блок + дополнительнцю информацию или эксепшен.
-template <>
-struct OutputData<StreamUnionMode::ExtraInfo>
-{
-	Block block;
-	BlockExtraInfo extra_info;
-	std::exception_ptr exception;
-
-	OutputData() {}
-	OutputData(Block & block_, BlockExtraInfo & extra_info_) : block(block_), extra_info(extra_info_) {}
-	OutputData(std::exception_ptr & exception_) : exception(exception_) {}
-};
-
+		OutputData()
+		{
+		}
+		OutputData(Block & block_, BlockExtraInfo & extra_info_) : block(block_), extra_info(extra_info_)
+		{
+		}
+		OutputData(std::exception_ptr & exception_) : exception(exception_)
+		{
+		}
+	};
 }
 
 /** Объединяет несколько источников в один.
@@ -72,19 +81,24 @@ private:
 	using Self = UnionBlockInputStream<mode>;
 
 public:
-	UnionBlockInputStream(BlockInputStreams inputs, BlockInputStreamPtr additional_input_at_end, size_t max_threads,
-		ExceptionCallback exception_callback_ = ExceptionCallback()) :
-		output_queue(std::min(inputs.size(), max_threads)),
-		handler(*this),
-		processor(inputs, additional_input_at_end, max_threads, handler),
-		exception_callback(exception_callback_)
+	UnionBlockInputStream(BlockInputStreams inputs,
+		BlockInputStreamPtr additional_input_at_end,
+		size_t max_threads,
+		ExceptionCallback exception_callback_ = ExceptionCallback())
+		: output_queue(std::min(inputs.size(), max_threads)),
+		  handler(*this),
+		  processor(inputs, additional_input_at_end, max_threads, handler),
+		  exception_callback(exception_callback_)
 	{
 		children = inputs;
 		if (additional_input_at_end)
 			children.push_back(additional_input_at_end);
 	}
 
-	String getName() const override { return "Union"; }
+	String getName() const override
+	{
+		return "Union";
+	}
 
 	String getID() const override
 	{
@@ -237,17 +251,16 @@ protected:
 	}
 
 private:
-	template<StreamUnionMode mode2 = mode>
+	template <StreamUnionMode mode2 = mode>
 	BlockExtraInfo doGetBlockExtraInfo(typename std::enable_if<mode2 == StreamUnionMode::ExtraInfo>::type * = nullptr) const
 	{
 		return received_payload.extra_info;
 	}
 
-	template<StreamUnionMode mode2 = mode>
+	template <StreamUnionMode mode2 = mode>
 	BlockExtraInfo doGetBlockExtraInfo(typename std::enable_if<mode2 == StreamUnionMode::Basic>::type * = nullptr) const
 	{
-		throw Exception("Method getBlockExtraInfo is not supported for mode StreamUnionMode::Basic",
-			ErrorCodes::NOT_IMPLEMENTED);
+		throw Exception("Method getBlockExtraInfo is not supported for mode StreamUnionMode::Basic", ErrorCodes::NOT_IMPLEMENTED);
 	}
 
 private:
@@ -265,18 +278,21 @@ private:
 
 	struct Handler
 	{
-		Handler(Self & parent_) : parent(parent_) {}
+		Handler(Self & parent_) : parent(parent_)
+		{
+		}
 
 		template <StreamUnionMode mode2 = mode>
-		void onBlock(Block & block, size_t thread_num,
-			typename std::enable_if<mode2 == StreamUnionMode::Basic>::type * = nullptr)
+		void onBlock(Block & block, size_t thread_num, typename std::enable_if<mode2 == StreamUnionMode::Basic>::type * = nullptr)
 		{
 			//std::cerr << "pushing block\n";
 			parent.output_queue.push(Payload(block));
 		}
 
 		template <StreamUnionMode mode2 = mode>
-		void onBlock(Block & block, BlockExtraInfo & extra_info, size_t thread_num,
+		void onBlock(Block & block,
+			BlockExtraInfo & extra_info,
+			size_t thread_num,
 			typename std::enable_if<mode2 == StreamUnionMode::ExtraInfo>::type * = nullptr)
 		{
 			//std::cerr << "pushing block with extra info\n";
@@ -302,7 +318,7 @@ private:
 			///  и эксепшен потеряется.
 
 			parent.output_queue.push(exception);
-			parent.cancel();	/// Не кидает исключений.
+			parent.cancel(); /// Не кидает исключений.
 		}
 
 		Self & parent;
@@ -320,5 +336,4 @@ private:
 
 	Logger * log = &Logger::get("UnionBlockInputStream");
 };
-
 }

@@ -6,8 +6,6 @@
 
 namespace DB
 {
-
-
 /// Возможные значения параметров шаблонов см. в AggregateFunctionsMinMaxAny.h
 template <typename ResultData, typename ValueData>
 struct AggregateFunctionsArgMinMaxData
@@ -15,8 +13,8 @@ struct AggregateFunctionsArgMinMaxData
 	using ResultData_t = ResultData;
 	using ValueData_t = ValueData;
 
-	ResultData result;	// аргумент, при котором достигается минимальное/максимальное значение value.
-	ValueData value;	// значение, для которого считается минимум/максимум.
+	ResultData result; // аргумент, при котором достигается минимальное/максимальное значение value.
+	ValueData value; // значение, для которого считается минимум/максимум.
 };
 
 /// Возвращает первое попавшееся значение arg для минимального/максимального value. Пример: argMax(arg, value).
@@ -28,7 +26,10 @@ private:
 	DataTypePtr type_val;
 
 public:
-	String getName() const override { return (0 == strcmp(Data::ValueData_t::name(), "min")) ? "argMin" : "argMax"; }
+	String getName() const override
+	{
+		return (0 == strcmp(Data::ValueData_t::name(), "min")) ? "argMin" : "argMax";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -70,5 +71,4 @@ public:
 		this->data(place).result.insertResultInto(to);
 	}
 };
-
 }

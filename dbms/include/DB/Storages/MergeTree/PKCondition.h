@@ -2,17 +2,16 @@
 
 #include <sstream>
 
-#include <DB/Interpreters/Context.h>
 #include <DB/Core/SortDescription.h>
+#include <DB/Interpreters/Context.h>
 #include <DB/Parsers/ASTExpressionList.h>
-#include <DB/Parsers/ASTSelectQuery.h>
 #include <DB/Parsers/ASTFunction.h>
 #include <DB/Parsers/ASTLiteral.h>
+#include <DB/Parsers/ASTSelectQuery.h>
 
 
 namespace DB
 {
-
 class IFunction;
 using FunctionPtr = std::shared_ptr<IFunction>;
 
@@ -26,25 +25,32 @@ private:
 	static bool less(const Field & lhs, const Field & rhs);
 
 public:
-	Field left;				/// левая граница, если есть
-	Field right;			/// правая граница, если есть
-	bool left_bounded = false;		/// ограничен ли слева
-	bool right_bounded = false; 	/// ограничен ли справа
-	bool left_included = false; 	/// включает левую границу, если есть
-	bool right_included = false;	/// включает правую границу, если есть
+	Field left; /// левая граница, если есть
+	Field right; /// правая граница, если есть
+	bool left_bounded = false; /// ограничен ли слева
+	bool right_bounded = false; /// ограничен ли справа
+	bool left_included = false; /// включает левую границу, если есть
+	bool right_included = false; /// включает правую границу, если есть
 
 	/// Всё множество.
-	Range() {}
+	Range()
+	{
+	}
 
 	/// Одна точка.
 	Range(const Field & point)
-		: left(point), right(point), left_bounded(true), right_bounded(true), left_included(true), right_included(true) {}
+		: left(point), right(point), left_bounded(true), right_bounded(true), left_included(true), right_included(true)
+	{
+	}
 
 	/// Ограниченный с двух сторон диапазон.
 	Range(const Field & left_, bool left_included_, const Field & right_, bool right_included_)
-		: left(left_), right(right_),
-		left_bounded(true), right_bounded(true),
-		left_included(left_included_), right_included(right_included_)
+		: left(left_),
+		  right(right_),
+		  left_bounded(true),
+		  right_bounded(true),
+		  left_included(left_included_),
+		  right_included(right_included_)
 	{
 		shrinkToIncludedIfPossible();
 	}
@@ -105,9 +111,7 @@ public:
 
 	bool empty() const
 	{
-		return left_bounded && right_bounded
-			&& (less(right, left)
-				|| ((!left_included || !right_included) && !less(left, right)));
+		return left_bounded && right_bounded && (less(right, left) || ((!left_included || !right_included) && !less(left, right)));
 	}
 
 	/// x входит в range
@@ -119,35 +123,25 @@ public:
 	/// x находится левее
 	bool rightThan(const Field & x) const
 	{
-		return (left_bounded
-			? !(less(left, x) || (left_included && equals(x, left)))
-			: false);
+		return (left_bounded ? !(less(left, x) || (left_included && equals(x, left))) : false);
 	}
 
 	/// x находится правее
 	bool leftThan(const Field & x) const
 	{
-		return (right_bounded
-			? !(less(x, right) || (right_included && equals(x, right)))
-			: false);
+		return (right_bounded ? !(less(x, right) || (right_included && equals(x, right))) : false);
 	}
 
 	bool intersectsRange(const Range & r) const
 	{
 		/// r левее меня.
-		if (r.right_bounded
-			&& left_bounded
-			&& (less(r.right, left)
-				|| ((!left_included || !r.right_included)
-					&& equals(r.right, left))))
+		if (r.right_bounded && left_bounded && (less(r.right, left) || ((!left_included || !r.right_included) && equals(r.right, left))))
 			return false;
 
 		/// r правее меня.
-		if (r.left_bounded
-			&& right_bounded
-			&& (less(right, r.left)							/// ...} {...
-				|| ((!right_included || !r.left_included)	/// ...)[...  или ...](...
-					&& equals(r.left, right))))
+		if (r.left_bounded && right_bounded && (less(right, r.left) /// ...} {...
+												   || ((!right_included || !r.left_included) /// ...)[...  или ...](...
+														  && equals(r.left, right))))
 			return false;
 
 		return true;
@@ -156,21 +150,11 @@ public:
 	bool containsRange(const Range & r) const
 	{
 		/// r начинается левее меня.
-		if (left_bounded
-			&& (!r.left_bounded
-				|| less(r.left, left)
-				|| (r.left_included
-					&& !left_included
-					&& equals(r.left, left))))
+		if (left_bounded && (!r.left_bounded || less(r.left, left) || (r.left_included && !left_included && equals(r.left, left))))
 			return false;
 
 		/// r заканчивается правее меня.
-		if (right_bounded
-			&& (!r.right_bounded
-				|| less(right, r.right)
-				|| (r.right_included
-					&& !right_included
-					&& equals(r.right, right))))
+		if (right_bounded && (!r.right_bounded || less(right, r.right) || (r.right_included && !right_included && equals(r.right, right))))
 			return false;
 
 		return true;
@@ -202,7 +186,10 @@ class PKCondition
 {
 public:
 	/// Не учитывает секцию SAMPLE. all_columns - набор всех столбцов таблицы.
-	PKCondition(ASTPtr & query, const Context & context, const NamesAndTypesList & all_columns, const SortDescription & sort_descr,
+	PKCondition(ASTPtr & query,
+		const Context & context,
+		const NamesAndTypesList & all_columns,
+		const SortDescription & sort_descr,
 		const Block & pk_sample_block);
 
 	/// Выполнимо ли условие в диапазоне ключей.
@@ -247,11 +234,19 @@ public:
 			ALWAYS_TRUE,
 		};
 
-		RPNElement() {}
-		RPNElement(Function function_) : function(function_) {}
-		RPNElement(Function function_, size_t key_column_) : function(function_), key_column(key_column_) {}
+		RPNElement()
+		{
+		}
+		RPNElement(Function function_) : function(function_)
+		{
+		}
+		RPNElement(Function function_, size_t key_column_) : function(function_), key_column(key_column_)
+		{
+		}
 		RPNElement(Function function_, size_t key_column_, const Range & range_)
-			: function(function_), range(range_), key_column(key_column_) {}
+			: function(function_), range(range_), key_column(key_column_)
+		{
+		}
 
 		String toString() const;
 
@@ -268,13 +263,12 @@ public:
 		  * (например: -toFloat64(toDayOfWeek(date))), то здесь будут расположены функции: toDayOfWeek, toFloat64, negate.
 		  */
 		using MonotonicFunctionsChain = std::vector<FunctionPtr>;
-		mutable MonotonicFunctionsChain monotonic_functions_chain;	/// Выполнение функции не нарушает константность.
+		mutable MonotonicFunctionsChain monotonic_functions_chain; /// Выполнение функции не нарушает константность.
 	};
 
-	static Block getBlockWithConstants(
-		const ASTPtr & query, const Context & context, const NamesAndTypesList & all_columns);
+	static Block getBlockWithConstants(const ASTPtr & query, const Context & context, const NamesAndTypesList & all_columns);
 
-	using AtomMap = std::unordered_map<std::string, bool(*)(RPNElement & out, const Field & value, ASTPtr & node)>;
+	using AtomMap = std::unordered_map<std::string, bool (*)(RPNElement & out, const Field & value, ASTPtr & node)>;
 	static const AtomMap atom_map;
 
 private:
@@ -282,11 +276,7 @@ private:
 	using ColumnIndices = std::map<String, size_t>;
 
 	bool mayBeTrueInRange(
-		size_t used_key_size,
-		const Field * left_pk,
-		const Field * right_pk,
-		const DataTypes & data_types,
-		bool right_bounded) const;
+		size_t used_key_size, const Field * left_pk, const Field * right_pk, const DataTypes & data_types, bool right_bounded) const;
 
 	bool mayBeTrueInRangeImpl(const std::vector<Range> & key_ranges, const DataTypes & data_types) const;
 
@@ -300,15 +290,13 @@ private:
 	  * If these conditions are true, then returns number of column in primary key, type of resulting expression
 	  *  and fills chain of possibly-monotonic functions.
 	  */
-	bool isPrimaryKeyPossiblyWrappedByMonotonicFunctions(
-		const ASTPtr & node,
+	bool isPrimaryKeyPossiblyWrappedByMonotonicFunctions(const ASTPtr & node,
 		const Context & context,
 		size_t & out_primary_key_column_num,
 		DataTypePtr & out_primary_key_res_column_type,
 		RPNElement::MonotonicFunctionsChain & out_functions_chain);
 
-	bool isPrimaryKeyPossiblyWrappedByMonotonicFunctionsImpl(
-		const ASTPtr & node,
+	bool isPrimaryKeyPossiblyWrappedByMonotonicFunctionsImpl(const ASTPtr & node,
 		size_t & out_primary_key_column_num,
 		DataTypePtr & out_primary_key_column_type,
 		std::vector<const ASTFunction *> & out_functions_chain);
@@ -319,5 +307,4 @@ private:
 	ColumnIndices pk_columns;
 	const Block & pk_sample_block;
 };
-
 }

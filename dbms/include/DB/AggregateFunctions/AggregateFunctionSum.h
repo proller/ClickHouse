@@ -1,7 +1,7 @@
 #pragma once
 
-#include <DB/IO/WriteHelpers.h>
 #include <DB/IO/ReadHelpers.h>
+#include <DB/IO/WriteHelpers.h>
 
 #include <DB/DataTypes/DataTypesNumberFixed.h>
 
@@ -10,22 +10,27 @@
 
 namespace DB
 {
-
 template <typename T>
 struct AggregateFunctionSumData
 {
 	T sum;
 
-	AggregateFunctionSumData() : sum(0) {}
+	AggregateFunctionSumData() : sum(0)
+	{
+	}
 };
 
 
 /// Считает сумму чисел.
 template <typename T>
-class AggregateFunctionSum final : public IUnaryAggregateFunction<AggregateFunctionSumData<typename NearestFieldType<T>::Type>, AggregateFunctionSum<T> >
+class AggregateFunctionSum final
+	: public IUnaryAggregateFunction<AggregateFunctionSumData<typename NearestFieldType<T>::Type>, AggregateFunctionSum<T>>
 {
 public:
-	String getName() const override { return "sum"; }
+	String getName() const override
+	{
+		return "sum";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -65,6 +70,4 @@ public:
 		static_cast<ColumnVector<typename NearestFieldType<T>::Type> &>(to).getData().push_back(this->data(place).sum);
 	}
 };
-
-
 }

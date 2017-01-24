@@ -7,7 +7,6 @@
 
 namespace DB
 {
-
 class IAST;
 class IStorage;
 class ASTSelectQuery;
@@ -34,17 +33,19 @@ class Context;
 class InJoinSubqueriesPreprocessor
 {
 public:
-	InJoinSubqueriesPreprocessor(const Context & context) : context(context) {}
+	InJoinSubqueriesPreprocessor(const Context & context) : context(context)
+	{
+	}
 	void process(ASTSelectQuery * query) const;
 
 	/// These methods could be overriden for the need of the unit test.
 	virtual bool hasAtLeastTwoShards(const IStorage & table) const;
 	virtual std::pair<std::string, std::string> getRemoteDatabaseAndTableName(const IStorage & table) const;
-	virtual ~InJoinSubqueriesPreprocessor() {}
+	virtual ~InJoinSubqueriesPreprocessor()
+	{
+	}
 
 private:
 	const Context & context;
 };
-
-
 }

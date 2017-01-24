@@ -1,13 +1,11 @@
 #pragma once
 
-#include <DB/Interpreters/Aggregator.h>
 #include <DB/DataStreams/IProfilingBlockInputStream.h>
+#include <DB/Interpreters/Aggregator.h>
 
 
 namespace DB
 {
-
-
 /** Доагрегирует поток блоков, в котором каждый блок уже агрегирован.
   * Агрегатные функции в блоках не должны быть финализированы, чтобы их состояния можно было объединить.
   */
@@ -20,7 +18,10 @@ public:
 		children.push_back(input_);
 	}
 
-	String getName() const override { return "MergingAggregated"; }
+	String getName() const override
+	{
+		return "MergingAggregated";
+	}
 
 	String getID() const override
 	{
@@ -41,5 +42,4 @@ private:
 	BlocksList blocks;
 	BlocksList::iterator it;
 };
-
 }

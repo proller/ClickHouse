@@ -1,24 +1,27 @@
 #pragma once
 
-#include <map>
 #include <list>
-#include <string>
+#include <map>
 #include <set>
+#include <string>
 
-#include <DB/DataTypes/IDataType.h>
 #include <DB/Core/Names.h>
+#include <DB/DataTypes/IDataType.h>
 
 
 namespace DB
 {
-
 struct NameAndTypePair
 {
 	String name;
 	DataTypePtr type;
 
-	NameAndTypePair() {}
-	NameAndTypePair(const String & name_, const DataTypePtr & type_) : name(name_), type(type_) {}
+	NameAndTypePair()
+	{
+	}
+	NameAndTypePair(const String & name_, const DataTypePtr & type_) : name(name_), type(type_)
+	{
+	}
 
 	bool operator<(const NameAndTypePair & rhs) const
 	{
@@ -64,5 +67,4 @@ public:
 };
 
 using NamesAndTypesListPtr = std::shared_ptr<NamesAndTypesList>;
-
 }

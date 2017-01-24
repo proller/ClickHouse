@@ -6,7 +6,6 @@
 
 namespace DB
 {
-
 struct DictionaryStructure;
 class WriteBuffer;
 
@@ -24,16 +23,15 @@ struct ExternalQueryBuilder
 	/// NOTE There could be differences in escaping rules inside quotes. Escaping rules may not match that required by specific external DBMS.
 	enum QuotingStyle
 	{
-		None,			/// Write as-is, without quotes.
-		Backticks,		/// `mysql` style
-		DoubleQuotes	/// "postgres" style
+		None, /// Write as-is, without quotes.
+		Backticks, /// `mysql` style
+		DoubleQuotes /// "postgres" style
 	};
 
 	QuotingStyle quoting_style;
 
 
-	ExternalQueryBuilder(
-		const DictionaryStructure & dict_struct,
+	ExternalQueryBuilder(const DictionaryStructure & dict_struct,
 		const std::string & db,
 		const std::string & table,
 		const std::string & where,
@@ -57,9 +55,7 @@ struct ExternalQueryBuilder
 	};
 
 	std::string composeLoadKeysQuery(
-		const ConstColumnPlainPtrs & key_columns,
-		const std::vector<size_t> & requested_rows,
-		LoadKeysMethod method);
+		const ConstColumnPlainPtrs & key_columns, const std::vector<size_t> & requested_rows, LoadKeysMethod method);
 
 
 private:
@@ -75,5 +71,4 @@ private:
 	/// Write string with specified quoting style.
 	void writeQuoted(const std::string & s, WriteBuffer & out) const;
 };
-
 }

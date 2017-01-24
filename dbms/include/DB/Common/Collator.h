@@ -19,11 +19,11 @@
 
 namespace DB
 {
-	namespace ErrorCodes
-	{
-		extern const int UNSUPPORTED_COLLATION_LOCALE;
-		extern const int COLLATION_COMPARISON_FAILED;
-	}
+namespace ErrorCodes
+{
+	extern const int UNSUPPORTED_COLLATION_LOCALE;
+	extern const int COLLATION_COMPARISON_FAILED;
+}
 }
 
 
@@ -57,8 +57,8 @@ public:
 		UCollationResult compare_result = ucol_strcollIter(collator, &iter1, &iter2, &status);
 
 		if (status != U_ZERO_ERROR)
-			throw DB::Exception("ICU collation comparison failed with error code: " + DB::toString(status),
-								DB::ErrorCodes::COLLATION_COMPARISON_FAILED);
+			throw DB::Exception(
+				"ICU collation comparison failed with error code: " + DB::toString(status), DB::ErrorCodes::COLLATION_COMPARISON_FAILED);
 
 		/** Values of enum UCollationResult are equals to what exactly we need:
 		 * 	UCOL_EQUAL = 0

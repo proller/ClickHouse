@@ -3,8 +3,6 @@
 
 namespace DB
 {
-
-
 /** Merging consecutive passed blocks to specified minimum size.
   *
   * (But if one of input blocks has already at least specified size,
@@ -29,8 +27,12 @@ public:
 		bool ready = false;
 		Block block;
 
-		Result(bool ready_) : ready(ready_) {}
-		Result(Block && block_) : ready(true), block(std::move(block_)) {}
+		Result(bool ready_) : ready(ready_)
+		{
+		}
+		Result(Block && block_) : ready(true), block(std::move(block_))
+		{
+		}
 	};
 
 	/** Add next block and possibly returns squashed block.
@@ -48,5 +50,4 @@ private:
 
 	bool isEnoughSize(size_t rows, size_t bytes) const;
 };
-
 }

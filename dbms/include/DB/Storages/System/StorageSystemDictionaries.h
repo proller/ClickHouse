@@ -6,22 +6,26 @@
 
 namespace DB
 {
-
 class Context;
 
 
 class StorageSystemDictionaries : private ext::shared_ptr_helper<StorageSystemDictionaries>, public IStorage
 {
-friend class ext::shared_ptr_helper<StorageSystemDictionaries>;
+	friend class ext::shared_ptr_helper<StorageSystemDictionaries>;
 
 public:
 	static StoragePtr create(const std::string & name);
 
-	std::string getName() const override { return "SystemDictionaries"; }
-	std::string getTableName() const override { return name; }
+	std::string getName() const override
+	{
+		return "SystemDictionaries";
+	}
+	std::string getTableName() const override
+	{
+		return name;
+	}
 
-	BlockInputStreams read(
-		const Names & column_names,
+	BlockInputStreams read(const Names & column_names,
 		ASTPtr query,
 		const Context & context,
 		const Settings & settings,
@@ -35,7 +39,9 @@ private:
 
 	StorageSystemDictionaries(const std::string & name);
 
-	const NamesAndTypesList & getColumnsListImpl() const override { return columns; }
+	const NamesAndTypesList & getColumnsListImpl() const override
+	{
+		return columns;
+	}
 };
-
 }

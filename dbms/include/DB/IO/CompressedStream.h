@@ -2,7 +2,7 @@
 
 /** Общие дефайны */
 
-#define DBMS_MAX_COMPRESSED_SIZE 0x40000000ULL	/// 1GB
+#define DBMS_MAX_COMPRESSED_SIZE 0x40000000ULL /// 1GB
 
 #define QUICKLZ_ADDITIONAL_SPACE 400
 #define COMPRESSED_BLOCK_HEADER_SIZE 9
@@ -10,14 +10,13 @@
 
 namespace DB
 {
-
 /** Метод сжатия */
 enum class CompressionMethod
 {
 	QuickLZ = 0,
 	LZ4 = 1,
-	LZ4HC = 2,		/// Формат такой же, как у LZ4. Разница только при сжатии.
-	ZSTD = 3,		/// Экспериментальный алгоритм: https://github.com/Cyan4973/zstd
+	LZ4HC = 2, /// Формат такой же, как у LZ4. Разница только при сжатии.
+	ZSTD = 3, /// Экспериментальный алгоритм: https://github.com/Cyan4973/zstd
 };
 
 /** Формат сжатого блока следующий:
@@ -51,8 +50,7 @@ enum class CompressionMethod
 
 enum class CompressionMethodByte : uint8_t
 {
-	LZ4 	= 0x82,
-	ZSTD 	= 0x90,
+	LZ4 = 0x82,
+	ZSTD = 0x90,
 };
-
 }

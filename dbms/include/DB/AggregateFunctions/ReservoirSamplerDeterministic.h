@@ -1,18 +1,18 @@
 #pragma once
 
-#include <limits>
 #include <algorithm>
 #include <climits>
+#include <limits>
 #include <sstream>
-#include <DB/AggregateFunctions/ReservoirSampler.h>
+#include <boost/random.hpp>
+#include <Poco/Exception.h>
 #include <common/Common.h>
+#include <DB/AggregateFunctions/ReservoirSampler.h>
 #include <DB/Common/HashTable/Hash.h>
+#include <DB/Common/PODArray.h>
 #include <DB/IO/ReadBuffer.h>
 #include <DB/IO/ReadHelpers.h>
 #include <DB/IO/WriteHelpers.h>
-#include <DB/Common/PODArray.h>
-#include <Poco/Exception.h>
-#include <boost/random.hpp>
 
 
 /// Реализация алгоритма Reservoir Sampling. Инкрементально выбирает из добавленных объектов случайное подмножество размера sample_count.
@@ -43,8 +43,7 @@ enum class ReservoirSamplerDeterministicOnEmpty
 	RETURN_NAN_OR_ZERO,
 };
 
-template <typename T,
-	ReservoirSamplerDeterministicOnEmpty OnEmpty = ReservoirSamplerDeterministicOnEmpty::THROW>
+template <typename T, ReservoirSamplerDeterministicOnEmpty OnEmpty = ReservoirSamplerDeterministicOnEmpty::THROW>
 class ReservoirSamplerDeterministic
 {
 	bool good(const UInt32 hash)
@@ -53,8 +52,7 @@ class ReservoirSamplerDeterministic
 	}
 
 public:
-	ReservoirSamplerDeterministic(const size_t sample_count = DEFAULT_SAMPLE_COUNT)
-		: sample_count{sample_count}
+	ReservoirSamplerDeterministic(const size_t sample_count = DEFAULT_SAMPLE_COUNT) : sample_count{ sample_count }
 	{
 	}
 
@@ -177,7 +175,7 @@ private:
 		while (samples.size() + 1 >= sample_count)
 		{
 			if (++skip_degree > detail::MAX_SKIP_DEGREE)
-				throw DB::Exception{"skip_degree exceeds maximum value", DB::ErrorCodes::MEMORY_LIMIT_EXCEEDED};
+				throw DB::Exception{ "skip_degree exceeds maximum value", DB::ErrorCodes::MEMORY_LIMIT_EXCEEDED };
 			thinOut();
 		}
 
@@ -211,7 +209,7 @@ private:
 		if (sorted)
 			return;
 		sorted = true;
-		std::sort(samples.begin(), samples.end(), [] (const std::pair<T, UInt32> & lhs, const std::pair<T, UInt32> & rhs) {
+		std::sort(samples.begin(), samples.end(), [](const std::pair<T, UInt32> & lhs, const std::pair<T, UInt32> & rhs) {
 			return lhs.first < rhs.first;
 		});
 	}

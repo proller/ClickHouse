@@ -2,15 +2,14 @@
 
 #include <memory>
 
+#include <DB/Common/Arena.h>
+#include <DB/Common/typeid_cast.h>
 #include <DB/Core/Row.h>
 #include <DB/DataTypes/IDataType.h>
-#include <DB/Common/typeid_cast.h>
-#include <DB/Common/Arena.h>
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int AGGREGATE_FUNCTION_DOESNT_ALLOW_PARAMETERS;
@@ -48,14 +47,14 @@ public:
 	  */
 	virtual void setParameters(const Array & params)
 	{
-		throw Exception("Aggregate function " + getName() + " doesn't allow parameters.",
-			ErrorCodes::AGGREGATE_FUNCTION_DOESNT_ALLOW_PARAMETERS);
+		throw Exception(
+			"Aggregate function " + getName() + " doesn't allow parameters.", ErrorCodes::AGGREGATE_FUNCTION_DOESNT_ALLOW_PARAMETERS);
 	}
 
 	/// Получить тип результата.
 	virtual DataTypePtr getReturnType() const = 0;
 
-	virtual ~IAggregateFunction() {};
+	virtual ~IAggregateFunction(){};
 
 
 	/** Функции по работе с данными. */
@@ -105,7 +104,10 @@ public:
 	/** Возвращает true для агрегатных функций типа -State.
 	  * Они выполняются как другие агрегатные функции, но не финализируются (возвращают состояние агрегации, которое может быть объединено с другим).
 	  */
-	virtual bool isState() const { return false; }
+	virtual bool isState() const
+	{
+		return false;
+	}
 
 
 	/** Внутренний цикл, использующий указатель на функцию, получается лучше, чем использующий виртуальную функцию.
@@ -126,8 +128,14 @@ class IAggregateFunctionHelper : public IAggregateFunction
 protected:
 	using Data = T;
 
-	static Data & data(AggregateDataPtr place) 				{ return *reinterpret_cast<Data*>(place); }
-	static const Data & data(ConstAggregateDataPtr place) 	{ return *reinterpret_cast<const Data*>(place); }
+	static Data & data(AggregateDataPtr place)
+	{
+		return *reinterpret_cast<Data *>(place);
+	}
+	static const Data & data(ConstAggregateDataPtr place)
+	{
+		return *reinterpret_cast<const Data *>(place);
+	}
 
 public:
 	void create(AggregateDataPtr place) const override
@@ -159,5 +167,4 @@ public:
 
 
 using AggregateFunctionPtr = std::shared_ptr<IAggregateFunction>;
-
 }

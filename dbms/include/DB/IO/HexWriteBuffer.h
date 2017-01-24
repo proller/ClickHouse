@@ -10,7 +10,6 @@
 
 namespace DB
 {
-
 /** Всё что в него пишут, переводит в HEX (большими буквами) и пишет в другой WriteBuffer.
   */
 class HexWriteBuffer : public WriteBuffer
@@ -33,9 +32,11 @@ protected:
 	}
 
 public:
-	HexWriteBuffer(WriteBuffer & out_) : WriteBuffer(buf, sizeof(buf)), out(out_) {}
+	HexWriteBuffer(WriteBuffer & out_) : WriteBuffer(buf, sizeof(buf)), out(out_)
+	{
+	}
 
-    ~HexWriteBuffer() override
+	~HexWriteBuffer() override
 	{
 		try
 		{
@@ -47,5 +48,4 @@ public:
 		}
 	}
 };
-
 }

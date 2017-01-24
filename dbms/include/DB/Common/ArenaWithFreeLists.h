@@ -6,8 +6,6 @@
 
 namespace DB
 {
-
-
 /** В отличие от Arena, позволяет освобождать (для последующего повторного использования)
   *  выделенные ранее (не обязательно только что) куски памяти.
   * Для этого, запрашиваемый размер округляется вверх до степени двух
@@ -22,8 +20,7 @@ class ArenaWithFreeLists : private Allocator<false>, private boost::noncopyable
 private:
 	/// Если блок свободен, то в его начале хранится указатель на следующий свободный блок, либо nullptr, если свободных блоков больше нет.
 	/// Если блок используется, то в нём хранятся какие-то данные.
-	union Block
-	{
+	union Block {
 		Block * next;
 		char data[0];
 	};
@@ -42,13 +39,12 @@ private:
 
 	/// Списки свободных блоков. Каждый элемент указывает на голову соответствующего списка, либо равен nullptr.
 	/// Первые два элемента не используются, а предназначены для упрощения арифметики.
-	Block * free_lists[16] {};
+	Block * free_lists[16]{};
 
 public:
 	ArenaWithFreeLists(
-		const size_t initial_size = 4096, const size_t growth_factor = 2,
-		const size_t linear_growth_threshold = 128 * 1024 * 1024)
-		: pool{initial_size, growth_factor, linear_growth_threshold}
+		const size_t initial_size = 4096, const size_t growth_factor = 2, const size_t linear_growth_threshold = 128 * 1024 * 1024)
+		: pool{ initial_size, growth_factor, linear_growth_threshold }
 	{
 	}
 
@@ -94,6 +90,4 @@ public:
 		return pool.size();
 	}
 };
-
-
 }

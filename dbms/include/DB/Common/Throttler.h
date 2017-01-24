@@ -1,14 +1,13 @@
 #pragma once
 
-#include <mutex>
 #include <memory>
-#include <DB/Common/Stopwatch.h>
+#include <mutex>
 #include <DB/Common/Exception.h>
+#include <DB/Common/Stopwatch.h>
 #include <DB/IO/WriteHelpers.h>
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int LIMIT_EXCEEDED;
@@ -26,7 +25,9 @@ class Throttler
 {
 public:
 	Throttler(size_t max_speed_, size_t limit_, const char * limit_exceeded_exception_message_)
-		: max_speed(max_speed_), limit(limit_), limit_exceeded_exception_message(limit_exceeded_exception_message_) {}
+		: max_speed(max_speed_), limit(limit_), limit_exceeded_exception_message(limit_exceeded_exception_message_)
+	{
+	}
 
 	void add(size_t amount)
 	{
@@ -65,7 +66,7 @@ public:
 				timespec sleep_ts;
 				sleep_ts.tv_sec = sleep_ns / 1000000000;
 				sleep_ts.tv_nsec = sleep_ns % 1000000000;
-				nanosleep(&sleep_ts, nullptr);	/// NOTE Завершается раньше в случае сигнала. Это считается нормальным.
+				nanosleep(&sleep_ts, nullptr); /// NOTE Завершается раньше в случае сигнала. Это считается нормальным.
 			}
 		}
 	}
@@ -73,13 +74,12 @@ public:
 private:
 	size_t max_speed = 0;
 	size_t count = 0;
-	size_t limit = 0;		/// 0 - не ограничено.
+	size_t limit = 0; /// 0 - не ограничено.
 	const char * limit_exceeded_exception_message = nullptr;
-	Stopwatch watch {CLOCK_MONOTONIC_COARSE};
+	Stopwatch watch{ CLOCK_MONOTONIC_COARSE };
 	std::mutex mutex;
 };
 
 
 using ThrottlerPtr = std::shared_ptr<Throttler>;
-
 }

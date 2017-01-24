@@ -1,9 +1,9 @@
 #pragma once
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <limits>
-#include <algorithm>
 
 #include <type_traits>
 
@@ -15,23 +15,22 @@
 
 #include <common/exp10.h>
 
-#include <DB/Core/Types.h>
-#include <DB/Core/StringRef.h>
+#include <DB/Common/Arena.h>
 #include <DB/Common/Exception.h>
 #include <DB/Common/StringUtils.h>
-#include <DB/Common/Arena.h>
+#include <DB/Core/StringRef.h>
+#include <DB/Core/Types.h>
 
+#include <city.h>
 #include <DB/IO/ReadBuffer.h>
 #include <DB/IO/ReadBufferFromMemory.h>
 #include <DB/IO/VarInt.h>
-#include <city.h>
 
 #define DEFAULT_MAX_STRING_SIZE 0x00FFFFFFULL
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int CANNOT_PARSE_DATE;
@@ -43,26 +42,26 @@ namespace ErrorCodes
 
 inline char parseEscapeSequence(char c)
 {
-	switch(c)
+	switch (c)
 	{
-		case 'a':
-			return '\a';
-		case 'b':
-			return '\b';
-		case 'f':
-			return '\f';
-		case 'n':
-			return '\n';
-		case 'r':
-			return '\r';
-		case 't':
-			return '\t';
-		case 'v':
-			return '\v';
-		case '0':
-			return '\0';
-		default:
-			return c;
+	case 'a':
+		return '\a';
+	case 'b':
+		return '\b';
+	case 'f':
+		return '\f';
+	case 'n':
+		return '\n';
+	case 'r':
+		return '\r';
+	case 't':
+		return '\t';
+	case 'v':
+		return '\v';
+	case '0':
+		return '\0';
+	default:
+		return c;
 	}
 }
 
@@ -70,14 +69,14 @@ inline char unhex(char c)
 {
 	switch (c)
 	{
-		case '0' ... '9':
-			return c - '0';
-		case 'a' ... 'f':
-			return c - 'a' + 10;
-		case 'A' ... 'F':
-			return c - 'A' + 10;
-		default:
-			return 0;
+	case '0' ... '9':
+		return c - '0';
+	case 'a' ... 'f':
+		return c - 'a' + 10;
+	case 'A' ... 'F':
+		return c - 'A' + 10;
+	default:
+		return 0;
 	}
 }
 
@@ -237,31 +236,31 @@ ReturnType readIntTextImpl(T & x, ReadBuffer & buf)
 	{
 		switch (*buf.position())
 		{
-			case '+':
-				break;
-			case '-':
-			    if (std::is_signed<T>::value)
-					negative = true;
-				else
-					return ReturnType(false);
-				break;
-			case '0':
-			case '1':
-			case '2':
-			case '3':
-			case '4':
-			case '5':
-			case '6':
-			case '7':
-			case '8':
-			case '9':
-				x *= 10;
-				x += *buf.position() - '0';
-				break;
-			default:
-				if (negative)
-					x = -x;
-				return ReturnType(true);
+		case '+':
+			break;
+		case '-':
+			if (std::is_signed<T>::value)
+				negative = true;
+			else
+				return ReturnType(false);
+			break;
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+			x *= 10;
+			x += *buf.position() - '0';
+			break;
+		default:
+			if (negative)
+				x = -x;
+			return ReturnType(true);
 		}
 		++buf.position();
 	}
@@ -295,8 +294,7 @@ void readIntTextUnsafe(T & x, ReadBuffer & buf)
 	bool negative = false;
 	x = 0;
 
-	auto on_error = []
-	{
+	auto on_error = [] {
 		if (throw_on_error)
 			throwReadAfterEOF();
 	};
@@ -312,7 +310,7 @@ void readIntTextUnsafe(T & x, ReadBuffer & buf)
 			return on_error();
 	}
 
-	if (*buf.position() == '0')					/// There are many zeros in real datasets.
+	if (*buf.position() == '0') /// There are many zeros in real datasets.
 	{
 		++buf.position();
 		return;
@@ -320,7 +318,7 @@ void readIntTextUnsafe(T & x, ReadBuffer & buf)
 
 	while (!buf.eof())
 	{
-		if ((*buf.position() & 0xF0) == 0x30)	/// It makes sense to have this condition inside loop.
+		if ((*buf.position() & 0xF0) == 0x30) /// It makes sense to have this condition inside loop.
 		{
 			x *= 10;
 			x += *buf.position() & 0x0F;
@@ -334,7 +332,7 @@ void readIntTextUnsafe(T & x, ReadBuffer & buf)
 		x = -x;
 }
 
-template<typename T>
+template <typename T>
 void tryReadIntTextUnsafe(T & x, ReadBuffer & buf)
 {
 	return readIntTextUnsafe<T, false>(x, buf);
@@ -386,82 +384,82 @@ ReturnType readFloatTextImpl(T & x, ReadBuffer & buf)
 	{
 		switch (*buf.position())
 		{
-			case '+':
-				break;
-			case '-':
-				negative = true;
-				break;
-			case point_symbol:
-				after_point = true;
-				break;
-			case '0':
-			case '1':
-			case '2':
-			case '3':
-			case '4':
-			case '5':
-			case '6':
-			case '7':
-			case '8':
-			case '9':
-				if (after_point)
-				{
-					power_of_ten /= 10;
-					x += (*buf.position() - '0') * power_of_ten;
-				}
-				else
-				{
-					x *= 10;
-					x += *buf.position() - '0';
-				}
-				break;
-			case 'e':
-			case 'E':
+		case '+':
+			break;
+		case '-':
+			negative = true;
+			break;
+		case point_symbol:
+			after_point = true;
+			break;
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+			if (after_point)
 			{
-				++buf.position();
-				Int32 exponent = 0;
-				bool res = exceptionPolicySelector<throw_exception>(readIntText<Int32>, tryReadIntText<Int32>, exponent, buf);
-				if (res)
-				{
-					x *= exp10(exponent);
-					if (negative)
-						x = -x;
-				}
-				return ReturnType(res);
+				power_of_ten /= 10;
+				x += (*buf.position() - '0') * power_of_ten;
 			}
-
-			case 'i':
-			case 'I':
+			else
 			{
-				bool res = exceptionPolicySelector<throw_exception>(assertInfinity, parseInfinity, buf);
-				if (res)
-				{
-					x = std::numeric_limits<T>::infinity();
-					if (negative)
-						x = -x;
-				}
-				return ReturnType(res);
+				x *= 10;
+				x += *buf.position() - '0';
 			}
-
-			case 'n':
-			case 'N':
+			break;
+		case 'e':
+		case 'E':
+		{
+			++buf.position();
+			Int32 exponent = 0;
+			bool res = exceptionPolicySelector<throw_exception>(readIntText<Int32>, tryReadIntText<Int32>, exponent, buf);
+			if (res)
 			{
-				bool res = exceptionPolicySelector<throw_exception>(assertNaN, parseNaN, buf);
-				if (res)
-				{
-					x = std::numeric_limits<T>::quiet_NaN();
-					if (negative)
-						x = -x;
-				}
-				return ReturnType(res);
-			}
-
-			default:
-			{
+				x *= exp10(exponent);
 				if (negative)
 					x = -x;
-				return ReturnType(true);
 			}
+			return ReturnType(res);
+		}
+
+		case 'i':
+		case 'I':
+		{
+			bool res = exceptionPolicySelector<throw_exception>(assertInfinity, parseInfinity, buf);
+			if (res)
+			{
+				x = std::numeric_limits<T>::infinity();
+				if (negative)
+					x = -x;
+			}
+			return ReturnType(res);
+		}
+
+		case 'n':
+		case 'N':
+		{
+			bool res = exceptionPolicySelector<throw_exception>(assertNaN, parseNaN, buf);
+			if (res)
+			{
+				x = std::numeric_limits<T>::quiet_NaN();
+				if (negative)
+					x = -x;
+			}
+			return ReturnType(res);
+		}
+
+		default:
+		{
+			if (negative)
+				x = -x;
+			return ReturnType(true);
+		}
 		}
 		++buf.position();
 	}
@@ -542,8 +540,8 @@ void readJSONStringInto(Vector & s, ReadBuffer & buf);
 /// This could be used as template parameter for functions above, if you want to just skip data.
 struct NullSink
 {
-	void append(const char *, size_t) {};
-	void push_back(char) {};
+	void append(const char *, size_t){};
+	void push_back(char){};
 };
 
 
@@ -648,73 +646,217 @@ inline void readDateTimeText(LocalDateTime & datetime, ReadBuffer & buf)
 
 
 /// Generic methods to read value in native binary format.
-inline void readBinary(UInt8 & x, 	ReadBuffer & buf) { readPODBinary(x, buf); }
-inline void readBinary(UInt16 & x, 	ReadBuffer & buf) { readPODBinary(x, buf); }
-inline void readBinary(UInt32 & x, 	ReadBuffer & buf) { readPODBinary(x, buf); }
-inline void readBinary(UInt64 & x, 	ReadBuffer & buf) { readPODBinary(x, buf); }
+inline void readBinary(UInt8 & x, ReadBuffer & buf)
+{
+	readPODBinary(x, buf);
+}
+inline void readBinary(UInt16 & x, ReadBuffer & buf)
+{
+	readPODBinary(x, buf);
+}
+inline void readBinary(UInt32 & x, ReadBuffer & buf)
+{
+	readPODBinary(x, buf);
+}
+inline void readBinary(UInt64 & x, ReadBuffer & buf)
+{
+	readPODBinary(x, buf);
+}
 #ifdef __APPLE__
 /**
  * On Linux x86_64 'int64_t' maps to "long", but on Apple x86_64 it maps to 'long long'
  * But on both platforms Int64 maps to 'long'. This is two different types
  * with the same size==8, so we need extra functions here
  */
-inline void readBinary(uint64_t & x, 	ReadBuffer & buf) { readPODBinary(x, buf); }
-inline void readBinary(int64_t & x, 	ReadBuffer & buf) { readPODBinary(x, buf); }
+inline void readBinary(uint64_t & x, ReadBuffer & buf)
+{
+	readPODBinary(x, buf);
+}
+inline void readBinary(int64_t & x, ReadBuffer & buf)
+{
+	readPODBinary(x, buf);
+}
 #endif
-inline void readBinary(Int8 & x, 	ReadBuffer & buf) { readPODBinary(x, buf); }
-inline void readBinary(Int16 & x, 	ReadBuffer & buf) { readPODBinary(x, buf); }
-inline void readBinary(Int32 & x, 	ReadBuffer & buf) { readPODBinary(x, buf); }
-inline void readBinary(Int64 & x, 	ReadBuffer & buf) { readPODBinary(x, buf); }
-inline void readBinary(Float32 & x, ReadBuffer & buf) { readPODBinary(x, buf); }
-inline void readBinary(Float64 & x, ReadBuffer & buf) { readPODBinary(x, buf); }
-inline void readBinary(String & x, 	ReadBuffer & buf) { readStringBinary(x, buf); }
-inline void readBinary(bool & x, 	ReadBuffer & buf) { readPODBinary(x, buf); }
-inline void readBinary(uint128 & x,	ReadBuffer & buf) { readPODBinary(x, buf); }
+inline void readBinary(Int8 & x, ReadBuffer & buf)
+{
+	readPODBinary(x, buf);
+}
+inline void readBinary(Int16 & x, ReadBuffer & buf)
+{
+	readPODBinary(x, buf);
+}
+inline void readBinary(Int32 & x, ReadBuffer & buf)
+{
+	readPODBinary(x, buf);
+}
+inline void readBinary(Int64 & x, ReadBuffer & buf)
+{
+	readPODBinary(x, buf);
+}
+inline void readBinary(Float32 & x, ReadBuffer & buf)
+{
+	readPODBinary(x, buf);
+}
+inline void readBinary(Float64 & x, ReadBuffer & buf)
+{
+	readPODBinary(x, buf);
+}
+inline void readBinary(String & x, ReadBuffer & buf)
+{
+	readStringBinary(x, buf);
+}
+inline void readBinary(bool & x, ReadBuffer & buf)
+{
+	readPODBinary(x, buf);
+}
+inline void readBinary(uint128 & x, ReadBuffer & buf)
+{
+	readPODBinary(x, buf);
+}
 
-inline void readBinary(VisitID_t & x, ReadBuffer & buf) { readPODBinary(x, buf); }
-inline void readBinary(LocalDate & x, 	ReadBuffer & buf) 	{ readPODBinary(x, buf); }
-inline void readBinary(LocalDateTime & x, ReadBuffer & buf) { readPODBinary(x, buf); }
+inline void readBinary(VisitID_t & x, ReadBuffer & buf)
+{
+	readPODBinary(x, buf);
+}
+inline void readBinary(LocalDate & x, ReadBuffer & buf)
+{
+	readPODBinary(x, buf);
+}
+inline void readBinary(LocalDateTime & x, ReadBuffer & buf)
+{
+	readPODBinary(x, buf);
+}
 
 
 /// Generic methods to read value in text tab-separated format.
-inline void readText(UInt8 & x, 	ReadBuffer & buf) { readIntText(x, buf); }
-inline void readText(UInt16 & x, 	ReadBuffer & buf) { readIntText(x, buf); }
-inline void readText(UInt32 & x, 	ReadBuffer & buf) { readIntText(x, buf); }
-inline void readText(UInt64 & x, 	ReadBuffer & buf) { readIntText(x, buf); }
+inline void readText(UInt8 & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readText(UInt16 & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readText(UInt32 & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readText(UInt64 & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
 #ifdef __APPLE__
-inline void readText(uint64_t & x, 	ReadBuffer & buf) { readIntText(x, buf); }
-inline void readText(int64_t & x, 	ReadBuffer & buf) { readIntText(x, buf); }
+inline void readText(uint64_t & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readText(int64_t & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
 #endif
-inline void readText(Int8 & x, 		ReadBuffer & buf) { readIntText(x, buf); }
-inline void readText(Int16 & x, 	ReadBuffer & buf) { readIntText(x, buf); }
-inline void readText(Int32 & x, 	ReadBuffer & buf) { readIntText(x, buf); }
-inline void readText(Int64 & x, 	ReadBuffer & buf) { readIntText(x, buf); }
-inline void readText(Float32 & x, 	ReadBuffer & buf) { readFloatText(x, buf); }
-inline void readText(Float64 & x, 	ReadBuffer & buf) { readFloatText(x, buf); }
-inline void readText(String & x, 	ReadBuffer & buf) { readEscapedString(x, buf); }
-inline void readText(bool & x, 		ReadBuffer & buf) { readBoolText(x, buf); }
+inline void readText(Int8 & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readText(Int16 & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readText(Int32 & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readText(Int64 & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readText(Float32 & x, ReadBuffer & buf)
+{
+	readFloatText(x, buf);
+}
+inline void readText(Float64 & x, ReadBuffer & buf)
+{
+	readFloatText(x, buf);
+}
+inline void readText(String & x, ReadBuffer & buf)
+{
+	readEscapedString(x, buf);
+}
+inline void readText(bool & x, ReadBuffer & buf)
+{
+	readBoolText(x, buf);
+}
 
-inline void readText(VisitID_t & x, ReadBuffer & buf) { readIntText(x, buf); }
-inline void readText(LocalDate & x, 	ReadBuffer & buf) { readDateText(x, buf); }
-inline void readText(LocalDateTime & x, ReadBuffer & buf) { readDateTimeText(x, buf); }
+inline void readText(VisitID_t & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readText(LocalDate & x, ReadBuffer & buf)
+{
+	readDateText(x, buf);
+}
+inline void readText(LocalDateTime & x, ReadBuffer & buf)
+{
+	readDateTimeText(x, buf);
+}
 
 
 /// Generic methods to read value in text format,
 ///  possibly in single quotes (only for data types that use quotes in VALUES format of INSERT statement in SQL).
-inline void readQuoted(UInt8 & x, 	ReadBuffer & buf) { readIntText(x, buf); }
-inline void readQuoted(UInt16 & x, 	ReadBuffer & buf) { readIntText(x, buf); }
-inline void readQuoted(UInt32 & x, 	ReadBuffer & buf) { readIntText(x, buf); }
-inline void readQuoted(UInt64 & x, 	ReadBuffer & buf) { readIntText(x, buf); }
-inline void readQuoted(Int8 & x, 	ReadBuffer & buf) { readIntText(x, buf); }
-inline void readQuoted(Int16 & x, 	ReadBuffer & buf) { readIntText(x, buf); }
-inline void readQuoted(Int32 & x, 	ReadBuffer & buf) { readIntText(x, buf); }
-inline void readQuoted(Int64 & x, 	ReadBuffer & buf) { readIntText(x, buf); }
-inline void readQuoted(Float32 & x, ReadBuffer & buf) { readFloatText(x, buf); }
-inline void readQuoted(Float64 & x, ReadBuffer & buf) { readFloatText(x, buf); }
-inline void readQuoted(String & x, 	ReadBuffer & buf) { readQuotedString(x, buf); }
-inline void readQuoted(bool & x, 	ReadBuffer & buf) { readBoolText(x, buf); }
+inline void readQuoted(UInt8 & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readQuoted(UInt16 & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readQuoted(UInt32 & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readQuoted(UInt64 & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readQuoted(Int8 & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readQuoted(Int16 & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readQuoted(Int32 & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readQuoted(Int64 & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readQuoted(Float32 & x, ReadBuffer & buf)
+{
+	readFloatText(x, buf);
+}
+inline void readQuoted(Float64 & x, ReadBuffer & buf)
+{
+	readFloatText(x, buf);
+}
+inline void readQuoted(String & x, ReadBuffer & buf)
+{
+	readQuotedString(x, buf);
+}
+inline void readQuoted(bool & x, ReadBuffer & buf)
+{
+	readBoolText(x, buf);
+}
 
-inline void readQuoted(VisitID_t & x, ReadBuffer & buf) { readIntText(x, buf); }
+inline void readQuoted(VisitID_t & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
 
 inline void readQuoted(LocalDate & x, ReadBuffer & buf)
 {
@@ -732,20 +874,59 @@ inline void readQuoted(LocalDateTime & x, ReadBuffer & buf)
 
 
 /// Same as above, but in double quotes.
-inline void readDoubleQuoted(UInt8 & x, 	ReadBuffer & buf) { readIntText(x, buf); }
-inline void readDoubleQuoted(UInt16 & x, 	ReadBuffer & buf) { readIntText(x, buf); }
-inline void readDoubleQuoted(UInt32 & x, 	ReadBuffer & buf) { readIntText(x, buf); }
-inline void readDoubleQuoted(UInt64 & x, 	ReadBuffer & buf) { readIntText(x, buf); }
-inline void readDoubleQuoted(Int8 & x, 		ReadBuffer & buf) { readIntText(x, buf); }
-inline void readDoubleQuoted(Int16 & x, 	ReadBuffer & buf) { readIntText(x, buf); }
-inline void readDoubleQuoted(Int32 & x, 	ReadBuffer & buf) { readIntText(x, buf); }
-inline void readDoubleQuoted(Int64 & x, 	ReadBuffer & buf) { readIntText(x, buf); }
-inline void readDoubleQuoted(Float32 & x, 	ReadBuffer & buf) { readFloatText(x, buf); }
-inline void readDoubleQuoted(Float64 & x, 	ReadBuffer & buf) { readFloatText(x, buf); }
-inline void readDoubleQuoted(String & x, 	ReadBuffer & buf) { readDoubleQuotedString(x, buf); }
-inline void readDoubleQuoted(bool & x, 		ReadBuffer & buf) { readBoolText(x, buf); }
+inline void readDoubleQuoted(UInt8 & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readDoubleQuoted(UInt16 & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readDoubleQuoted(UInt32 & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readDoubleQuoted(UInt64 & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readDoubleQuoted(Int8 & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readDoubleQuoted(Int16 & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readDoubleQuoted(Int32 & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readDoubleQuoted(Int64 & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
+inline void readDoubleQuoted(Float32 & x, ReadBuffer & buf)
+{
+	readFloatText(x, buf);
+}
+inline void readDoubleQuoted(Float64 & x, ReadBuffer & buf)
+{
+	readFloatText(x, buf);
+}
+inline void readDoubleQuoted(String & x, ReadBuffer & buf)
+{
+	readDoubleQuotedString(x, buf);
+}
+inline void readDoubleQuoted(bool & x, ReadBuffer & buf)
+{
+	readBoolText(x, buf);
+}
 
-inline void readDoubleQuoted(VisitID_t & x, ReadBuffer & buf) { readIntText(x, buf); }
+inline void readDoubleQuoted(VisitID_t & x, ReadBuffer & buf)
+{
+	readIntText(x, buf);
+}
 
 inline void readDoubleQuoted(LocalDate & x, ReadBuffer & buf)
 {
@@ -780,21 +961,66 @@ inline void readCSVSimple(T & x, ReadBuffer & buf)
 		assertChar(maybe_quote, buf);
 }
 
-inline void readCSV(UInt8 & x, 		ReadBuffer & buf) { readCSVSimple(x, buf); }
-inline void readCSV(UInt16 & x, 	ReadBuffer & buf) { readCSVSimple(x, buf); }
-inline void readCSV(UInt32 & x, 	ReadBuffer & buf) { readCSVSimple(x, buf); }
-inline void readCSV(UInt64 & x, 	ReadBuffer & buf) { readCSVSimple(x, buf); }
-inline void readCSV(Int8 & x, 		ReadBuffer & buf) { readCSVSimple(x, buf); }
-inline void readCSV(Int16 & x, 		ReadBuffer & buf) { readCSVSimple(x, buf); }
-inline void readCSV(Int32 & x, 		ReadBuffer & buf) { readCSVSimple(x, buf); }
-inline void readCSV(Int64 & x, 		ReadBuffer & buf) { readCSVSimple(x, buf); }
-inline void readCSV(Float32 & x, 	ReadBuffer & buf) { readCSVSimple(x, buf); }
-inline void readCSV(Float64 & x, 	ReadBuffer & buf) { readCSVSimple(x, buf); }
-inline void readCSV(String & x, ReadBuffer & buf, const char delimiter = ',') { readCSVString(x, buf, delimiter); }
-inline void readCSV(bool & x, 		ReadBuffer & buf) { readCSVSimple(x, buf); }
-inline void readCSV(VisitID_t & x, 	ReadBuffer & buf) { readCSVSimple(x, buf); }
-inline void readCSV(LocalDate & x, 	ReadBuffer & buf) { readCSVSimple(x, buf); }
-inline void readCSV(LocalDateTime & x, ReadBuffer & buf) { readCSVSimple(x, buf); }
+inline void readCSV(UInt8 & x, ReadBuffer & buf)
+{
+	readCSVSimple(x, buf);
+}
+inline void readCSV(UInt16 & x, ReadBuffer & buf)
+{
+	readCSVSimple(x, buf);
+}
+inline void readCSV(UInt32 & x, ReadBuffer & buf)
+{
+	readCSVSimple(x, buf);
+}
+inline void readCSV(UInt64 & x, ReadBuffer & buf)
+{
+	readCSVSimple(x, buf);
+}
+inline void readCSV(Int8 & x, ReadBuffer & buf)
+{
+	readCSVSimple(x, buf);
+}
+inline void readCSV(Int16 & x, ReadBuffer & buf)
+{
+	readCSVSimple(x, buf);
+}
+inline void readCSV(Int32 & x, ReadBuffer & buf)
+{
+	readCSVSimple(x, buf);
+}
+inline void readCSV(Int64 & x, ReadBuffer & buf)
+{
+	readCSVSimple(x, buf);
+}
+inline void readCSV(Float32 & x, ReadBuffer & buf)
+{
+	readCSVSimple(x, buf);
+}
+inline void readCSV(Float64 & x, ReadBuffer & buf)
+{
+	readCSVSimple(x, buf);
+}
+inline void readCSV(String & x, ReadBuffer & buf, const char delimiter = ',')
+{
+	readCSVString(x, buf, delimiter);
+}
+inline void readCSV(bool & x, ReadBuffer & buf)
+{
+	readCSVSimple(x, buf);
+}
+inline void readCSV(VisitID_t & x, ReadBuffer & buf)
+{
+	readCSVSimple(x, buf);
+}
+inline void readCSV(LocalDate & x, ReadBuffer & buf)
+{
+	readCSVSimple(x, buf);
+}
+inline void readCSV(LocalDateTime & x, ReadBuffer & buf)
+{
+	readCSVSimple(x, buf);
+}
 
 
 template <typename T>
@@ -898,31 +1124,31 @@ static inline const char * tryReadIntText(T & x, const char * pos, const char * 
 	{
 		switch (*pos)
 		{
-			case '+':
-				break;
-			case '-':
-				if (std::is_signed<T>::value)
-					negative = true;
-				else
-					return pos;
-				break;
-			case '0':
-			case '1':
-			case '2':
-			case '3':
-			case '4':
-			case '5':
-			case '6':
-			case '7':
-			case '8':
-			case '9':
-				x *= 10;
-				x += *pos - '0';
-				break;
-			default:
-				if (negative)
-					x = -x;
+		case '+':
+			break;
+		case '-':
+			if (std::is_signed<T>::value)
+				negative = true;
+			else
 				return pos;
+			break;
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+			x *= 10;
+			x += *pos - '0';
+			break;
+		default:
+			if (negative)
+				x = -x;
+			return pos;
 		}
 		++pos;
 	}
@@ -961,14 +1187,10 @@ inline T parse(const String & s)
   */
 inline void skipBOMIfExists(ReadBuffer & buf)
 {
-	if (!buf.eof()
-		&& buf.position() + 3 < buf.buffer().end()
-		&& buf.position()[0] == '\xEF'
-		&& buf.position()[1] == '\xBB'
+	if (!buf.eof() && buf.position() + 3 < buf.buffer().end() && buf.position()[0] == '\xEF' && buf.position()[1] == '\xBB'
 		&& buf.position()[2] == '\xBF')
 	{
 		buf.position() += 3;
 	}
 }
-
 }

@@ -2,14 +2,13 @@
 
 #include <tuple>
 
+#include <DB/Common/PODArray.h>
 #include <DB/Core/Types.h>
 #include <DB/IO/WriteHelpers.h>
-#include <DB/Common/PODArray.h>
 
 
 namespace DB
 {
-
 /** Засечка - позиция в сжатом файле. Сжатый файл состоит из уложенных подряд сжатых блоков.
   * Засечка представляют собой пару - смещение в файле до начала сжатого блока, смещение в разжатом блоке до начала данных.
   */
@@ -35,5 +34,4 @@ struct MarkInCompressedFile
 };
 
 using MarksInCompressedFile = PODArray<MarkInCompressedFile>;
-
 }

@@ -6,19 +6,18 @@
 #include <type_traits>
 
 #if defined(__x86_64__)
-	#define LIBDIVIDE_USE_SSE2 1
+#define LIBDIVIDE_USE_SSE2 1
 #endif
 
 #include <libdivide.h>
 
 namespace DB
 {
-
 template <typename T>
 struct BlockFilterCreator
 {
-	static std::vector<IColumn::Filter> perform(const size_t num_rows, const IColumn * column,
-		size_t num_shards, const std::vector<size_t> & slots)
+	static std::vector<IColumn::Filter> perform(
+		const size_t num_rows, const IColumn * column, size_t num_shards, const std::vector<size_t> & slots)
 	{
 		const auto total_weight = slots.size();
 		std::vector<IColumn::Filter> filters(num_shards);
@@ -52,13 +51,12 @@ struct BlockFilterCreator
 			{
 				filters[i].resize(num_rows);
 				for (size_t j = 0; j < num_rows; ++j)
-					filters[i][j] = slots[
-						static_cast<TUInt32Or64>(data[j]) - (static_cast<TUInt32Or64>(data[j]) / divider) * total_weight] == i;
+					filters[i][j]
+						= slots[static_cast<TUInt32Or64>(data[j]) - (static_cast<TUInt32Or64>(data[j]) / divider) * total_weight] == i;
 			}
 		}
 
 		return filters;
 	}
 };
-
 }

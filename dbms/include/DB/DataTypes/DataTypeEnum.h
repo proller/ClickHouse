@@ -1,16 +1,15 @@
 #pragma once
 
-#include <DB/DataTypes/IDataType.h>
-#include <DB/Columns/ColumnVector.h>
-#include <DB/Columns/ColumnConst.h>
-#include <DB/Common/HashTable/HashMap.h>
-#include <vector>
 #include <unordered_map>
+#include <vector>
+#include <DB/Columns/ColumnConst.h>
+#include <DB/Columns/ColumnVector.h>
+#include <DB/Common/HashTable/HashMap.h>
+#include <DB/DataTypes/IDataType.h>
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int LOGICAL_ERROR;
@@ -19,7 +18,6 @@ namespace ErrorCodes
 class IDataTypeEnum : public IDataType
 {
 public:
-
 	virtual Field castToName(const Field & value_or_name) const = 0;
 
 	virtual Field castToValue(const Field & value_or_name) const = 0;
@@ -50,19 +48,28 @@ public:
 	DataTypeEnum(const Values & values_);
 	DataTypeEnum(const DataTypeEnum & other);
 
-	const Values & getValues() const { return values; }
-	std::string getName() const override { return name; }
-	bool isNumeric() const override { return true; }
-	bool behavesAsNumber() const override { return true; }
+	const Values & getValues() const
+	{
+		return values;
+	}
+	std::string getName() const override
+	{
+		return name;
+	}
+	bool isNumeric() const override
+	{
+		return true;
+	}
+	bool behavesAsNumber() const override
+	{
+		return true;
+	}
 
 	const StringRef & getNameForValue(const FieldType & value) const
 	{
 		const auto it = value_to_name_map.find(value);
 		if (it == std::end(value_to_name_map))
-			throw Exception{
-				"Unexpected value " + toString(value) + " for type " + getName(),
-				ErrorCodes::LOGICAL_ERROR
-			};
+			throw Exception{ "Unexpected value " + toString(value) + " for type " + getName(), ErrorCodes::LOGICAL_ERROR };
 
 		return it->second;
 	}
@@ -71,9 +78,7 @@ public:
 	{
 		const auto it = name_to_value_map.find(name);
 		if (it == std::end(name_to_value_map))
-			throw Exception{
-				"Unknown element '" + name.toString() + "' for type " + getName(),
-				ErrorCodes::LOGICAL_ERROR};
+			throw Exception{ "Unknown element '" + name.toString() + "' for type " + getName(), ErrorCodes::LOGICAL_ERROR };
 
 		return it->second;
 	}
@@ -102,9 +107,15 @@ public:
 	void serializeBinaryBulk(const IColumn & column, WriteBuffer & ostr, const size_t offset, size_t limit) const override;
 	void deserializeBinaryBulk(IColumn & column, ReadBuffer & istr, const size_t limit, const double avg_value_size_hint) const override;
 
-	size_t getSizeOfField() const override { return sizeof(FieldType); }
+	size_t getSizeOfField() const override
+	{
+		return sizeof(FieldType);
+	}
 
-	ColumnPtr createColumn() const override { return std::make_shared<ColumnType>(); }
+	ColumnPtr createColumn() const override
+	{
+		return std::make_shared<ColumnType>();
+	}
 	ColumnPtr createConstColumn(const size_t size, const Field & field) const override;
 
 	Field getDefault() const override;
@@ -113,6 +124,4 @@ public:
 
 using DataTypeEnum8 = DataTypeEnum<Int8>;
 using DataTypeEnum16 = DataTypeEnum<Int16>;
-
-
 }

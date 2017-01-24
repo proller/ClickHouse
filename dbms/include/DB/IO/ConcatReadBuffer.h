@@ -7,7 +7,6 @@
 
 namespace DB
 {
-
 /** Читает из конкатенации нескольких ReadBuffer-ов
   */
 class ConcatReadBuffer : public ReadBuffer
@@ -51,7 +50,9 @@ protected:
 	}
 
 public:
-	ConcatReadBuffer(const ReadBuffers & buffers_) : ReadBuffer(nullptr, 0), buffers(buffers_), current(buffers.begin()) {}
+	ConcatReadBuffer(const ReadBuffers & buffers_) : ReadBuffer(nullptr, 0), buffers(buffers_), current(buffers.begin())
+	{
+	}
 
 	ConcatReadBuffer(ReadBuffer & buf1, ReadBuffer & buf2) : ReadBuffer(nullptr, 0)
 	{
@@ -60,5 +61,4 @@ public:
 		current = buffers.begin();
 	}
 };
-
 }

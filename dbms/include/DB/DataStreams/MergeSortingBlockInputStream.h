@@ -10,13 +10,12 @@
 #include <DB/DataStreams/IProfilingBlockInputStream.h>
 #include <DB/DataStreams/NativeBlockInputStream.h>
 
-#include <DB/IO/ReadBufferFromFile.h>
 #include <DB/IO/CompressedReadBuffer.h>
+#include <DB/IO/ReadBufferFromFile.h>
 
 
 namespace DB
 {
-
 /** Merges stream of sorted each-separately blocks to sorted as-a-whole stream of blocks.
   * If data to sort is too much, could use external sorting, with temporary files.
   */
@@ -28,11 +27,16 @@ class MergeSortingBlocksBlockInputStream : public IProfilingBlockInputStream
 {
 public:
 	/// limit - if not 0, allowed to return just first 'limit' rows in sorted order.
-	MergeSortingBlocksBlockInputStream(Blocks & blocks_, SortDescription & description_,
-		size_t max_merged_block_size_, size_t limit_ = 0);
+	MergeSortingBlocksBlockInputStream(Blocks & blocks_, SortDescription & description_, size_t max_merged_block_size_, size_t limit_ = 0);
 
-	String getName() const override { return "MergeSortingBlocks"; }
-	String getID() const override { return getName(); }
+	String getName() const override
+	{
+		return "MergeSortingBlocks";
+	}
+	String getID() const override
+	{
+		return getName();
+	}
 
 protected:
 	Block readImpl() override;
@@ -64,16 +68,25 @@ class MergeSortingBlockInputStream : public IProfilingBlockInputStream
 {
 public:
 	/// limit - if not 0, allowed to return just first 'limit' rows in sorted order.
-	MergeSortingBlockInputStream(BlockInputStreamPtr input_, SortDescription & description_,
-		size_t max_merged_block_size_, size_t limit_,
-		size_t max_bytes_before_external_sort_, const std::string & tmp_path_)
-		: description(description_), max_merged_block_size(max_merged_block_size_), limit(limit_),
-		max_bytes_before_external_sort(max_bytes_before_external_sort_), tmp_path(tmp_path_)
+	MergeSortingBlockInputStream(BlockInputStreamPtr input_,
+		SortDescription & description_,
+		size_t max_merged_block_size_,
+		size_t limit_,
+		size_t max_bytes_before_external_sort_,
+		const std::string & tmp_path_)
+		: description(description_),
+		  max_merged_block_size(max_merged_block_size_),
+		  limit(limit_),
+		  max_bytes_before_external_sort(max_bytes_before_external_sort_),
+		  tmp_path(tmp_path_)
 	{
 		children.push_back(input_);
 	}
 
-	String getName() const override { return "MergeSorting"; }
+	String getName() const override
+	{
+		return "MergeSorting";
+	}
 
 	String getID() const override
 	{
@@ -120,12 +133,13 @@ private:
 		BlockInputStreamPtr block_in;
 
 		TemporaryFileStream(const std::string & path)
-			: file_in(path), compressed_in(file_in), block_in(std::make_shared<NativeBlockInputStream>(compressed_in)) {}
+			: file_in(path), compressed_in(file_in), block_in(std::make_shared<NativeBlockInputStream>(compressed_in))
+		{
+		}
 	};
 
 	std::vector<std::unique_ptr<TemporaryFileStream>> temporary_inputs;
 
 	BlockInputStreams inputs_to_merge;
 };
-
 }

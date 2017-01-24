@@ -7,7 +7,6 @@
 
 namespace DB
 {
-
 /** Интерфейс для пулов соединений.
   *
   * Использование (на примере обычного ConnectionPool):
@@ -25,7 +24,9 @@ public:
 	using Entry = PoolBase<Connection>::Entry;
 
 public:
-	virtual ~IConnectionPool() {}
+	virtual ~IConnectionPool()
+	{
+	}
 
 	/** Выделяет соединение для работы. */
 	Entry get(const Settings * settings = nullptr)
@@ -38,8 +39,7 @@ public:
 	  * Если флаг get_all установлен, все соединения достаются.
 	  * Выкидывает исключение, если не удалось выделить ни одного соединения.
 	  */
-	std::vector<Entry> getMany(const Settings * settings = nullptr,
-		PoolMode pool_mode = PoolMode::GET_MANY)
+	std::vector<Entry> getMany(const Settings * settings = nullptr, PoolMode pool_mode = PoolMode::GET_MANY)
 	{
 		return doGetMany(settings, pool_mode);
 	}
@@ -67,36 +67,55 @@ public:
 	using Base = PoolBase<Connection>;
 
 	ConnectionPool(unsigned max_connections_,
-			const String & host_, UInt16 port_,
-			const String & default_database_,
-			const String & user_, const String & password_,
-			const String & client_name_ = "client",
-			Protocol::Compression::Enum compression_ = Protocol::Compression::Enable,
-			Poco::Timespan connect_timeout_ = Poco::Timespan(DBMS_DEFAULT_CONNECT_TIMEOUT_SEC, 0),
-			Poco::Timespan receive_timeout_ = Poco::Timespan(DBMS_DEFAULT_RECEIVE_TIMEOUT_SEC, 0),
-			Poco::Timespan send_timeout_ = Poco::Timespan(DBMS_DEFAULT_SEND_TIMEOUT_SEC, 0))
-	   : Base(max_connections_, &Logger::get("ConnectionPool (" + host_ + ":" + toString(port_) + ")")),
-		host(host_), port(port_), default_database(default_database_),
-		user(user_), password(password_), resolved_address(host_, port_),
-		client_name(client_name_), compression(compression_),
-		connect_timeout(connect_timeout_), receive_timeout(receive_timeout_), send_timeout(send_timeout_)
+		const String & host_,
+		UInt16 port_,
+		const String & default_database_,
+		const String & user_,
+		const String & password_,
+		const String & client_name_ = "client",
+		Protocol::Compression::Enum compression_ = Protocol::Compression::Enable,
+		Poco::Timespan connect_timeout_ = Poco::Timespan(DBMS_DEFAULT_CONNECT_TIMEOUT_SEC, 0),
+		Poco::Timespan receive_timeout_ = Poco::Timespan(DBMS_DEFAULT_RECEIVE_TIMEOUT_SEC, 0),
+		Poco::Timespan send_timeout_ = Poco::Timespan(DBMS_DEFAULT_SEND_TIMEOUT_SEC, 0))
+		: Base(max_connections_, &Logger::get("ConnectionPool (" + host_ + ":" + toString(port_) + ")")),
+		  host(host_),
+		  port(port_),
+		  default_database(default_database_),
+		  user(user_),
+		  password(password_),
+		  resolved_address(host_, port_),
+		  client_name(client_name_),
+		  compression(compression_),
+		  connect_timeout(connect_timeout_),
+		  receive_timeout(receive_timeout_),
+		  send_timeout(send_timeout_)
 	{
 	}
 
 	ConnectionPool(unsigned max_connections_,
-			const String & host_, UInt16 port_, const Poco::Net::SocketAddress & resolved_address_,
-			const String & default_database_,
-			const String & user_, const String & password_,
-			const String & client_name_ = "client",
-			Protocol::Compression::Enum compression_ = Protocol::Compression::Enable,
-			Poco::Timespan connect_timeout_ = Poco::Timespan(DBMS_DEFAULT_CONNECT_TIMEOUT_SEC, 0),
-			Poco::Timespan receive_timeout_ = Poco::Timespan(DBMS_DEFAULT_RECEIVE_TIMEOUT_SEC, 0),
-			Poco::Timespan send_timeout_ = Poco::Timespan(DBMS_DEFAULT_SEND_TIMEOUT_SEC, 0))
+		const String & host_,
+		UInt16 port_,
+		const Poco::Net::SocketAddress & resolved_address_,
+		const String & default_database_,
+		const String & user_,
+		const String & password_,
+		const String & client_name_ = "client",
+		Protocol::Compression::Enum compression_ = Protocol::Compression::Enable,
+		Poco::Timespan connect_timeout_ = Poco::Timespan(DBMS_DEFAULT_CONNECT_TIMEOUT_SEC, 0),
+		Poco::Timespan receive_timeout_ = Poco::Timespan(DBMS_DEFAULT_RECEIVE_TIMEOUT_SEC, 0),
+		Poco::Timespan send_timeout_ = Poco::Timespan(DBMS_DEFAULT_SEND_TIMEOUT_SEC, 0))
 		: Base(max_connections_, &Logger::get("ConnectionPool (" + host_ + ":" + toString(port_) + ")")),
-		host(host_), port(port_), default_database(default_database_),
-		user(user_), password(password_), resolved_address(resolved_address_),
-		client_name(client_name_), compression(compression_),
-		connect_timeout(connect_timeout_), receive_timeout(receive_timeout_), send_timeout(send_timeout_)
+		  host(host_),
+		  port(port_),
+		  default_database(default_database_),
+		  user(user_),
+		  password(password_),
+		  resolved_address(resolved_address_),
+		  client_name(client_name_),
+		  compression(compression_),
+		  connect_timeout(connect_timeout_),
+		  receive_timeout(receive_timeout_),
+		  send_timeout(send_timeout_)
 	{
 	}
 
@@ -109,11 +128,17 @@ protected:
 	/** Создает новый объект для помещения в пул. */
 	ConnectionPtr allocObject() override
 	{
-		return std::make_shared<Connection>(
-			host, port, resolved_address,
-			default_database, user, password,
-			client_name, compression,
-			connect_timeout, receive_timeout, send_timeout);
+		return std::make_shared<Connection>(host,
+			port,
+			resolved_address,
+			default_database,
+			user,
+			password,
+			client_name,
+			compression,
+			connect_timeout,
+			receive_timeout,
+			send_timeout);
 	}
 
 private:
@@ -138,11 +163,10 @@ private:
 	Poco::Net::SocketAddress resolved_address;
 
 	String client_name;
-	Protocol::Compression::Enum compression;		/// Сжимать ли данные при взаимодействии с сервером.
+	Protocol::Compression::Enum compression; /// Сжимать ли данные при взаимодействии с сервером.
 
 	Poco::Timespan connect_timeout;
 	Poco::Timespan receive_timeout;
 	Poco::Timespan send_timeout;
 };
-
 }

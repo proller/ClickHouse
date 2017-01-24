@@ -3,12 +3,11 @@
 #include <string>
 #include <fcntl.h>
 
-#include <DB/IO/WriteBuffer.h>
 #include <DB/IO/BufferWithOwnMemory.h>
+#include <DB/IO/WriteBuffer.h>
 
 namespace DB
 {
-
 class WriteBufferFromFileBase : public BufferWithOwnMemory<WriteBuffer>
 {
 public:
@@ -26,5 +25,4 @@ protected:
 	virtual off_t doSeek(off_t off, int whence) = 0;
 	virtual void doTruncate(off_t length) = 0;
 };
-
 }

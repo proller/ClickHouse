@@ -1,16 +1,14 @@
 #pragma once
 
-#include <DB/Interpreters/Aggregator.h>
-#include <DB/IO/ReadBufferFromFile.h>
-#include <DB/IO/CompressedReadBuffer.h>
 #include <DB/DataStreams/IProfilingBlockInputStream.h>
 #include <DB/DataStreams/ParallelInputsProcessor.h>
+#include <DB/IO/CompressedReadBuffer.h>
+#include <DB/IO/ReadBufferFromFile.h>
+#include <DB/Interpreters/Aggregator.h>
 
 
 namespace DB
 {
-
-
 /** Агрегирует несколько источников параллельно.
   * Производит агрегацию блоков из разных источников независимо в разных потоках, затем объединяет результаты.
   * Если final == false, агрегатные функции не финализируются, то есть, не заменяются на своё значение, а содержат промежуточное состояние вычислений.
@@ -21,11 +19,17 @@ class ParallelAggregatingBlockInputStream : public IProfilingBlockInputStream
 public:
 	/** Столбцы из key_names и аргументы агрегатных функций, уже должны быть вычислены.
 	  */
-	ParallelAggregatingBlockInputStream(
-		BlockInputStreams inputs, BlockInputStreamPtr additional_input_at_end,
-		const Aggregator::Params & params_, bool final_, size_t max_threads_, size_t temporary_data_merge_threads_);
+	ParallelAggregatingBlockInputStream(BlockInputStreams inputs,
+		BlockInputStreamPtr additional_input_at_end,
+		const Aggregator::Params & params_,
+		bool final_,
+		size_t max_threads_,
+		size_t temporary_data_merge_threads_);
 
-	String getName() const override { return "ParallelAggregating"; }
+	String getName() const override
+	{
+		return "ParallelAggregating";
+	}
 
 	String getID() const override;
 
@@ -56,7 +60,7 @@ private:
 	  */
 	bool no_more_keys = false;
 
-	std::atomic<bool> executed {false};
+	std::atomic<bool> executed{ false };
 
 	/// Для чтения сброшенных во временный файл данных.
 	struct TemporaryFileStream
@@ -99,8 +103,9 @@ private:
 
 	struct Handler
 	{
-		Handler(ParallelAggregatingBlockInputStream & parent_)
-			: parent(parent_) {}
+		Handler(ParallelAggregatingBlockInputStream & parent_) : parent(parent_)
+		{
+		}
 
 		void onBlock(Block & block, size_t thread_num);
 		void onFinishThread(size_t thread_num);
@@ -121,5 +126,4 @@ private:
 	  */
 	std::unique_ptr<IBlockInputStream> impl;
 };
-
 }

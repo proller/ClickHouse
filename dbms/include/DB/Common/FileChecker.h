@@ -1,13 +1,12 @@
 #pragma once
 
 #include <string>
-#include <common/logger_useful.h>
 #include <Poco/File.h>
+#include <common/logger_useful.h>
 
 
 namespace DB
 {
-
 /// хранит размеры всех столбцов, и может проверять не побились ли столбцы
 class FileChecker
 {
@@ -41,5 +40,4 @@ private:
 
 	Logger * log = &Logger::get("FileChecker");
 };
-
 }

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <mutex>
 #include <memory>
+#include <mutex>
 
 
 /** Позволяет хранить некоторый объект, использовать его read-only в разных потоках,

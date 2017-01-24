@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 class Block;
 class ReadBuffer;
 
@@ -22,5 +21,4 @@ public:
 private:
 	ReadBuffer & istr;
 };
-
 }

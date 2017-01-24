@@ -1,16 +1,16 @@
 #pragma once
 
 #include <string>
-#include <Poco/DOM/Document.h>
+#include <Poco/AutoPtr.h>
+#include <Poco/ConsoleChannel.h>
 #include <Poco/DOM/DOMParser.h>
 #include <Poco/DOM/DOMWriter.h>
-#include <Poco/DOM/NodeList.h>
+#include <Poco/DOM/Document.h>
 #include <Poco/DOM/NamedNodeMap.h>
-#include <Poco/AutoPtr.h>
+#include <Poco/DOM/NodeList.h>
+#include <Poco/DirectoryIterator.h>
 #include <Poco/File.h>
 #include <Poco/Path.h>
-#include <Poco/DirectoryIterator.h>
-#include <Poco/ConsoleChannel.h>
 #include <Poco/Util/AbstractConfiguration.h>
 #include <common/logger_useful.h>
 
@@ -20,7 +20,7 @@ using XMLDocumentPtr = Poco::AutoPtr<Poco::XML::Document>;
 class ConfigProcessor
 {
 public:
-	using Substitutions = std::vector<std::pair<std::string, std::string> >;
+	using Substitutions = std::vector<std::pair<std::string, std::string>>;
 
 	/// log_to_console нужно использовать, если система логгирования еще не инициализирована.
 	ConfigProcessor(bool throw_on_bad_incl = false, bool log_to_console = false, const Substitutions & substitutions = Substitutions());
@@ -45,7 +45,6 @@ public:
 	ConfigurationPtr loadConfig(const std::string & path);
 
 public:
-
 	using Files = std::list<std::string>;
 
 	static Files getConfigMergeFiles(const std::string & config_path);

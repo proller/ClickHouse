@@ -1,18 +1,17 @@
 #pragma once
 
-#include <unordered_map>
+#include <chrono>
 #include <list>
 #include <memory>
-#include <chrono>
-#include <Poco/ScopedLock.h>
 #include <mutex>
-#include <DB/Common/Exception.h>
+#include <unordered_map>
+#include <Poco/ScopedLock.h>
 #include <common/logger_useful.h>
+#include <DB/Common/Exception.h>
 
 
 namespace DB
 {
-
 template <typename T>
 struct TrivialWeightFunction
 {
@@ -27,7 +26,10 @@ struct TrivialWeightFunction
   * Кеш начинает выбрасывать значения, когда их суммарный вес превышает max_size и срок годности этих значений истёк.
   * После вставки значения его вес не должен меняться.
   */
-template <typename TKey, typename TMapped, typename HashFunction = std::hash<TMapped>, typename WeightFunction = TrivialWeightFunction<TMapped> >
+template <typename TKey,
+	typename TMapped,
+	typename HashFunction = std::hash<TMapped>,
+	typename WeightFunction = TrivialWeightFunction<TMapped>>
 class LRUCache
 {
 public:
@@ -42,7 +44,9 @@ private:
 
 public:
 	LRUCache(size_t max_size_, const Delay & expiration_delay_ = Delay::zero())
-		: max_size(std::max(1ul, max_size_)), expiration_delay(expiration_delay_) {}
+		: max_size(std::max(1ul, max_size_)), expiration_delay(expiration_delay_)
+	{
+	}
 
 	MappedPtr get(const Key & key)
 	{
@@ -69,9 +73,7 @@ public:
 	{
 		std::lock_guard<std::mutex> lock(mutex);
 
-		auto res = cells.emplace(std::piecewise_construct,
-			std::forward_as_tuple(key),
-			std::forward_as_tuple());
+		auto res = cells.emplace(std::piecewise_construct, std::forward_as_tuple(key), std::forward_as_tuple());
 
 		Cell & cell = res.first->second;
 		bool inserted = res.second;
@@ -137,8 +139,8 @@ private:
 	public:
 		bool expired(const Timestamp & last_timestamp, const Delay & expiration_delay) const
 		{
-			return (expiration_delay == Delay::zero()) ||
-				((last_timestamp > timestamp) && ((last_timestamp - timestamp) > expiration_delay));
+			return (expiration_delay == Delay::zero())
+				|| ((last_timestamp > timestamp) && ((last_timestamp - timestamp) > expiration_delay));
 		}
 
 	public:
@@ -203,6 +205,4 @@ private:
 		}
 	}
 };
-
-
 }

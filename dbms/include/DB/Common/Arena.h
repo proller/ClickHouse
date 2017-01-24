@@ -1,25 +1,23 @@
 #pragma once
 
-#include <string.h>
 #include <memory>
 #include <vector>
+#include <string.h>
 #include <boost/noncopyable.hpp>
 #include <common/likely.h>
-#include <DB/Core/Defines.h>
-#include <DB/Common/ProfileEvents.h>
 #include <DB/Common/Allocator.h>
+#include <DB/Common/ProfileEvents.h>
+#include <DB/Core/Defines.h>
 
 
 namespace ProfileEvents
 {
-	extern const Event ArenaAllocChunks;
-	extern const Event ArenaAllocBytes;
+extern const Event ArenaAllocChunks;
+extern const Event ArenaAllocBytes;
 }
 
 namespace DB
 {
-
-
 /** Memory pool to append something. For example, short strings.
   * Usage scenario:
   * - put lot of strings inside pool, keep their addresses;
@@ -32,7 +30,7 @@ class Arena : private boost::noncopyable
 {
 private:
 	/// Contiguous chunk of memory and pointer to free space inside it. Member of single-linked list.
-	struct Chunk : private Allocator<false>	/// empty base optimization
+	struct Chunk : private Allocator<false> /// empty base optimization
 	{
 		char * begin;
 		char * pos;
@@ -59,7 +57,10 @@ private:
 				delete prev;
 		}
 
-		size_t size() { return end - begin; }
+		size_t size()
+		{
+			return end - begin;
+		}
 	};
 
 	size_t growth_factor;
@@ -100,8 +101,10 @@ private:
 
 public:
 	Arena(size_t initial_size_ = 4096, size_t growth_factor_ = 2, size_t linear_growth_threshold_ = 128 * 1024 * 1024)
-		: growth_factor(growth_factor_), linear_growth_threshold(linear_growth_threshold_),
-		head(new Chunk(initial_size_, nullptr)), size_in_bytes(head->size())
+		: growth_factor(growth_factor_),
+		  linear_growth_threshold(linear_growth_threshold_),
+		  head(new Chunk(initial_size_, nullptr)),
+		  size_in_bytes(head->size())
 	{
 	}
 
@@ -172,6 +175,4 @@ public:
 
 using ArenaPtr = std::shared_ptr<Arena>;
 using Arenas = std::vector<ArenaPtr>;
-
-
 }

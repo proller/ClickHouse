@@ -7,13 +7,12 @@
 #include <DB/Columns/ColumnArray.h>
 #include <DB/Columns/ColumnExpression.h>
 
-#include <DB/Functions/IFunction.h>
 #include <DB/Functions/FunctionsMiscellaneous.h>
+#include <DB/Functions/IFunction.h>
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int SIZES_OF_ARRAYS_DOESNT_MATCH;
@@ -33,11 +32,20 @@ namespace ErrorCodes
 struct ArrayMapImpl
 {
 	/// true, если выражение (для перегрузки f(expression, arrays)) или массив (для f(array)) должно быть булевым.
-	static bool needBoolean() { return false; }
+	static bool needBoolean()
+	{
+		return false;
+	}
 	/// true, если перегрузка f(array) недоступна.
-	static bool needExpression() { return true; }
+	static bool needExpression()
+	{
+		return true;
+	}
 	/// true, если массив должен быть ровно один.
-	static bool needOneArray() { return false; }
+	static bool needOneArray()
+	{
+		return false;
+	}
 
 	static DataTypePtr getReturnType(const DataTypePtr & expression_return, const DataTypePtr & array_element)
 	{
@@ -54,9 +62,18 @@ struct ArrayMapImpl
 
 struct ArrayFilterImpl
 {
-	static bool needBoolean() { return true; }
-	static bool needExpression() { return true; }
-	static bool needOneArray() { return false; }
+	static bool needBoolean()
+	{
+		return true;
+	}
+	static bool needExpression()
+	{
+		return true;
+	}
+	static bool needOneArray()
+	{
+		return false;
+	}
 
 	static DataTypePtr getReturnType(const DataTypePtr & expression_return, const DataTypePtr & array_element)
 	{
@@ -79,8 +96,7 @@ struct ArrayFilterImpl
 				return array.clone();
 			else
 				return std::make_shared<ColumnArray>(
-					array.getDataPtr()->cloneEmpty(),
-					std::make_shared<ColumnArray::ColumnOffsets_t>(array.size(), 0));
+					array.getDataPtr()->cloneEmpty(), std::make_shared<ColumnArray::ColumnOffsets_t>(array.size(), 0));
 		}
 
 		const IColumn::Filter & filter = column_filter->getData();
@@ -109,9 +125,18 @@ struct ArrayFilterImpl
 
 struct ArrayCountImpl
 {
-	static bool needBoolean() { return true; }
-	static bool needExpression() { return false; }
-	static bool needOneArray() { return false; }
+	static bool needBoolean()
+	{
+		return true;
+	}
+	static bool needExpression()
+	{
+		return false;
+	}
+	static bool needOneArray()
+	{
+		return false;
+	}
 
 	static DataTypePtr getReturnType(const DataTypePtr & expression_return, const DataTypePtr & array_element)
 	{
@@ -171,9 +196,18 @@ struct ArrayCountImpl
 
 struct ArrayExistsImpl
 {
-	static bool needBoolean() { return true; }
-	static bool needExpression() { return false; }
-	static bool needOneArray() { return false; }
+	static bool needBoolean()
+	{
+		return true;
+	}
+	static bool needExpression()
+	{
+		return false;
+	}
+	static bool needOneArray()
+	{
+		return false;
+	}
 
 	static DataTypePtr getReturnType(const DataTypePtr & expression_return, const DataTypePtr & array_element)
 	{
@@ -237,9 +271,18 @@ struct ArrayExistsImpl
 
 struct ArrayAllImpl
 {
-	static bool needBoolean() { return true; }
-	static bool needExpression() { return false; }
-	static bool needOneArray() { return false; }
+	static bool needBoolean()
+	{
+		return true;
+	}
+	static bool needExpression()
+	{
+		return false;
+	}
+	static bool needOneArray()
+	{
+		return false;
+	}
 
 	static DataTypePtr getReturnType(const DataTypePtr & expression_return, const DataTypePtr & array_element)
 	{
@@ -303,26 +346,32 @@ struct ArrayAllImpl
 
 struct ArraySumImpl
 {
-	static bool needBoolean() { return false; }
-	static bool needExpression() { return false; }
-	static bool needOneArray() { return false; }
+	static bool needBoolean()
+	{
+		return false;
+	}
+	static bool needExpression()
+	{
+		return false;
+	}
+	static bool needOneArray()
+	{
+		return false;
+	}
 
 	static DataTypePtr getReturnType(const DataTypePtr & expression_return, const DataTypePtr & array_element)
 	{
-		if (typeid_cast<const DataTypeUInt8 *>(&*expression_return) ||
-			typeid_cast<const DataTypeUInt16 *>(&*expression_return) ||
-			typeid_cast<const DataTypeUInt32 *>(&*expression_return) ||
-			typeid_cast<const DataTypeUInt64 *>(&*expression_return))
+		if (typeid_cast<const DataTypeUInt8 *>(&*expression_return) || typeid_cast<const DataTypeUInt16 *>(&*expression_return)
+			|| typeid_cast<const DataTypeUInt32 *>(&*expression_return)
+			|| typeid_cast<const DataTypeUInt64 *>(&*expression_return))
 			return std::make_shared<DataTypeUInt64>();
 
-		if (typeid_cast<const DataTypeInt8 *>(&*expression_return) ||
-			typeid_cast<const DataTypeInt16 *>(&*expression_return) ||
-			typeid_cast<const DataTypeInt32 *>(&*expression_return) ||
-			typeid_cast<const DataTypeInt64 *>(&*expression_return))
+		if (typeid_cast<const DataTypeInt8 *>(&*expression_return) || typeid_cast<const DataTypeInt16 *>(&*expression_return)
+			|| typeid_cast<const DataTypeInt32 *>(&*expression_return)
+			|| typeid_cast<const DataTypeInt64 *>(&*expression_return))
 			return std::make_shared<DataTypeInt64>();
 
-		if (typeid_cast<const DataTypeFloat32 *>(&*expression_return) ||
-			typeid_cast<const DataTypeFloat64 *>(&*expression_return))
+		if (typeid_cast<const DataTypeFloat32 *>(&*expression_return) || typeid_cast<const DataTypeFloat64 *>(&*expression_return))
 			return std::make_shared<DataTypeFloat64>();
 
 		throw Exception("arraySum cannot add values of type " + expression_return->getName(), ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
@@ -380,16 +429,15 @@ struct ArraySumImpl
 		const IColumn::Offsets_t & offsets = array.getOffsets();
 		ColumnPtr res;
 
-		if (executeType< UInt8 , UInt64>(mapped, offsets, res) ||
-			executeType< UInt16, UInt64>(mapped, offsets, res) ||
-			executeType< UInt32, UInt64>(mapped, offsets, res) ||
-			executeType< UInt64, UInt64>(mapped, offsets, res) ||
-			executeType<  Int8 ,  Int64>(mapped, offsets, res) ||
-			executeType<  Int16,  Int64>(mapped, offsets, res) ||
-			executeType<  Int32,  Int64>(mapped, offsets, res) ||
-			executeType<  Int64,  Int64>(mapped, offsets, res) ||
-			executeType<Float32,Float64>(mapped, offsets, res) ||
-			executeType<Float64,Float64>(mapped, offsets, res))
+		if (executeType<UInt8, UInt64>(mapped, offsets, res) || executeType<UInt16, UInt64>(mapped, offsets, res)
+			|| executeType<UInt32, UInt64>(mapped, offsets, res)
+			|| executeType<UInt64, UInt64>(mapped, offsets, res)
+			|| executeType<Int8, Int64>(mapped, offsets, res)
+			|| executeType<Int16, Int64>(mapped, offsets, res)
+			|| executeType<Int32, Int64>(mapped, offsets, res)
+			|| executeType<Int64, Int64>(mapped, offsets, res)
+			|| executeType<Float32, Float64>(mapped, offsets, res)
+			|| executeType<Float64, Float64>(mapped, offsets, res))
 			return res;
 		else
 			throw Exception("Unexpected column for arraySum: " + mapped->getName());
@@ -398,9 +446,18 @@ struct ArraySumImpl
 
 struct ArrayFirstImpl
 {
-	static bool needBoolean() { return false; }
-	static bool needExpression() { return true; }
-	static bool needOneArray() { return false; }
+	static bool needBoolean()
+	{
+		return false;
+	}
+	static bool needExpression()
+	{
+		return true;
+	}
+	static bool needOneArray()
+	{
+		return false;
+	}
 
 	static DataTypePtr getReturnType(const DataTypePtr & expression_return, const DataTypePtr & array_element)
 	{
@@ -422,7 +479,7 @@ struct ArrayFirstImpl
 			{
 				const auto & offsets = array.getOffsets();
 				const auto & data = array.getData();
-				ColumnPtr out{data.cloneEmpty()};
+				ColumnPtr out{ data.cloneEmpty() };
 
 				size_t pos{};
 				for (size_t i = 0; i < offsets.size(); ++i)
@@ -439,7 +496,7 @@ struct ArrayFirstImpl
 			}
 			else
 			{
-				ColumnPtr out{array.getData().cloneEmpty()};
+				ColumnPtr out{ array.getData().cloneEmpty() };
 				out->insertDefault();
 				return out->replicate(IColumn::Offsets_t(1, array.size()));
 			}
@@ -448,7 +505,7 @@ struct ArrayFirstImpl
 		const auto & filter = column_filter->getData();
 		const auto & offsets = array.getOffsets();
 		const auto & data = array.getData();
-		ColumnPtr out{data.cloneEmpty()};
+		ColumnPtr out{ data.cloneEmpty() };
 
 		size_t pos{};
 		for (size_t i = 0; i < offsets.size(); ++i)
@@ -475,9 +532,18 @@ struct ArrayFirstImpl
 
 struct ArrayFirstIndexImpl
 {
-	static bool needBoolean() { return false; }
-	static bool needExpression() { return true; }
-	static bool needOneArray() { return false; }
+	static bool needBoolean()
+	{
+		return false;
+	}
+	static bool needExpression()
+	{
+		return true;
+	}
+	static bool needOneArray()
+	{
+		return false;
+	}
 
 	static DataTypePtr getReturnType(const DataTypePtr & expression_return, const DataTypePtr & array_element)
 	{
@@ -523,7 +589,7 @@ struct ArrayFirstIndexImpl
 		for (size_t i = 0; i < offsets.size(); ++i)
 		{
 			UInt32 index{};
-			for (size_t idx{1}; pos < offsets[i]; ++pos, ++idx)
+			for (size_t idx{ 1 }; pos < offsets[i]; ++pos, ++idx)
 			{
 				if (filter[pos])
 				{
@@ -546,9 +612,18 @@ struct ArrayFirstIndexImpl
 template <bool positive>
 struct ArraySortImpl
 {
-	static bool needBoolean() { return false; }
-	static bool needExpression() { return false; }
-	static bool needOneArray() { return false; }
+	static bool needBoolean()
+	{
+		return false;
+	}
+	static bool needExpression()
+	{
+		return false;
+	}
+	static bool needOneArray()
+	{
+		return false;
+	}
 
 	static DataTypePtr getReturnType(const DataTypePtr & expression_return, const DataTypePtr & array_element)
 	{
@@ -559,7 +634,9 @@ struct ArraySortImpl
 	{
 		const IColumn & column;
 
-		Less(const IColumn & column) : column(column) {}
+		Less(const IColumn & column) : column(column)
+		{
+		}
 
 		bool operator()(size_t lhs, size_t rhs) const
 		{
@@ -599,7 +676,10 @@ class FunctionArrayMapped : public IFunction
 {
 public:
 	static constexpr auto name = Name::name;
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionArrayMapped>(); };
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionArrayMapped>();
+	};
 
 	/// Получить имя функции.
 	String getName() const override
@@ -607,21 +687,25 @@ public:
 		return name;
 	}
 
-	bool isVariadic() const override { return true; }
-	size_t getNumberOfArguments() const override { return 0; }
+	bool isVariadic() const override
+	{
+		return true;
+	}
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 
 	/// Вызывается, если хоть один агрумент функции - лямбда-выражение.
 	/// Для аргументов-лямбда-выражений определяет типы аргументов этих выражений.
 	void getLambdaArgumentTypesImpl(DataTypes & arguments) const override
 	{
 		if (arguments.size() < 1)
-			throw Exception("Function " + getName() + " needs at least one argument; passed "
-							+ toString(arguments.size()) + ".",
-							ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+			throw Exception("Function " + getName() + " needs at least one argument; passed " + toString(arguments.size()) + ".",
+				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
 		if (arguments.size() == 1)
-			throw Exception("Function " + getName() + " needs at least one array argument.",
-							ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+			throw Exception("Function " + getName() + " needs at least one array argument.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
 		DataTypes nested_types(arguments.size() - 1);
 		for (size_t i = 0; i < nested_types.size(); ++i)
@@ -629,61 +713,66 @@ public:
 			const DataTypeArray * array_type = typeid_cast<const DataTypeArray *>(&*arguments[i + 1]);
 			if (!array_type)
 				throw Exception("Argument " + toString(i + 2) + " of function " + getName() + " must be array. Found "
-								+ arguments[i + 1]->getName() + " instead.", ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+						+ arguments[i + 1]->getName()
+						+ " instead.",
+					ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 			nested_types[i] = array_type->getNestedType();
 		}
 
 		const DataTypeExpression * expression_type = typeid_cast<const DataTypeExpression *>(&*arguments[0]);
 		if (!expression_type || expression_type->getArgumentTypes().size() != nested_types.size())
 			throw Exception("First argument for this overload of " + getName() + " must be an expression with "
-							+ toString(nested_types.size()) + " arguments. Found "
-							+ arguments[0]->getName() + " instead.", ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+					+ toString(nested_types.size())
+					+ " arguments. Found "
+					+ arguments[0]->getName()
+					+ " instead.",
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 		arguments[0] = std::make_shared<DataTypeExpression>(nested_types);
 	}
 
-	void getReturnTypeAndPrerequisitesImpl(const ColumnsWithTypeAndName & arguments,
-										DataTypePtr & out_return_type,
-										ExpressionActions::Actions & out_prerequisites) override
+	void getReturnTypeAndPrerequisitesImpl(
+		const ColumnsWithTypeAndName & arguments, DataTypePtr & out_return_type, ExpressionActions::Actions & out_prerequisites) override
 	{
 		size_t min_args = Impl::needExpression() ? 2 : 1;
 		if (arguments.size() < min_args)
-			throw Exception("Function " + getName() + " needs at least "
-							+ toString(min_args) + " argument; passed "
-							+ toString(arguments.size()) + ".",
-							ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+			throw Exception(
+				"Function " + getName() + " needs at least " + toString(min_args) + " argument; passed " + toString(arguments.size()) + ".",
+				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
 		if (arguments.size() == 1)
 		{
 			const DataTypeArray * array_type = typeid_cast<const DataTypeArray *>(&*arguments[0].type);
 
 			if (!array_type)
-				throw Exception("The only argument for function " + getName() + " must be array. Found "
-								+ arguments[0].type->getName() + " instead.", ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+				throw Exception(
+					"The only argument for function " + getName() + " must be array. Found " + arguments[0].type->getName() + " instead.",
+					ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 			DataTypePtr nested_type = array_type->getNestedType();
 
 			if (Impl::needBoolean() && !typeid_cast<const DataTypeUInt8 *>(&*nested_type))
 				throw Exception("The only argument for function " + getName() + " must be array of UInt8. Found "
-								+ arguments[0].type->getName() + " instead.", ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+						+ arguments[0].type->getName()
+						+ " instead.",
+					ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 			out_return_type = Impl::getReturnType(nested_type, nested_type);
 		}
 		else
 		{
 			if (arguments.size() > 2 && Impl::needOneArray())
-				throw Exception("Function " + getName() + " needs one array argument.",
-					ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+				throw Exception("Function " + getName() + " needs one array argument.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
 			if (!arguments[0].column)
-				throw Exception("Type of first argument for function " + getName() + " must be an expression.",
-					ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+				throw Exception(
+					"Type of first argument for function " + getName() + " must be an expression.", ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 			const ColumnExpression * column_expression = typeid_cast<const ColumnExpression *>(arguments[0].column.get());
 
 			if (!column_expression)
-				throw Exception("Column of first argument for function " + getName() + " must be an expression.",
-					ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+				throw Exception(
+					"Column of first argument for function " + getName() + " must be an expression.", ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 			/// Типы остальных аргументов уже проверены в getLambdaArgumentTypes.
 
@@ -706,8 +795,8 @@ public:
 
 			DataTypePtr return_type = column_expression->getReturnType();
 			if (Impl::needBoolean() && !typeid_cast<const DataTypeUInt8 *>(&*return_type))
-				throw Exception("Expression for function " + getName() + " must return UInt8, found "
-								+ return_type->getName(), ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+				throw Exception("Expression for function " + getName() + " must return UInt8, found " + return_type->getName(),
+					ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 			const DataTypeArray * first_array_type = typeid_cast<const DataTypeArray *>(&*arguments[1].type);
 
@@ -739,8 +828,8 @@ public:
 			const auto & column_with_type_and_name = block.safeGetByPosition(arguments[0]);
 
 			if (!column_with_type_and_name.column)
-				throw Exception("First argument for function " + getName() + " must be an expression.",
-					ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+				throw Exception(
+					"First argument for function " + getName() + " must be an expression.", ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 			ColumnExpression * column_expression = typeid_cast<ColumnExpression *>(column_with_type_and_name.column.get());
 
@@ -782,7 +871,8 @@ public:
 					/// Первое условие - оптимизация: не сравнивать данные, если указатели равны.
 					if (column_array->getOffsetsColumn() != offsets_column
 						&& column_array->getOffsets() != typeid_cast<const ColumnArray::ColumnOffsets_t &>(*offsets_column).getData())
-						throw Exception("Arrays passed to " + getName() + " must have equal size", ErrorCodes::SIZES_OF_ARRAYS_DOESNT_MATCH);
+						throw Exception(
+							"Arrays passed to " + getName() + " must have equal size", ErrorCodes::SIZES_OF_ARRAYS_DOESNT_MATCH);
 				}
 
 				if (i == 0)
@@ -791,10 +881,7 @@ public:
 					column_first_array = column_array;
 				}
 
-				temp_block.insert(ColumnWithTypeAndName(
-					column_array->getDataPtr(),
-					argument_type,
-					argument_name));
+				temp_block.insert(ColumnWithTypeAndName(column_array->getDataPtr(), argument_type, argument_name));
 
 				argument_names.insert(argument_name);
 			}
@@ -823,22 +910,53 @@ public:
 
 			expression.execute(temp_block);
 
-			block.safeGetByPosition(result).column = Impl::execute(*column_first_array, temp_block.getByName(column_expression->getReturnName()).column);
+			block.safeGetByPosition(result).column
+				= Impl::execute(*column_first_array, temp_block.getByName(column_expression->getReturnName()).column);
 		}
 	}
 };
 
 
-struct NameArrayMap			{ static constexpr auto name = "arrayMap"; };
-struct NameArrayFilter		{ static constexpr auto name = "arrayFilter"; };
-struct NameArrayCount		{ static constexpr auto name = "arrayCount"; };
-struct NameArrayExists		{ static constexpr auto name = "arrayExists"; };
-struct NameArrayAll			{ static constexpr auto name = "arrayAll"; };
-struct NameArraySum			{ static constexpr auto name = "arraySum"; };
-struct NameArrayFirst		{ static constexpr auto name = "arrayFirst"; };
-struct NameArrayFirstIndex	{ static constexpr auto name = "arrayFirstIndex"; };
-struct NameArraySort		{ static constexpr auto name = "arraySort"; };
-struct NameArrayReverseSort	{ static constexpr auto name = "arrayReverseSort"; };
+struct NameArrayMap
+{
+	static constexpr auto name = "arrayMap";
+};
+struct NameArrayFilter
+{
+	static constexpr auto name = "arrayFilter";
+};
+struct NameArrayCount
+{
+	static constexpr auto name = "arrayCount";
+};
+struct NameArrayExists
+{
+	static constexpr auto name = "arrayExists";
+};
+struct NameArrayAll
+{
+	static constexpr auto name = "arrayAll";
+};
+struct NameArraySum
+{
+	static constexpr auto name = "arraySum";
+};
+struct NameArrayFirst
+{
+	static constexpr auto name = "arrayFirst";
+};
+struct NameArrayFirstIndex
+{
+	static constexpr auto name = "arrayFirstIndex";
+};
+struct NameArraySort
+{
+	static constexpr auto name = "arraySort";
+};
+struct NameArrayReverseSort
+{
+	static constexpr auto name = "arrayReverseSort";
+};
 
 using FunctionArrayMap = FunctionArrayMapped<ArrayMapImpl, NameArrayMap>;
 using FunctionArrayFilter = FunctionArrayMapped<ArrayFilterImpl, NameArrayFilter>;
@@ -850,5 +968,4 @@ using FunctionArrayFirst = FunctionArrayMapped<ArrayFirstImpl, NameArrayFirst>;
 using FunctionArrayFirstIndex = FunctionArrayMapped<ArrayFirstIndexImpl, NameArrayFirstIndex>;
 using FunctionArraySort = FunctionArrayMapped<ArraySortImpl<true>, NameArraySort>;
 using FunctionArrayReverseSort = FunctionArrayMapped<ArraySortImpl<false>, NameArrayReverseSort>;
-
 }

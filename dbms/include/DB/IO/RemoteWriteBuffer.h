@@ -1,14 +1,14 @@
 #pragma once
 
-#include <Poco/URI.h>
+#include <Poco/Net/HTTPClientSession.h>
 #include <Poco/Net/HTTPRequest.h>
 #include <Poco/Net/HTTPResponse.h>
-#include <Poco/Net/HTTPClientSession.h>
 #include <Poco/Net/NetException.h>
+#include <Poco/URI.h>
 
+#include <DB/IO/HashingWriteBuffer.h>
 #include <DB/IO/WriteBuffer.h>
 #include <DB/IO/WriteBufferFromOStream.h>
-#include <DB/IO/HashingWriteBuffer.h>
 
 #include <common/logger_useful.h>
 
@@ -19,7 +19,6 @@
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int CANNOT_WRITE_TO_OSTREAM;
@@ -44,36 +43,44 @@ private:
 	std::string uri_str;
 
 	Poco::Net::HTTPClientSession session;
-	std::ostream * ostr;	/// этим владеет session
+	std::ostream * ostr; /// этим владеет session
 	std::unique_ptr<WriteBuffer> impl;
 
 	/// Отправили все данные и переименовали файл
 	bool finalized;
+
 public:
 	/** Если tmp_path не пустой, то записывает сначала временный файл, а затем переименовывает,
 	  *  удаляя существующие файлы, если есть.
 	  * Иначе используется параметр if_exists.
 	  */
-	RemoteWriteBuffer(const std::string & host_, int port_, const std::string & path_,
-		const std::string & tmp_path_ = "", const std::string & if_exists_ = "remove",
+	RemoteWriteBuffer(const std::string & host_,
+		int port_,
+		const std::string & path_,
+		const std::string & tmp_path_ = "",
+		const std::string & if_exists_ = "remove",
 		bool decompress_ = false,
 		unsigned connection_retries_ = 3,
 		size_t buffer_size_ = DBMS_DEFAULT_BUFFER_SIZE,
 		const Poco::Timespan & connection_timeout = Poco::Timespan(DEFAULT_REMOTE_WRITE_BUFFER_CONNECTION_TIMEOUT, 0),
 		const Poco::Timespan & send_timeout = Poco::Timespan(DEFAULT_REMOTE_WRITE_BUFFER_SEND_TIMEOUT, 0),
 		const Poco::Timespan & receive_timeout = Poco::Timespan(DEFAULT_REMOTE_WRITE_BUFFER_RECEIVE_TIMEOUT, 0))
-		: WriteBuffer(nullptr, 0), host(host_), port(port_), path(path_),
-		tmp_path(tmp_path_), if_exists(if_exists_),
-		decompress(decompress_), connection_retries(connection_retries_), finalized(false)
+		: WriteBuffer(nullptr, 0),
+		  host(host_),
+		  port(port_),
+		  path(path_),
+		  tmp_path(tmp_path_),
+		  if_exists(if_exists_),
+		  decompress(decompress_),
+		  connection_retries(connection_retries_),
+		  finalized(false)
 	{
 		Poco::URI::encode(path, "&#", encoded_path);
 		Poco::URI::encode(tmp_path, "&#", encoded_tmp_path);
 
 		std::stringstream uri;
-		uri << "http://" << host << ":" << port
-			<< "/?action=write"
-			<< "&path=" << (tmp_path.empty() ? encoded_path : encoded_tmp_path)
-			<< "&if_exists=" << if_exists
+		uri << "http://" << host << ":" << port << "/?action=write"
+			<< "&path=" << (tmp_path.empty() ? encoded_path : encoded_tmp_path) << "&if_exists=" << if_exists
 			<< "&decompress=" << (decompress ? "true" : "false");
 
 		uri_str = Poco::URI(uri.str()).getPathAndQuery();
@@ -82,7 +89,7 @@ public:
 		session.setPort(port);
 		session.setKeepAlive(true);
 
-		/// устанавливаем таймаут
+/// устанавливаем таймаут
 #if POCO_CLICKHOUSE_PATCH || POCO_VERSION >= 0x02000000
 		session.setTimeout(connection_timeout, send_timeout, receive_timeout);
 #else
@@ -106,7 +113,8 @@ public:
 				if (i + 1 == connection_retries)
 					throw;
 
-				LOG_WARNING((&Logger::get("RemoteWriteBuffer")), e.displayText() << ", URL: " << host << ":" << port << uri_str << ", try No " << i + 1 << ".");
+				LOG_WARNING((&Logger::get("RemoteWriteBuffer")),
+					e.displayText() << ", URL: " << host << ":" << port << uri_str << ", try No " << i + 1 << ".");
 				session.reset();
 				continue;
 			}
@@ -115,7 +123,8 @@ public:
 				if (i + 1 == connection_retries)
 					throw;
 
-				LOG_WARNING((&Logger::get("RemoteWriteBuffer")), "Connection timeout from " << host << ":" << port << uri_str << ", try No " << i + 1 << ".");
+				LOG_WARNING((&Logger::get("RemoteWriteBuffer")),
+					"Connection timeout from " << host << ":" << port << uri_str << ", try No " << i + 1 << ".");
 				session.reset();
 				continue;
 			}
@@ -145,7 +154,7 @@ public:
 		catch (const Exception & e)
 		{
 			if (e.code() == ErrorCodes::CANNOT_WRITE_TO_OSTREAM)
-				checkStatus();	/// Меняем сообщение об ошибке на более ясное.
+				checkStatus(); /// Меняем сообщение об ошибке на более ясное.
 			throw;
 		}
 	}
@@ -184,7 +193,6 @@ public:
 
 
 private:
-
 	void checkStatus()
 	{
 		Poco::Net::HTTPResponse response;
@@ -206,10 +214,8 @@ private:
 	void rename()
 	{
 		std::stringstream uri;
-		uri << "http://" << host << ":" << port
-			<< "/?action=rename"
-			<< "&from=" << encoded_tmp_path
-			<< "&to=" << encoded_path;
+		uri << "http://" << host << ":" << port << "/?action=rename"
+			<< "&from=" << encoded_tmp_path << "&to=" << encoded_path;
 
 		uri_str = Poco::URI(uri.str()).getPathAndQuery();
 
@@ -229,8 +235,9 @@ private:
 				if (i + 1 == connection_retries)
 					throw;
 
-				LOG_WARNING((&Logger::get("RemoteWriteBuffer")), e.what() << ", message: " << e.displayText()
-					<< ", URL: " << host << ":" << port << uri_str << ", try No " << i + 1 << ".");
+				LOG_WARNING((&Logger::get("RemoteWriteBuffer")),
+					e.what() << ", message: " << e.displayText() << ", URL: " << host << ":" << port << uri_str << ", try No " << i + 1
+							 << ".");
 				session.reset();
 				continue;
 			}
@@ -239,7 +246,8 @@ private:
 				if (i + 1 == connection_retries)
 					throw;
 
-				LOG_WARNING((&Logger::get("RemoteWriteBuffer")), "Connection timeout from " << host << ":" << port << uri_str << ", try No " << i + 1 << ".");
+				LOG_WARNING((&Logger::get("RemoteWriteBuffer")),
+					"Connection timeout from " << host << ":" << port << uri_str << ", try No " << i + 1 << ".");
 				session.reset();
 				continue;
 			}
@@ -259,5 +267,4 @@ private:
 		}
 	}
 };
-
 }

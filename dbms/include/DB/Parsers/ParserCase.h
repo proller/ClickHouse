@@ -4,7 +4,6 @@
 
 namespace DB
 {
-
 /** CASE construction
   * Two variants:
   * 1. CASE expr WHEN val1 THEN res1 [WHEN ...] ELSE resN END
@@ -14,8 +13,10 @@ namespace DB
 class ParserCase final : public IParserBase
 {
 protected:
-	const char * getName() const override { return "case"; }
+	const char * getName() const override
+	{
+		return "case";
+	}
 	bool parseImpl(Pos & pos, Pos end, ASTPtr & node, Pos & max_parsed_pos, Expected & expected) override;
 };
-
 }

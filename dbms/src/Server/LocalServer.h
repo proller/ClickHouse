@@ -1,11 +1,10 @@
 #pragma once
 
-#include <Poco/Util/Application.h>
 #include <memory>
+#include <Poco/Util/Application.h>
 
 namespace DB
 {
-
 class Context;
 
 /// Lightweight Application for clickhouse-local
@@ -14,19 +13,17 @@ class Context;
 class LocalServer : public Poco::Util::Application
 {
 public:
-
 	LocalServer();
 
 	void initialize(Poco::Util::Application & self) override;
 
-	void defineOptions(Poco::Util::OptionSet& _options) override;
+	void defineOptions(Poco::Util::OptionSet & _options) override;
 
 	int main(const std::vector<std::string> & args) override;
 
 	~LocalServer();
 
 private:
-
 	/** Composes CREATE subquery based on passed arguments (--structure --file --table and --input-format)
 	  * This query will be executed first, before queries passed through --query argument
 	  * Returns empty string if it cannot compose that query.
@@ -48,9 +45,7 @@ private:
 	void handleHelp(const std::string & name, const std::string & value);
 
 protected:
-
 	std::unique_ptr<Context> context;
 	std::string path;
 };
-
 }

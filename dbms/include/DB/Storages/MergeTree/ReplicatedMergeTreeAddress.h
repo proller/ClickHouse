@@ -1,13 +1,12 @@
+#include <DB/IO/Operators.h>
 #include <DB/IO/ReadBuffer.h>
 #include <DB/IO/ReadBufferFromString.h>
 #include <DB/IO/WriteBuffer.h>
 #include <DB/IO/WriteBufferFromString.h>
-#include <DB/IO/Operators.h>
 
 
 namespace DB
 {
-
 /// Позволяет узнать, куда отправлять запросы, чтобы попасть на реплику.
 
 struct ReplicatedMergeTreeAddress
@@ -18,7 +17,9 @@ struct ReplicatedMergeTreeAddress
 	String database;
 	String table;
 
-	ReplicatedMergeTreeAddress() {}
+	ReplicatedMergeTreeAddress()
+	{
+	}
 	ReplicatedMergeTreeAddress(const String & str)
 	{
 		fromString(str);
@@ -26,8 +27,7 @@ struct ReplicatedMergeTreeAddress
 
 	void writeText(WriteBuffer & out) const
 	{
-		out
-			<< "host: " << escape << host << '\n'
+		out << "host: " << escape << host << '\n'
 			<< "port: " << replication_port << '\n'
 			<< "tcp_port: " << queries_port << '\n'
 			<< "database: " << escape << database << '\n'
@@ -36,12 +36,8 @@ struct ReplicatedMergeTreeAddress
 
 	void readText(ReadBuffer & in)
 	{
-		in
-			>> "host: " >> escape >> host >> "\n"
-			>> "port: " >> replication_port >> "\n"
-			>> "tcp_port: " >> queries_port >> "\n"
-			>> "database: " >> escape >> database >> "\n"
-			>> "table: " >> escape >> table >> "\n";
+		in >> "host: " >> escape >> host >> "\n" >> "port: " >> replication_port >> "\n" >> "tcp_port: " >> queries_port >> "\n"
+			>> "database: " >> escape >> database >> "\n" >> "table: " >> escape >> table >> "\n";
 	}
 
 	String toString() const
@@ -60,5 +56,4 @@ struct ReplicatedMergeTreeAddress
 		readText(in);
 	}
 };
-
 }

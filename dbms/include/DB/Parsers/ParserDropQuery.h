@@ -1,12 +1,11 @@
 #pragma once
 
-#include <DB/Parsers/IParserBase.h>
 #include <DB/Parsers/ExpressionElementParsers.h>
+#include <DB/Parsers/IParserBase.h>
 
 
 namespace DB
 {
-
 /** Запрос типа такого:
   * DROP|DETACH TABLE [IF EXISTS] [db.]name
   *
@@ -16,8 +15,10 @@ namespace DB
 class ParserDropQuery : public IParserBase
 {
 protected:
-	const char * getName() const { return "DROP query"; }
+	const char * getName() const
+	{
+		return "DROP query";
+	}
 	bool parseImpl(Pos & pos, Pos end, ASTPtr & node, Pos & max_parsed_pos, Expected & expected);
 };
-
 }

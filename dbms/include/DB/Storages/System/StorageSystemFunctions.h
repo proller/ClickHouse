@@ -6,7 +6,6 @@
 
 namespace DB
 {
-
 class Context;
 
 
@@ -15,17 +14,25 @@ class Context;
   */
 class StorageSystemFunctions : private ext::shared_ptr_helper<StorageSystemFunctions>, public IStorage
 {
-friend class ext::shared_ptr_helper<StorageSystemFunctions>;
+	friend class ext::shared_ptr_helper<StorageSystemFunctions>;
 
 public:
 	static StoragePtr create(const std::string & name_);
 
-	std::string getName() const override { return "SystemFunctions"; }
-	std::string getTableName() const override { return name; }
-	const NamesAndTypesList & getColumnsListImpl() const override { return columns; }
+	std::string getName() const override
+	{
+		return "SystemFunctions";
+	}
+	std::string getTableName() const override
+	{
+		return name;
+	}
+	const NamesAndTypesList & getColumnsListImpl() const override
+	{
+		return columns;
+	}
 
-	BlockInputStreams read(
-		const Names & column_names,
+	BlockInputStreams read(const Names & column_names,
 		ASTPtr query,
 		const Context & context,
 		const Settings & settings,
@@ -40,5 +47,4 @@ private:
 	const std::string name;
 	NamesAndTypesList columns;
 };
-
 }

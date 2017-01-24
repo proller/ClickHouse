@@ -2,16 +2,15 @@
 
 #include <DB/Parsers/IAST.h>
 
-#include <string>
-#include <vector>
 #include <map>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 
 namespace DB
 {
-
 struct Settings;
 class ASTFunction;
 class ASTSelectQuery;
@@ -41,8 +40,7 @@ private:
 	*/
 	struct OrWithExpression
 	{
-		OrWithExpression(ASTFunction * or_function_, const std::string & expression_,
-			const std::string & alias_);
+		OrWithExpression(ASTFunction * or_function_, const std::string & expression_, const std::string & alias_);
 		bool operator<(const OrWithExpression & rhs) const;
 
 		ASTFunction * or_function;
@@ -102,5 +100,4 @@ private:
 	/// Set of nodes, that was visited.
 	std::unordered_set<void *> visited_nodes;
 };
-
 }

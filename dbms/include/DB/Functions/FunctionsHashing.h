@@ -1,27 +1,27 @@
 #pragma once
 
-#include <openssl/md5.h>
-#include <openssl/sha.h>
 #include <city.h>
 #include <farmhash.h>
 #include <metrohash.h>
+#include <openssl/md5.h>
+#include <openssl/sha.h>
 
 #include <Poco/ByteOrder.h>
 
-#include <DB/Common/SipHash.h>
-#include <DB/DataTypes/DataTypesNumberFixed.h>
-#include <DB/DataTypes/DataTypeString.h>
-#include <DB/DataTypes/DataTypeDate.h>
-#include <DB/DataTypes/DataTypeDateTime.h>
-#include <DB/DataTypes/DataTypeArray.h>
-#include <DB/DataTypes/DataTypeFixedString.h>
-#include <DB/DataTypes/DataTypeEnum.h>
-#include <DB/Columns/ColumnString.h>
+#include <DB/Columns/ColumnArray.h>
 #include <DB/Columns/ColumnConst.h>
 #include <DB/Columns/ColumnFixedString.h>
-#include <DB/Columns/ColumnArray.h>
+#include <DB/Columns/ColumnString.h>
 #include <DB/Columns/ColumnTuple.h>
 #include <DB/Common/HashTable/Hash.h>
+#include <DB/Common/SipHash.h>
+#include <DB/DataTypes/DataTypeArray.h>
+#include <DB/DataTypes/DataTypeDate.h>
+#include <DB/DataTypes/DataTypeDateTime.h>
+#include <DB/DataTypes/DataTypeEnum.h>
+#include <DB/DataTypes/DataTypeFixedString.h>
+#include <DB/DataTypes/DataTypeString.h>
+#include <DB/DataTypes/DataTypesNumberFixed.h>
 #include <DB/Functions/IFunction.h>
 
 #include <ext/range.hpp>
@@ -29,7 +29,6 @@
 
 namespace DB
 {
-
 /** Функции хэширования.
   *
   * Половинка MD5:
@@ -54,8 +53,7 @@ struct HalfMD5Impl
 {
 	static UInt64 apply(const char * begin, size_t size)
 	{
-		union
-		{
+		union {
 			unsigned char char_data[16];
 			Poco::UInt64 uint64_data;
 		} buf;
@@ -65,14 +63,17 @@ struct HalfMD5Impl
 		MD5_Update(&ctx, reinterpret_cast<const unsigned char *>(begin), size);
 		MD5_Final(buf.char_data, &ctx);
 
-		return Poco::ByteOrder::flipBytes(buf.uint64_data);		/// Совместимость с существующим кодом.
+		return Poco::ByteOrder::flipBytes(buf.uint64_data); /// Совместимость с существующим кодом.
 	}
 };
 
 struct MD5Impl
 {
 	static constexpr auto name = "MD5";
-	enum { length = 16 };
+	enum
+	{
+		length = 16
+	};
 
 	static void apply(const char * begin, const size_t size, unsigned char * out_char_data)
 	{
@@ -86,7 +87,10 @@ struct MD5Impl
 struct SHA1Impl
 {
 	static constexpr auto name = "SHA1";
-	enum { length = 20 };
+	enum
+	{
+		length = 20
+	};
 
 	static void apply(const char * begin, const size_t size, unsigned char * out_char_data)
 	{
@@ -100,7 +104,10 @@ struct SHA1Impl
 struct SHA224Impl
 {
 	static constexpr auto name = "SHA224";
-	enum { length = 28 };
+	enum
+	{
+		length = 28
+	};
 
 	static void apply(const char * begin, const size_t size, unsigned char * out_char_data)
 	{
@@ -114,7 +121,10 @@ struct SHA224Impl
 struct SHA256Impl
 {
 	static constexpr auto name = "SHA256";
-	enum { length = 32 };
+	enum
+	{
+		length = 32
+	};
 
 	static void apply(const char * begin, const size_t size, unsigned char * out_char_data)
 	{
@@ -136,11 +146,14 @@ struct SipHash64Impl
 struct SipHash128Impl
 {
 	static constexpr auto name = "sipHash128";
-	enum { length = 16 };
+	enum
+	{
+		length = 16
+	};
 
 	static void apply(const char * begin, const size_t size, unsigned char * out_char_data)
 	{
-		sipHash128(begin, size, reinterpret_cast<char*>(out_char_data));
+		sipHash128(begin, size, reinterpret_cast<char *>(out_char_data));
 	}
 };
 
@@ -171,7 +184,10 @@ class FunctionStringHash64 : public IFunction
 {
 public:
 	static constexpr auto name = Name::name;
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionStringHash64>(); };
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionStringHash64>();
+	};
 
 	/// Получить имя функции.
 	String getName() const override
@@ -179,14 +195,17 @@ public:
 		return name;
 	}
 
-	size_t getNumberOfArguments() const override { return 1; }
+	size_t getNumberOfArguments() const override
+	{
+		return 1;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
 		if (!typeid_cast<const DataTypeString *>(&*arguments[0]))
-			throw Exception("Illegal type " + arguments[0]->getName() + " of argument of function " + getName(),
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+			throw Exception(
+				"Illegal type " + arguments[0]->getName() + " of argument of function " + getName(), ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 		return std::make_shared<DataTypeUInt64>();
 	}
@@ -206,19 +225,18 @@ public:
 			vec_to.resize(size);
 
 			for (size_t i = 0; i < size; ++i)
-				vec_to[i] = Impl::apply(
-					reinterpret_cast<const char *>(&data[i == 0 ? 0 : offsets[i - 1]]),
+				vec_to[i] = Impl::apply(reinterpret_cast<const char *>(&data[i == 0 ? 0 : offsets[i - 1]]),
 					i == 0 ? offsets[i] - 1 : (offsets[i] - 1 - offsets[i - 1]));
 		}
-		else if (const ColumnConstString * col_from = typeid_cast<const ColumnConstString *>(block.safeGetByPosition(arguments[0]).column.get()))
+		else if (const ColumnConstString * col_from
+			= typeid_cast<const ColumnConstString *>(block.safeGetByPosition(arguments[0]).column.get()))
 		{
 			block.safeGetByPosition(result).column = std::make_shared<ColumnConstUInt64>(
-				col_from->size(),
-				Impl::apply(col_from->getData().data(), col_from->getData().size()));
+				col_from->size(), Impl::apply(col_from->getData().data(), col_from->getData().size()));
 		}
 		else
-			throw Exception("Illegal column " + block.safeGetByPosition(arguments[0]).column->getName()
-					+ " of first argument of function " + Name::name,
+			throw Exception("Illegal column " + block.safeGetByPosition(arguments[0]).column->getName() + " of first argument of function "
+					+ Name::name,
 				ErrorCodes::ILLEGAL_COLUMN);
 	}
 };
@@ -229,7 +247,10 @@ class FunctionStringHashFixedString : public IFunction
 {
 public:
 	static constexpr auto name = Impl::name;
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionStringHashFixedString>(); };
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionStringHashFixedString>();
+	};
 
 	/// Получить имя функции.
 	String getName() const override
@@ -237,14 +258,17 @@ public:
 		return name;
 	}
 
-	size_t getNumberOfArguments() const override { return 1; }
+	size_t getNumberOfArguments() const override
+	{
+		return 1;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
 		if (!typeid_cast<const DataTypeString *>(&*arguments[0]))
-			throw Exception("Illegal type " + arguments[0]->getName() + " of argument of function " + getName(),
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+			throw Exception(
+				"Illegal type " + arguments[0]->getName() + " of argument of function " + getName(), ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 		return std::make_shared<DataTypeFixedString>(Impl::length);
 	}
@@ -264,26 +288,24 @@ public:
 			chars_to.resize(size * Impl::length);
 
 			for (size_t i = 0; i < size; ++i)
-				Impl::apply(
-					reinterpret_cast<const char *>(&data[i == 0 ? 0 : offsets[i - 1]]),
+				Impl::apply(reinterpret_cast<const char *>(&data[i == 0 ? 0 : offsets[i - 1]]),
 					i == 0 ? offsets[i] - 1 : (offsets[i] - 1 - offsets[i - 1]),
 					&chars_to[i * Impl::length]);
 		}
-		else if (const ColumnConstString * col_from = typeid_cast<const ColumnConstString *>(block.safeGetByPosition(arguments[0]).column.get()))
+		else if (const ColumnConstString * col_from
+			= typeid_cast<const ColumnConstString *>(block.safeGetByPosition(arguments[0]).column.get()))
 		{
 			const auto & data = col_from->getData();
 
 			String hash(Impl::length, 0);
 			Impl::apply(data.data(), data.size(), reinterpret_cast<unsigned char *>(&hash[0]));
 
-			block.safeGetByPosition(result).column = std::make_shared<ColumnConstString>(
-				col_from->size(),
-				hash,
-				std::make_shared<DataTypeFixedString>(Impl::length));
+			block.safeGetByPosition(result).column
+				= std::make_shared<ColumnConstString>(col_from->size(), hash, std::make_shared<DataTypeFixedString>(Impl::length));
 		}
 		else
-			throw Exception("Illegal column " + block.safeGetByPosition(arguments[0]).column->getName()
-					+ " of first argument of function " + getName(),
+			throw Exception(
+				"Illegal column " + block.safeGetByPosition(arguments[0]).column->getName() + " of first argument of function " + getName(),
 				ErrorCodes::ILLEGAL_COLUMN);
 	}
 };
@@ -294,7 +316,10 @@ class FunctionIntHash : public IFunction
 {
 public:
 	static constexpr auto name = Name::name;
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionIntHash>(); };
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionIntHash>();
+	};
 
 private:
 	using ToType = typename Impl::ReturnType;
@@ -315,13 +340,15 @@ private:
 			for (size_t i = 0; i < size; ++i)
 				vec_to[i] = Impl::apply(vec_from[i]);
 		}
-		else if (ColumnConst<FromType> * col_from = typeid_cast<ColumnConst<FromType> *>(block.safeGetByPosition(arguments[0]).column.get()))
+		else if (ColumnConst<FromType> * col_from
+			= typeid_cast<ColumnConst<FromType> *>(block.safeGetByPosition(arguments[0]).column.get()))
 		{
-			block.safeGetByPosition(result).column = std::make_shared<ColumnConst<ToType>>(col_from->size(), Impl::apply(col_from->getData()));
+			block.safeGetByPosition(result).column
+				= std::make_shared<ColumnConst<ToType>>(col_from->size(), Impl::apply(col_from->getData()));
 		}
 		else
-			throw Exception("Illegal column " + block.safeGetByPosition(arguments[0]).column->getName()
-					+ " of first argument of function " + Name::name,
+			throw Exception("Illegal column " + block.safeGetByPosition(arguments[0]).column->getName() + " of first argument of function "
+					+ Name::name,
 				ErrorCodes::ILLEGAL_COLUMN);
 	}
 
@@ -332,14 +359,17 @@ public:
 		return name;
 	}
 
-	size_t getNumberOfArguments() const override { return 1; }
+	size_t getNumberOfArguments() const override
+	{
+		return 1;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
 		if (!arguments[0]->isNumeric())
-			throw Exception("Illegal type " + arguments[0]->getName() + " of argument of function " + getName(),
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+			throw Exception(
+				"Illegal type " + arguments[0]->getName() + " of argument of function " + getName(), ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 		return std::make_shared<typename DataTypeFromFieldType<typename Impl::ReturnType>::Type>();
 	}
@@ -349,18 +379,29 @@ public:
 	{
 		IDataType * from_type = block.safeGetByPosition(arguments[0]).type.get();
 
-		if      (typeid_cast<const DataTypeUInt8 *		>(from_type)) executeType<UInt8	>(block, arguments, result);
-		else if (typeid_cast<const DataTypeUInt16 *	>(from_type)) executeType<UInt16>(block, arguments, result);
-		else if (typeid_cast<const DataTypeUInt32 *	>(from_type)) executeType<UInt32>(block, arguments, result);
-		else if (typeid_cast<const DataTypeUInt64 *	>(from_type)) executeType<UInt64>(block, arguments, result);
-		else if (typeid_cast<const DataTypeInt8 *		>(from_type)) executeType<Int8	>(block, arguments, result);
-		else if (typeid_cast<const DataTypeInt16 *		>(from_type)) executeType<Int16	>(block, arguments, result);
-		else if (typeid_cast<const DataTypeInt32 *		>(from_type)) executeType<Int32	>(block, arguments, result);
-		else if (typeid_cast<const DataTypeInt64 *		>(from_type)) executeType<Int64	>(block, arguments, result);
-		else if (typeid_cast<const DataTypeDate *		>(from_type)) executeType<UInt16>(block, arguments, result);
-		else if (typeid_cast<const DataTypeDateTime *	>(from_type)) executeType<UInt32>(block, arguments, result);
+		if (typeid_cast<const DataTypeUInt8 *>(from_type))
+			executeType<UInt8>(block, arguments, result);
+		else if (typeid_cast<const DataTypeUInt16 *>(from_type))
+			executeType<UInt16>(block, arguments, result);
+		else if (typeid_cast<const DataTypeUInt32 *>(from_type))
+			executeType<UInt32>(block, arguments, result);
+		else if (typeid_cast<const DataTypeUInt64 *>(from_type))
+			executeType<UInt64>(block, arguments, result);
+		else if (typeid_cast<const DataTypeInt8 *>(from_type))
+			executeType<Int8>(block, arguments, result);
+		else if (typeid_cast<const DataTypeInt16 *>(from_type))
+			executeType<Int16>(block, arguments, result);
+		else if (typeid_cast<const DataTypeInt32 *>(from_type))
+			executeType<Int32>(block, arguments, result);
+		else if (typeid_cast<const DataTypeInt64 *>(from_type))
+			executeType<Int64>(block, arguments, result);
+		else if (typeid_cast<const DataTypeDate *>(from_type))
+			executeType<UInt16>(block, arguments, result);
+		else if (typeid_cast<const DataTypeDateTime *>(from_type))
+			executeType<UInt32>(block, arguments, result);
 		else
-			throw Exception("Illegal type " + block.safeGetByPosition(arguments[0]).type->getName() + " of argument of function " + getName(),
+			throw Exception(
+				"Illegal type " + block.safeGetByPosition(arguments[0]).type->getName() + " of argument of function " + getName(),
 				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 	}
 };
@@ -387,7 +428,10 @@ class FunctionNeighbourhoodHash64 : public IFunction
 {
 public:
 	static constexpr auto name = Impl::name;
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionNeighbourhoodHash64>(); };
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionNeighbourhoodHash64>();
+	};
 
 private:
 	template <typename FromType, bool first>
@@ -421,9 +465,7 @@ private:
 			}
 		}
 		else
-			throw Exception("Illegal column " + column->getName()
-				+ " of argument of function " + getName(),
-				ErrorCodes::ILLEGAL_COLUMN);
+			throw Exception("Illegal column " + column->getName() + " of argument of function " + getName(), ErrorCodes::ILLEGAL_COLUMN);
 	}
 
 	template <bool first>
@@ -437,8 +479,7 @@ private:
 
 			for (size_t i = 0; i < size; ++i)
 			{
-				const UInt64 h = Impl::Hash64(
-					reinterpret_cast<const char *>(&data[i == 0 ? 0 : offsets[i - 1]]),
+				const UInt64 h = Impl::Hash64(reinterpret_cast<const char *>(&data[i == 0 ? 0 : offsets[i - 1]]),
 					i == 0 ? offsets[i] - 1 : (offsets[i] - 1 - offsets[i - 1]));
 				if (first)
 					vec_to[i] = h;
@@ -477,9 +518,8 @@ private:
 			}
 		}
 		else
-			throw Exception("Illegal column " + column->getName()
-					+ " of first argument of function " + getName(),
-				ErrorCodes::ILLEGAL_COLUMN);
+			throw Exception(
+				"Illegal column " + column->getName() + " of first argument of function " + getName(), ErrorCodes::ILLEGAL_COLUMN);
 	}
 
 	template <bool first>
@@ -520,34 +560,50 @@ private:
 			executeArray<first>(type, &*full_column, vec_to);
 		}
 		else
-			throw Exception("Illegal column " + column->getName()
-					+ " of first argument of function " + getName(),
-				ErrorCodes::ILLEGAL_COLUMN);
+			throw Exception(
+				"Illegal column " + column->getName() + " of first argument of function " + getName(), ErrorCodes::ILLEGAL_COLUMN);
 	}
 
 	template <bool first>
 	void executeAny(const IDataType * from_type, const IColumn * icolumn, ColumnUInt64::Container_t & vec_to)
 	{
-		if      (typeid_cast<const DataTypeUInt8 *		>(from_type)) executeIntType<UInt8,		first>(icolumn, vec_to);
-		else if (typeid_cast<const DataTypeUInt16 *		>(from_type)) executeIntType<UInt16,	first>(icolumn, vec_to);
-		else if (typeid_cast<const DataTypeUInt32 *		>(from_type)) executeIntType<UInt32,	first>(icolumn, vec_to);
-		else if (typeid_cast<const DataTypeUInt64 *		>(from_type)) executeIntType<UInt64,	first>(icolumn, vec_to);
-		else if (typeid_cast<const DataTypeInt8 *		>(from_type)) executeIntType<Int8,		first>(icolumn, vec_to);
-		else if (typeid_cast<const DataTypeInt16 *		>(from_type)) executeIntType<Int16,		first>(icolumn, vec_to);
-		else if (typeid_cast<const DataTypeInt32 *		>(from_type)) executeIntType<Int32,		first>(icolumn, vec_to);
-		else if (typeid_cast<const DataTypeInt64 *		>(from_type)) executeIntType<Int64,		first>(icolumn, vec_to);
-		else if (typeid_cast<const DataTypeEnum8 *		>(from_type)) executeIntType<Int8,		first>(icolumn, vec_to);
-		else if (typeid_cast<const DataTypeEnum16 *		>(from_type)) executeIntType<Int16,		first>(icolumn, vec_to);
-		else if (typeid_cast<const DataTypeDate *		>(from_type)) executeIntType<UInt16,	first>(icolumn, vec_to);
-		else if (typeid_cast<const DataTypeDateTime *	>(from_type)) executeIntType<UInt32,	first>(icolumn, vec_to);
-		else if (typeid_cast<const DataTypeFloat32 *	>(from_type)) executeIntType<Float32,	first>(icolumn, vec_to);
-		else if (typeid_cast<const DataTypeFloat64 *	>(from_type)) executeIntType<Float64,	first>(icolumn, vec_to);
-		else if (typeid_cast<const DataTypeString *		>(from_type)) executeString	<			first>(icolumn, vec_to);
-		else if (typeid_cast<const DataTypeFixedString *>(from_type)) executeString	<			first>(icolumn, vec_to);
-		else if (typeid_cast<const DataTypeArray *		>(from_type)) executeArray	<			first>(from_type, icolumn, vec_to);
+		if (typeid_cast<const DataTypeUInt8 *>(from_type))
+			executeIntType<UInt8, first>(icolumn, vec_to);
+		else if (typeid_cast<const DataTypeUInt16 *>(from_type))
+			executeIntType<UInt16, first>(icolumn, vec_to);
+		else if (typeid_cast<const DataTypeUInt32 *>(from_type))
+			executeIntType<UInt32, first>(icolumn, vec_to);
+		else if (typeid_cast<const DataTypeUInt64 *>(from_type))
+			executeIntType<UInt64, first>(icolumn, vec_to);
+		else if (typeid_cast<const DataTypeInt8 *>(from_type))
+			executeIntType<Int8, first>(icolumn, vec_to);
+		else if (typeid_cast<const DataTypeInt16 *>(from_type))
+			executeIntType<Int16, first>(icolumn, vec_to);
+		else if (typeid_cast<const DataTypeInt32 *>(from_type))
+			executeIntType<Int32, first>(icolumn, vec_to);
+		else if (typeid_cast<const DataTypeInt64 *>(from_type))
+			executeIntType<Int64, first>(icolumn, vec_to);
+		else if (typeid_cast<const DataTypeEnum8 *>(from_type))
+			executeIntType<Int8, first>(icolumn, vec_to);
+		else if (typeid_cast<const DataTypeEnum16 *>(from_type))
+			executeIntType<Int16, first>(icolumn, vec_to);
+		else if (typeid_cast<const DataTypeDate *>(from_type))
+			executeIntType<UInt16, first>(icolumn, vec_to);
+		else if (typeid_cast<const DataTypeDateTime *>(from_type))
+			executeIntType<UInt32, first>(icolumn, vec_to);
+		else if (typeid_cast<const DataTypeFloat32 *>(from_type))
+			executeIntType<Float32, first>(icolumn, vec_to);
+		else if (typeid_cast<const DataTypeFloat64 *>(from_type))
+			executeIntType<Float64, first>(icolumn, vec_to);
+		else if (typeid_cast<const DataTypeString *>(from_type))
+			executeString<first>(icolumn, vec_to);
+		else if (typeid_cast<const DataTypeFixedString *>(from_type))
+			executeString<first>(icolumn, vec_to);
+		else if (typeid_cast<const DataTypeArray *>(from_type))
+			executeArray<first>(from_type, icolumn, vec_to);
 		else
-			throw Exception("Unexpected type " + from_type->getName() + " of argument of function " + getName(),
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+			throw Exception(
+				"Unexpected type " + from_type->getName() + " of argument of function " + getName(), ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 	}
 
 	void executeForArgument(const IDataType * type, const IColumn * column, ColumnUInt64::Container_t & vec_to, bool & is_first)
@@ -585,8 +641,14 @@ public:
 		return name;
 	}
 
-	bool isVariadic() const override { return true; }
-	size_t getNumberOfArguments() const override { return 0; }
+	bool isVariadic() const override
+	{
+		return true;
+	}
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
@@ -698,45 +760,50 @@ class FunctionURLHash : public IFunction
 {
 public:
 	static constexpr auto name = "URLHash";
-	static FunctionPtr create(const Context &) { return std::make_shared<FunctionURLHash>(); }
+	static FunctionPtr create(const Context &)
+	{
+		return std::make_shared<FunctionURLHash>();
+	}
 
-	String getName() const override { return name; }
+	String getName() const override
+	{
+		return name;
+	}
 
-	bool isVariadic() const override { return true; }
-	size_t getNumberOfArguments() const override { return 0; }
+	bool isVariadic() const override
+	{
+		return true;
+	}
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
 		const auto arg_count = arguments.size();
 		if (arg_count != 1 && arg_count != 2)
-			throw Exception{
-				"Number of arguments for function " + getName() + " doesn't match: passed " +
-					toString(arg_count) + ", should be 1 or 2.",
-				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH
-			};
+			throw Exception{ "Number of arguments for function " + getName() + " doesn't match: passed " + toString(arg_count)
+					+ ", should be 1 or 2.",
+				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH };
 
 		const auto first_arg = arguments.front().get();
 		if (!typeid_cast<const DataTypeString *>(first_arg))
-			throw Exception{
-				"Illegal type " + first_arg->getName() + " of argument of function " + getName(),
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT
-			};
+			throw Exception{ "Illegal type " + first_arg->getName() + " of argument of function " + getName(),
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 
 		if (arg_count == 2)
 		{
 			const auto second_arg = arguments.back().get();
-			if (!typeid_cast<const DataTypeUInt8 *>(second_arg) &&
-				!typeid_cast<const DataTypeUInt16 *>(second_arg) &&
-				!typeid_cast<const DataTypeUInt32 *>(second_arg) &&
-				!typeid_cast<const DataTypeUInt64 *>(second_arg) &&
-				!typeid_cast<const DataTypeInt8 *>(second_arg) &&
-				!typeid_cast<const DataTypeInt16 *>(second_arg) &&
-				!typeid_cast<const DataTypeInt32 *>(second_arg) &&
-				!typeid_cast<const DataTypeInt64 *>(second_arg))
-				throw Exception{
-					"Illegal type " + second_arg->getName() + " of argument of function " + getName(),
-					ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT
-				};
+			if (!typeid_cast<const DataTypeUInt8 *>(second_arg) && !typeid_cast<const DataTypeUInt16 *>(second_arg)
+				&& !typeid_cast<const DataTypeUInt32 *>(second_arg)
+				&& !typeid_cast<const DataTypeUInt64 *>(second_arg)
+				&& !typeid_cast<const DataTypeInt8 *>(second_arg)
+				&& !typeid_cast<const DataTypeInt16 *>(second_arg)
+				&& !typeid_cast<const DataTypeInt32 *>(second_arg)
+				&& !typeid_cast<const DataTypeInt64 *>(second_arg))
+				throw Exception{ "Illegal type " + second_arg->getName() + " of argument of function " + getName(),
+					ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 		}
 
 		return std::make_shared<DataTypeUInt64>();
@@ -751,7 +818,7 @@ public:
 		else if (arg_count == 2)
 			executeTwoArgs(block, arguments, result);
 		else
-			throw std::logic_error{"got into IFunction::execute with unexpected number of arguments"};
+			throw std::logic_error{ "got into IFunction::execute with unexpected number of arguments" };
 	}
 
 private:
@@ -770,31 +837,25 @@ private:
 			auto & out = col_to->getData();
 
 			for (const auto i : ext::range(0, size))
-				out[i] = URLHashImpl::apply(
-					reinterpret_cast<const char *>(&chars[i == 0 ? 0 : offsets[i - 1]]),
+				out[i] = URLHashImpl::apply(reinterpret_cast<const char *>(&chars[i == 0 ? 0 : offsets[i - 1]]),
 					i == 0 ? offsets[i] - 1 : (offsets[i] - 1 - offsets[i - 1]));
 		}
 		else if (const auto col_from = typeid_cast<const ColumnConstString *>(col_untyped))
 		{
 			block.safeGetByPosition(result).column = std::make_shared<ColumnConstUInt64>(
-				col_from->size(),
-				URLHashImpl::apply(col_from->getData().data(), col_from->getData().size()));
+				col_from->size(), URLHashImpl::apply(col_from->getData().data(), col_from->getData().size()));
 		}
 		else
-			throw Exception{
-				"Illegal column " + block.safeGetByPosition(arguments[0]).column->getName() +
-				" of argument of function " + getName(),
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Illegal column " + block.safeGetByPosition(arguments[0]).column->getName() + " of argument of function "
+					+ getName(),
+				ErrorCodes::ILLEGAL_COLUMN };
 	}
 
 	void executeTwoArgs(Block & block, const ColumnNumbers & arguments, const std::size_t result) const
 	{
 		const auto level_col = block.safeGetByPosition(arguments.back()).column.get();
 		if (!level_col->isConst())
-			throw Exception{
-				"Second argument of function " + getName() + " must be an integral constant",
-				ErrorCodes::ILLEGAL_COLUMN
-			};
+			throw Exception{ "Second argument of function " + getName() + " must be an integral constant", ErrorCodes::ILLEGAL_COLUMN };
 
 		const auto level = level_col->get64(0);
 
@@ -817,30 +878,46 @@ private:
 		else if (const auto col_from = typeid_cast<const ColumnConstString *>(col_untyped))
 		{
 			block.safeGetByPosition(result).column = std::make_shared<ColumnConstUInt64>(
-				col_from->size(),
-				URLHierarchyHashImpl::apply(level, col_from->getData().data(), col_from->getData().size()));
+				col_from->size(), URLHierarchyHashImpl::apply(level, col_from->getData().data(), col_from->getData().size()));
 		}
 		else
-			throw Exception{
-				"Illegal column " + block.safeGetByPosition(arguments[0]).column->getName() +
-				" of argument of function " + getName(),
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Illegal column " + block.safeGetByPosition(arguments[0]).column->getName() + " of argument of function "
+					+ getName(),
+				ErrorCodes::ILLEGAL_COLUMN };
 	}
 };
 
 
-struct NameHalfMD5 			{ static constexpr auto name = "halfMD5"; };
-struct NameSipHash64		{ static constexpr auto name = "sipHash64"; };
-struct NameIntHash32 		{ static constexpr auto name = "intHash32"; };
-struct NameIntHash64 		{ static constexpr auto name = "intHash64"; };
+struct NameHalfMD5
+{
+	static constexpr auto name = "halfMD5";
+};
+struct NameSipHash64
+{
+	static constexpr auto name = "sipHash64";
+};
+struct NameIntHash32
+{
+	static constexpr auto name = "intHash32";
+};
+struct NameIntHash64
+{
+	static constexpr auto name = "intHash64";
+};
 
 struct ImplCityHash64
 {
 	static constexpr auto name = "cityHash64";
 	using uint128_t = uint128;
 
-	static auto Hash128to64(const uint128_t & x) { return ::Hash128to64(x); }
-	static auto Hash64(const char * const s, const std::size_t len) { return CityHash64(s, len); }
+	static auto Hash128to64(const uint128_t & x)
+	{
+		return ::Hash128to64(x);
+	}
+	static auto Hash64(const char * const s, const std::size_t len)
+	{
+		return CityHash64(s, len);
+	}
 };
 
 struct ImplFarmHash64
@@ -848,8 +925,14 @@ struct ImplFarmHash64
 	static constexpr auto name = "farmHash64";
 	using uint128_t = farmhash::uint128_t;
 
-	static auto Hash128to64(const uint128_t & x) { return farmhash::Hash128to64(x); }
-	static auto Hash64(const char * const s, const std::size_t len) { return farmhash::Hash64(s, len); }
+	static auto Hash128to64(const uint128_t & x)
+	{
+		return farmhash::Hash128to64(x);
+	}
+	static auto Hash64(const char * const s, const std::size_t len)
+	{
+		return farmhash::Hash64(s, len);
+	}
 };
 
 struct ImplMetroHash64
@@ -857,7 +940,10 @@ struct ImplMetroHash64
 	static constexpr auto name = "metroHash64";
 	using uint128_t = uint128;
 
-	static auto Hash128to64(const uint128_t & x) { return ::Hash128to64(x); }
+	static auto Hash128to64(const uint128_t & x)
+	{
+		return ::Hash128to64(x);
+	}
 	static auto Hash64(const char * const s, const std::size_t len)
 	{
 		union {
@@ -883,5 +969,4 @@ using FunctionSipHash128 = FunctionStringHashFixedString<SipHash128Impl>;
 using FunctionCityHash64 = FunctionNeighbourhoodHash64<ImplCityHash64>;
 using FunctionFarmHash64 = FunctionNeighbourhoodHash64<ImplFarmHash64>;
 using FunctionMetroHash64 = FunctionNeighbourhoodHash64<ImplMetroHash64>;
-
 }

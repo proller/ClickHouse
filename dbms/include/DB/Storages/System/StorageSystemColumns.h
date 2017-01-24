@@ -6,7 +6,6 @@
 
 namespace DB
 {
-
 class Context;
 
 /** Реализует системную таблицу columns, которая позволяет получить информацию
@@ -14,16 +13,25 @@ class Context;
   */
 class StorageSystemColumns : private ext::shared_ptr_helper<StorageSystemColumns>, public IStorage
 {
-friend class ext::shared_ptr_helper<StorageSystemColumns>;
+	friend class ext::shared_ptr_helper<StorageSystemColumns>;
+
 public:
 	static StoragePtr create(const std::string & name_);
 
-	std::string getName() const override { return "SystemColumns"; }
-	std::string getTableName() const override { return name; }
-	const NamesAndTypesList & getColumnsListImpl() const override { return columns; }
+	std::string getName() const override
+	{
+		return "SystemColumns";
+	}
+	std::string getTableName() const override
+	{
+		return name;
+	}
+	const NamesAndTypesList & getColumnsListImpl() const override
+	{
+		return columns;
+	}
 
-	BlockInputStreams read(
-		const Names & column_names,
+	BlockInputStreams read(const Names & column_names,
 		ASTPtr query,
 		const Context & context,
 		const Settings & settings,
@@ -38,5 +46,4 @@ private:
 	const std::string name;
 	NamesAndTypesList columns;
 };
-
 }

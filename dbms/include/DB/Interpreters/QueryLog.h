@@ -5,8 +5,6 @@
 
 namespace DB
 {
-
-
 /** Allows to log information about queries execution:
   * - info about start of query execution;
   * - performance metrics (are set at the end of query execution);
@@ -53,7 +51,10 @@ struct QueryLogElement
 
 	ClientInfo client_info;
 
-	static std::string name() { return "QueryLog"; }
+	static std::string name()
+	{
+		return "QueryLog";
+	}
 
 	static Block createBlock();
 	void appendToBlock(Block & block) const;
@@ -65,5 +66,4 @@ class QueryLog : public SystemLog<QueryLogElement>
 {
 	using SystemLog<QueryLogElement>::SystemLog;
 };
-
 }

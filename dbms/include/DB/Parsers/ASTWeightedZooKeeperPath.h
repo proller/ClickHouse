@@ -1,20 +1,27 @@
 #pragma once
 
-#include <DB/Parsers/IAST.h>
-#include <DB/Core/Types.h>
 #include <mysqlxx/Manip.h>
+#include <DB/Core/Types.h>
+#include <DB/Parsers/IAST.h>
 
 
 namespace DB
 {
-
 class ASTWeightedZooKeeperPath : public IAST
 {
 public:
 	ASTWeightedZooKeeperPath() = default;
-	ASTWeightedZooKeeperPath(StringRange range_) : IAST(range_) {}
-	String getID() const override { return "Weighted_ZooKeeper_Path"; }
-	ASTPtr clone() const override { return std::make_shared<ASTWeightedZooKeeperPath>(*this); }
+	ASTWeightedZooKeeperPath(StringRange range_) : IAST(range_)
+	{
+	}
+	String getID() const override
+	{
+		return "Weighted_ZooKeeper_Path";
+	}
+	ASTPtr clone() const override
+	{
+		return std::make_shared<ASTWeightedZooKeeperPath>(*this);
+	}
 
 public:
 	String path;
@@ -27,5 +34,4 @@ protected:
 		settings.ostr << settings.nl_or_ws << indent_str << mysqlxx::quote << path << " WEIGHT " << weight;
 	}
 };
-
 }

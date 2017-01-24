@@ -6,7 +6,6 @@
 
 namespace DB
 {
-
 class WriteBuffer;
 
 /** Поток для вывода данных в формате tsv.
@@ -27,11 +26,20 @@ public:
 
 	void flush() override;
 
-	void setTotals(const Block & totals_) override { totals = totals_; }
-	void setExtremes(const Block & extremes_) override { extremes = extremes_; }
+	void setTotals(const Block & totals_) override
+	{
+		totals = totals_;
+	}
+	void setExtremes(const Block & extremes_) override
+	{
+		extremes = extremes_;
+	}
 
 	/// https://www.iana.org/assignments/media-types/text/tab-separated-values
-	String getContentType() const override { return "text/tab-separated-values; charset=UTF-8"; }
+	String getContentType() const override
+	{
+		return "text/tab-separated-values; charset=UTF-8";
+	}
 
 protected:
 	void writeTotals();
@@ -44,6 +52,4 @@ protected:
 	Block totals;
 	Block extremes;
 };
-
 }
-

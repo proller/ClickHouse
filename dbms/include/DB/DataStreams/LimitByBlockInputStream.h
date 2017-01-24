@@ -8,7 +8,6 @@
 
 namespace DB
 {
-
 /** Implements LIMIT BY clause witch can be used to obtain a "top N by subgroup".
   *
   * For example, if you have table T like this (Num: 1 1 3 3 3 4 4 5 7 7 7 7),
@@ -20,7 +19,10 @@ class LimitByBlockInputStream : public IProfilingBlockInputStream
 public:
 	LimitByBlockInputStream(BlockInputStreamPtr input_, size_t group_size_, Names columns_);
 
-	String getName() const override { return "LimitBy"; }
+	String getName() const override
+	{
+		return "LimitBy";
+	}
 
 	String getID() const override;
 
@@ -37,5 +39,4 @@ private:
 	const size_t group_size;
 	MapHashed keys_counts;
 };
-
 }

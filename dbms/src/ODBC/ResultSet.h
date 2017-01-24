@@ -1,9 +1,9 @@
 #pragma once
 
 #include <vector>
+#include <sqltypes.h>
 #include <Poco/NumberParser.h>
 #include <Poco/Types.h>
-#include <sqltypes.h>
 
 #include "ReadHelpers.h"
 
@@ -15,10 +15,22 @@ class Field
 public:
 	std::string data;
 
-	Poco::UInt64 getUInt() const{ return Poco::NumberParser::parseUnsigned64(data); }
-	Poco::Int64 getInt() const	{ return Poco::NumberParser::parse64(data); }
-	float getFloat() const		{ return Poco::NumberParser::parseFloat(data); }
-	double getDouble() const	{ return Poco::NumberParser::parseFloat(data); }
+	Poco::UInt64 getUInt() const
+	{
+		return Poco::NumberParser::parseUnsigned64(data);
+	}
+	Poco::Int64 getInt() const
+	{
+		return Poco::NumberParser::parse64(data);
+	}
+	float getFloat() const
+	{
+		return Poco::NumberParser::parseFloat(data);
+	}
+	double getDouble() const
+	{
+		return Poco::NumberParser::parseFloat(data);
+	}
 
 	SQL_DATE_STRUCT getDate() const
 	{
@@ -53,12 +65,19 @@ public:
 class Row
 {
 public:
-	Row() {}
-	Row(size_t num_columns) : data(num_columns) {}
+	Row()
+	{
+	}
+	Row(size_t num_columns) : data(num_columns)
+	{
+	}
 
 	std::vector<Field> data;
 
-	operator bool() { return !data.empty(); }
+	operator bool()
+	{
+		return !data.empty();
+	}
 };
 
 
@@ -82,14 +101,28 @@ struct ColumnInfo
 class ResultSet
 {
 public:
-	ResultSet() {}
+	ResultSet()
+	{
+	}
 
 	void init(Statement & statement_);
 
-	bool empty() const { return columns_info.empty(); }
-	size_t getNumColumns() const { return columns_info.size(); }
-	const ColumnInfo & getColumnInfo(size_t i) const { return columns_info.at(i); }
-	size_t getNumRows() const { return rows; }
+	bool empty() const
+	{
+		return columns_info.empty();
+	}
+	size_t getNumColumns() const
+	{
+		return columns_info.size();
+	}
+	const ColumnInfo & getColumnInfo(size_t i) const
+	{
+		return columns_info.at(i);
+	}
+	size_t getNumRows() const
+	{
+		return rows;
+	}
 
 	Row fetch()
 	{

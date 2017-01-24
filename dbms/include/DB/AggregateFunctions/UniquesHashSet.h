@@ -4,14 +4,14 @@
 
 #include <common/Common.h>
 
-#include <DB/IO/WriteBuffer.h>
-#include <DB/IO/WriteHelpers.h>
 #include <DB/IO/ReadBuffer.h>
 #include <DB/IO/ReadHelpers.h>
 #include <DB/IO/VarInt.h>
+#include <DB/IO/WriteBuffer.h>
+#include <DB/IO/WriteHelpers.h>
 
-#include <DB/Common/HashTable/HashTableAllocator.h>
 #include <DB/Common/HashTable/Hash.h>
+#include <DB/Common/HashTable/HashTableAllocator.h>
 
 
 /** Приближённый рассчёт чего-угодно, как правило, построен по следующей схеме:
@@ -45,18 +45,18 @@
 
 
 /// Максимальная степень размера буфера перед тем, как значения будут выкидываться
-#define UNIQUES_HASH_MAX_SIZE_DEGREE 			17
+#define UNIQUES_HASH_MAX_SIZE_DEGREE 17
 
 /// Максимальное количество элементов перед тем, как значения будут выкидываться
-#define UNIQUES_HASH_MAX_SIZE 					(1 << (UNIQUES_HASH_MAX_SIZE_DEGREE - 1))
+#define UNIQUES_HASH_MAX_SIZE (1 << (UNIQUES_HASH_MAX_SIZE_DEGREE - 1))
 
 /** Количество младших бит, использующихся для прореживания. Оставшиеся старшие биты используются для определения позиции в хэш-таблице.
   * (старшие биты берутся потому что младшие будут постоянными после выкидывания части значений)
   */
-#define UNIQUES_HASH_BITS_FOR_SKIP 			(32 - UNIQUES_HASH_MAX_SIZE_DEGREE)
+#define UNIQUES_HASH_BITS_FOR_SKIP (32 - UNIQUES_HASH_MAX_SIZE_DEGREE)
 
 /// Начальная степень размера буфера
-#define UNIQUES_HASH_SET_INITIAL_SIZE_DEGREE 	4
+#define UNIQUES_HASH_SET_INITIAL_SIZE_DEGREE 4
 
 
 /** Эта хэш-функция не самая оптимальная, но состояния UniquesHashSet, посчитанные с ней,
@@ -64,7 +64,7 @@
   */
 struct UniquesHashSetDefaultHash
 {
-	size_t operator() (UInt64 x) const
+	size_t operator()(UInt64 x) const
 	{
 		return intHash32<0>(x);
 	}
@@ -79,10 +79,10 @@ private:
 	using HashValue_t = UInt32;
 	using Allocator = HashTableAllocatorWithStackMemory<(1 << UNIQUES_HASH_SET_INITIAL_SIZE_DEGREE) * sizeof(UInt32)>;
 
-	UInt32 m_size;			/// Количество элементов
-	UInt8 size_degree;		/// Размер таблицы в виде степени двух
-	UInt8 skip_degree;		/// Пропускать элементы не делящиеся на 2 ^ skip_degree
-	bool has_zero;			/// Хэш-таблица содержит элемент со значением хэш-функции = 0.
+	UInt32 m_size; /// Количество элементов
+	UInt8 size_degree; /// Размер таблицы в виде степени двух
+	UInt8 skip_degree; /// Пропускать элементы не делящиеся на 2 ^ skip_degree
+	bool has_zero; /// Хэш-таблица содержит элемент со значением хэш-функции = 0.
 
 	HashValue_t * buf;
 
@@ -106,10 +106,22 @@ private:
 		}
 	}
 
-	inline size_t buf_size() const						{ return 1 << size_degree; }
-	inline size_t max_fill() const						{ return 1 << (size_degree - 1); }
-	inline size_t mask() const							{ return buf_size() - 1; }
-	inline size_t place(HashValue_t x) const 			{ return (x >> UNIQUES_HASH_BITS_FOR_SKIP) & mask(); }
+	inline size_t buf_size() const
+	{
+		return 1 << size_degree;
+	}
+	inline size_t max_fill() const
+	{
+		return 1 << (size_degree - 1);
+	}
+	inline size_t mask() const
+	{
+		return buf_size() - 1;
+	}
+	inline size_t place(HashValue_t x) const
+	{
+		return (x >> UNIQUES_HASH_BITS_FOR_SKIP) & mask();
+	}
 
 	/// Значение делится на 2 ^ skip_degree
 	inline bool good(HashValue_t hash) const
@@ -273,10 +285,7 @@ private:
 
 
 public:
-	UniquesHashSet() :
-		m_size(0),
-		skip_degree(0),
-		has_zero(false)
+	UniquesHashSet() : m_size(0), skip_degree(0), has_zero(false)
 	{
 		alloc(UNIQUES_HASH_SET_INITIAL_SIZE_DEGREE);
 #ifdef UNIQUES_HASH_SET_COUNT_COLLISIONS
@@ -284,14 +293,13 @@ public:
 #endif
 	}
 
-	UniquesHashSet(const UniquesHashSet & rhs)
-		: m_size(rhs.m_size), skip_degree(rhs.skip_degree), has_zero(rhs.has_zero)
+	UniquesHashSet(const UniquesHashSet & rhs) : m_size(rhs.m_size), skip_degree(rhs.skip_degree), has_zero(rhs.has_zero)
 	{
 		alloc(rhs.size_degree);
 		memcpy(buf, rhs.buf, buf_size() * sizeof(buf[0]));
 	}
 
-	UniquesHashSet & operator= (const UniquesHashSet & rhs)
+	UniquesHashSet & operator=(const UniquesHashSet & rhs)
 	{
 		if (size_degree != rhs.size_degree)
 		{
@@ -402,9 +410,8 @@ public:
 
 		free();
 
-		UInt8 new_size_degree = m_size <= 1
-			 ? UNIQUES_HASH_SET_INITIAL_SIZE_DEGREE
-			 : std::max(UNIQUES_HASH_SET_INITIAL_SIZE_DEGREE, static_cast<int>(log2(m_size - 1)) + 2);
+		UInt8 new_size_degree = m_size <= 1 ? UNIQUES_HASH_SET_INITIAL_SIZE_DEGREE
+											: std::max(UNIQUES_HASH_SET_INITIAL_SIZE_DEGREE, static_cast<int>(log2(m_size - 1)) + 2);
 
 		alloc(new_size_degree);
 
@@ -498,9 +505,8 @@ public:
 
 		free();
 
-		UInt8 new_size_degree = m_size <= 1
-			 ? UNIQUES_HASH_SET_INITIAL_SIZE_DEGREE
-			 : std::max(UNIQUES_HASH_SET_INITIAL_SIZE_DEGREE, static_cast<int>(log2(m_size - 1)) + 2);
+		UInt8 new_size_degree = m_size <= 1 ? UNIQUES_HASH_SET_INITIAL_SIZE_DEGREE
+											: std::max(UNIQUES_HASH_SET_INITIAL_SIZE_DEGREE, static_cast<int>(log2(m_size - 1)) + 2);
 
 		alloc(new_size_degree);
 

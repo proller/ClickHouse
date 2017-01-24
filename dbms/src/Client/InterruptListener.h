@@ -6,7 +6,6 @@
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int CANNOT_MANIPULATE_SIGSET;
@@ -17,15 +16,19 @@ namespace ErrorCodes
 
 #ifdef __APPLE__
 // We only need to support timeout = {0, 0} at this moment
-static int sigtimedwait(const sigset_t *set, siginfo_t *info, const struct timespec *timeout) {
+static int sigtimedwait(const sigset_t * set, siginfo_t * info, const struct timespec * timeout)
+{
 	sigset_t pending;
 	int signo;
 	sigpending(&pending);
 
-	for (signo = 1; signo < NSIG; signo++) {
-		if (sigismember(set, signo) && sigismember(&pending, signo)) {
+	for (signo = 1; signo < NSIG; signo++)
+	{
+		if (sigismember(set, signo) && sigismember(&pending, signo))
+		{
 			sigwait(set, &signo);
-			if (info) {
+			if (info)
+			{
 				memset(info, 0, sizeof *info);
 				info->si_signo = signo;
 			}
@@ -53,10 +56,9 @@ private:
 public:
 	InterruptListener() : active(false)
 	{
-		if (sigemptyset(&sig_set)
-			|| sigaddset(&sig_set, SIGINT))
+		if (sigemptyset(&sig_set) || sigaddset(&sig_set, SIGINT))
 			throwFromErrno("Cannot manipulate with signal set.", ErrorCodes::CANNOT_MANIPULATE_SIGSET);
-		
+
 		block();
 	}
 
@@ -69,9 +71,9 @@ public:
 	{
 		if (!active)
 			return false;
-		
+
 		timespec timeout = { 0, 0 };
-		
+
 		if (-1 == sigtimedwait(&sig_set, nullptr, &timeout))
 		{
 			if (errno == EAGAIN)
@@ -106,5 +108,4 @@ public:
 		}
 	}
 };
-
 }

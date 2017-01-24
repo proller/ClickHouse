@@ -1,23 +1,26 @@
 #pragma once
-#include <common/Common.h>
 #include <future>
 #include <memory>
 #include <vector>
 #include <zookeeper/zookeeper.h>
 #include <Poco/Event.h>
+#include <common/Common.h>
 
 
 namespace zkutil
 {
-
 using ACLPtr = const ACL_vector *;
 using Stat = Stat;
 
 struct Op
 {
 public:
-	Op() : data(new zoo_op_t) {}
-	virtual ~Op() {}
+	Op() : data(new zoo_op_t)
+	{
+	}
+	virtual ~Op()
+	{
+	}
 
 	virtual std::string describe() = 0;
 
@@ -31,13 +34,15 @@ public:
 
 struct Op::Remove : public Op
 {
-	Remove(const std::string & path_, int32_t version) :
-		path(path_)
+	Remove(const std::string & path_, int32_t version) : path(path_)
 	{
 		zoo_delete_op_init(data.get(), path.c_str(), version);
 	}
 
-	std::string describe() override { return "command: remove, path: " + path; }
+	std::string describe() override
+	{
+		return "command: remove, path: " + path;
+	}
 
 private:
 	std::string path;
@@ -54,9 +59,9 @@ struct Op::Create : public Op
 
 	std::string describe() override
 	{
-		return 	"command: create"
-				", path: " + path +
-				", value: " + value;
+		return "command: create"
+			   ", path: "
+			+ path + ", value: " + value;
 	}
 
 private:
@@ -67,19 +72,16 @@ private:
 
 struct Op::SetData : public Op
 {
-	SetData(const std::string & path_, const std::string & value_, int32_t version) :
-		path(path_), value(value_)
+	SetData(const std::string & path_, const std::string & value_, int32_t version) : path(path_), value(value_)
 	{
 		zoo_set_op_init(data.get(), path.c_str(), value.c_str(), value.size(), version, &stat);
 	}
 
 	std::string describe() override
 	{
-		return
-			"command: set"
-			", path: " + path +
-			", value: " + value +
-			", version: " + std::to_string(data->set_op.version);
+		return "command: set"
+			   ", path: "
+			+ path + ", value: " + value + ", version: " + std::to_string(data->set_op.version);
 	}
 
 private:
@@ -90,13 +92,15 @@ private:
 
 struct Op::Check : public Op
 {
-	Check(const std::string & path_, int32_t version) :
-		path(path_)
+	Check(const std::string & path_, int32_t version) : path(path_)
 	{
 		zoo_check_op_init(data.get(), path.c_str(), version);
 	}
 
-	std::string describe() override { return "command: check, path: " + path; }
+	std::string describe() override
+	{
+		return "command: check, path: " + path;
+	}
 
 private:
 	std::string path;
@@ -122,5 +126,4 @@ namespace CreateMode
 }
 
 using EventPtr = std::shared_ptr<Poco::Event>;
-
 }

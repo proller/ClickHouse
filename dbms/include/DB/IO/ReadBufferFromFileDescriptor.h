@@ -2,13 +2,12 @@
 
 #include <unistd.h>
 
-#include <DB/IO/ReadBufferFromFileBase.h>
 #include <DB/IO/ReadBuffer.h>
+#include <DB/IO/ReadBufferFromFileBase.h>
 
 
 namespace DB
 {
-
 /** Use ready file descriptor. Does not open or close a file.
   */
 class ReadBufferFromFileDescriptor : public ReadBufferFromFileBase
@@ -23,8 +22,11 @@ protected:
 	std::string getFileName() const override;
 
 public:
-	ReadBufferFromFileDescriptor(int fd_, size_t buf_size = DBMS_DEFAULT_BUFFER_SIZE, char * existing_memory = nullptr, size_t alignment = 0)
-		: ReadBufferFromFileBase(buf_size, existing_memory, alignment), fd(fd_), pos_in_file(0) {}
+	ReadBufferFromFileDescriptor(
+		int fd_, size_t buf_size = DBMS_DEFAULT_BUFFER_SIZE, char * existing_memory = nullptr, size_t alignment = 0)
+		: ReadBufferFromFileBase(buf_size, existing_memory, alignment), fd(fd_), pos_in_file(0)
+	{
+	}
 
 	int getFD() const override
 	{
@@ -43,5 +45,4 @@ private:
 	/// Assuming file descriptor supports 'select', check that we have data to read or wait until timeout.
 	bool poll(size_t timeout_microseconds);
 };
-
 }

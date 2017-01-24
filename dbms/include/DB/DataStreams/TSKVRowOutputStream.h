@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 /** Поток для вывода данных в формате TSKV.
   * TSKV похож на TabSeparated, но перед каждым значением указывается его имя и знак равенства: name=value.
   * Этот формат весьма неэффективен.
@@ -21,6 +20,4 @@ protected:
 	NamesAndTypes fields;
 	size_t field_number = 0;
 };
-
 }
-

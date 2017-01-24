@@ -1,9 +1,9 @@
 #pragma once
 
-#include <DB/Core/Names.h>
-#include <DB/Core/NamesAndTypes.h>
 #include <DB/Common/Exception.h>
 #include <DB/Core/Block.h>
+#include <DB/Core/Names.h>
+#include <DB/Core/NamesAndTypes.h>
 #include <DB/Storages/ColumnDefault.h>
 
 #include <boost/range/iterator_range.hpp>
@@ -12,7 +12,6 @@
 
 namespace DB
 {
-
 class Context;
 
 /** Описание таблицы.
@@ -28,7 +27,10 @@ public:
 	/** Получить список имён и типов столбцов таблицы, только невиртуальные.
 	  */
 	NamesAndTypesList getColumnsList() const;
-	const NamesAndTypesList & getColumnsListNonMaterialized() const { return getColumnsListImpl(); }
+	const NamesAndTypesList & getColumnsListNonMaterialized() const
+	{
+		return getColumnsListImpl();
+	}
 
 	/** Получить список имён столбцов таблицы, только невиртуальные.
 	  */
@@ -84,13 +86,10 @@ public:
 
 	ITableDeclaration() = default;
 	ITableDeclaration(
-		const NamesAndTypesList & materialized_columns,
-		const NamesAndTypesList & alias_columns,
-		const ColumnDefaults & column_defaults)
-		: materialized_columns{materialized_columns},
-		  alias_columns{alias_columns},
-		  column_defaults{column_defaults}
-	{}
+		const NamesAndTypesList & materialized_columns, const NamesAndTypesList & alias_columns, const ColumnDefaults & column_defaults)
+		: materialized_columns{ materialized_columns }, alias_columns{ alias_columns }, column_defaults{ column_defaults }
+	{
+	}
 
 	NamesAndTypesList materialized_columns{};
 	NamesAndTypesList alias_columns{};
@@ -103,5 +102,4 @@ private:
 	/// Returns a lazily joined range of table's ordinary and materialized columns, without unnecessary copying
 	ColumnsListRange getColumnsListRange() const;
 };
-
 }

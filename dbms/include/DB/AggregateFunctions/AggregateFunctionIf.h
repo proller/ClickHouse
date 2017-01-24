@@ -1,13 +1,11 @@
 #pragma once
 
-#include <DB/DataTypes/DataTypesNumberFixed.h>
 #include <DB/AggregateFunctions/IAggregateFunction.h>
+#include <DB/DataTypes/DataTypesNumberFixed.h>
 
 
 namespace DB
 {
-
-
 /** Не агрегатная функция, а адаптер агрегатных функций,
   *  который любую агрегатную функцию agg(x) делает агрегатной функцией вида aggIf(x, cond).
   * Адаптированная агрегатная функция принимает два аргумента - значение и условие,
@@ -20,8 +18,11 @@ private:
 	AggregateFunctionPtr nested_func_owner;
 	IAggregateFunction * nested_func;
 	size_t num_agruments;
+
 public:
-	AggregateFunctionIf(AggregateFunctionPtr nested_) : nested_func_owner(nested_), nested_func(nested_func_owner.get()) {}
+	AggregateFunctionIf(AggregateFunctionPtr nested_) : nested_func_owner(nested_), nested_func(nested_func_owner.get())
+	{
+	}
 
 	String getName() const override
 	{
@@ -38,11 +39,13 @@ public:
 		num_agruments = arguments.size();
 
 		if (!typeid_cast<const DataTypeUInt8 *>(&*arguments[num_agruments - 1]))
-			throw Exception("Illegal type " + arguments[num_agruments - 1]->getName() + " of second argument for aggregate function " + getName() + ". Must be UInt8.",
+			throw Exception("Illegal type " + arguments[num_agruments - 1]->getName() + " of second argument for aggregate function "
+					+ getName()
+					+ ". Must be UInt8.",
 				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 		DataTypes nested_arguments;
-		for (size_t i = 0; i < num_agruments - 1; i ++)
+		for (size_t i = 0; i < num_agruments - 1; i++)
 			nested_arguments.push_back(arguments[i]);
 		nested_func->setArguments(nested_arguments);
 	}
@@ -108,7 +111,9 @@ public:
 		static_cast<const AggregateFunctionIf &>(*that).add(place, columns, row_num, arena);
 	}
 
-	IAggregateFunction::AddFunc getAddressOfAddFunction() const override final { return &addFree; }
+	IAggregateFunction::AddFunc getAddressOfAddFunction() const override final
+	{
+		return &addFree;
+	}
 };
-
 }

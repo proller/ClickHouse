@@ -6,7 +6,6 @@
 
 namespace mysqlxx
 {
-
 class Connection;
 
 
@@ -31,7 +30,9 @@ public:
 	Row fetch();
 
 	/// Для совместимости
-	Row fetch_row() { return fetch(); }
+	Row fetch_row()
+	{
+		return fetch();
+	}
 };
-
 }

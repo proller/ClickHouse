@@ -6,7 +6,6 @@
 
 namespace DB
 {
-
 class AsynchronousMetrics;
 class Context;
 
@@ -15,18 +14,26 @@ class Context;
   */
 class StorageSystemAsynchronousMetrics : private ext::shared_ptr_helper<StorageSystemAsynchronousMetrics>, public IStorage
 {
-friend class ext::shared_ptr_helper<StorageSystemAsynchronousMetrics>;
+	friend class ext::shared_ptr_helper<StorageSystemAsynchronousMetrics>;
 
 public:
 	static StoragePtr create(const std::string & name_, const AsynchronousMetrics & async_metrics_);
 
-	std::string getName() const override { return "SystemAsynchronousMetrics"; }
-	std::string getTableName() const override { return name; }
+	std::string getName() const override
+	{
+		return "SystemAsynchronousMetrics";
+	}
+	std::string getTableName() const override
+	{
+		return name;
+	}
 
-	const NamesAndTypesList & getColumnsListImpl() const override { return columns; }
+	const NamesAndTypesList & getColumnsListImpl() const override
+	{
+		return columns;
+	}
 
-	BlockInputStreams read(
-		const Names & column_names,
+	BlockInputStreams read(const Names & column_names,
 		ASTPtr query,
 		const Context & context,
 		const Settings & settings,
@@ -41,5 +48,4 @@ private:
 
 	StorageSystemAsynchronousMetrics(const std::string & name_, const AsynchronousMetrics & async_metrics_);
 };
-
 }

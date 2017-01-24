@@ -5,8 +5,6 @@
 
 namespace DB
 {
-
-
 /** INSERT запрос
   */
 class ASTInsertQuery : public IAST
@@ -24,18 +22,31 @@ public:
 	const char * end = nullptr;
 
 	ASTInsertQuery() = default;
-	ASTInsertQuery(const StringRange range_) : IAST(range_) {}
+	ASTInsertQuery(const StringRange range_) : IAST(range_)
+	{
+	}
 
 	/** Получить текст, который идентифицирует этот элемент. */
-	String getID() const override { return "InsertQuery_" + database + "_" + table; };
+	String getID() const override
+	{
+		return "InsertQuery_" + database + "_" + table;
+	};
 
 	ASTPtr clone() const override
 	{
 		auto res = std::make_shared<ASTInsertQuery>(*this);
 		res->children.clear();
 
-		if (columns) 	{ res->columns = columns->clone(); 	res->children.push_back(res->columns); }
-		if (select) 	{ res->select = select->clone(); 	res->children.push_back(res->select); }
+		if (columns)
+		{
+			res->columns = columns->clone();
+			res->children.push_back(res->columns);
+		}
+		if (select)
+		{
+			res->select = select->clone();
+			res->children.push_back(res->select);
+		}
 
 		return res;
 	}
@@ -43,5 +54,4 @@ public:
 protected:
 	void formatImpl(const FormatSettings & settings, FormatState & state, FormatStateStacked frame) const override;
 };
-
 }

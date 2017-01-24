@@ -2,16 +2,15 @@
 
 #include <common/logger_useful.h>
 
-#include <DB/Core/Row.h>
-#include <DB/Core/ColumnNumbers.h>
-#include <DB/DataStreams/MergingSortedBlockInputStream.h>
 #include <DB/AggregateFunctions/IAggregateFunction.h>
 #include <DB/Columns/ColumnAggregateFunction.h>
+#include <DB/Core/ColumnNumbers.h>
+#include <DB/Core/Row.h>
+#include <DB/DataStreams/MergingSortedBlockInputStream.h>
 
 
 namespace DB
 {
-
 /** Соединяет несколько сортированных потоков в один.
   * При этом, для каждой группы идущих подряд одинаковых значений первичного ключа (столбцов, по которым сортируются данные),
   * сливает их в одну строку. При слиянии, производится доагрегация данных - слияние состояний агрегатных функций,
@@ -26,7 +25,10 @@ public:
 	{
 	}
 
-	String getName() const override { return "AggregatingSorted"; }
+	String getName() const override
+	{
+		return "AggregatingSorted";
+	}
 
 	String getID() const override
 	{
@@ -60,8 +62,8 @@ private:
 	ColumnNumbers column_numbers_not_to_aggregate;
 	std::vector<ColumnAggregateFunction *> columns_to_aggregate;
 
-	RowRef current_key;		/// Текущий первичный ключ.
-	RowRef next_key;		/// Первичный ключ следующей строки.
+	RowRef current_key; /// Текущий первичный ключ.
+	RowRef next_key; /// Первичный ключ следующей строки.
 
 	/** Делаем поддержку двух разных курсоров - с Collation и без.
 	 *  Шаблоны используем вместо полиморфных SortCursor'ов и вызовов виртуальных функций.
@@ -74,5 +76,4 @@ private:
 	template <class TSortCursor>
 	void addRow(TSortCursor & cursor);
 };
-
 }

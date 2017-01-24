@@ -24,19 +24,15 @@ struct TwoLevelHashTableGrower : public HashTableGrower<initial_size_degree>
 	}
 };
 
-template
-<
-	typename Key,
+template <typename Key,
 	typename Cell,
 	typename Hash,
 	typename Grower,
-	typename Allocator,	/// TODO WithStackMemory
+	typename Allocator, /// TODO WithStackMemory
 	typename ImplTable = HashTable<Key, Cell, Hash, Grower, Allocator>,
-	size_t BITS_FOR_BUCKET = 8
->
-class TwoLevelHashTable :
-	private boost::noncopyable,
-	protected Hash			/// empty base optimization
+	size_t BITS_FOR_BUCKET = 8>
+class TwoLevelHashTable : private boost::noncopyable,
+						  protected Hash /// empty base optimization
 {
 protected:
 	friend class const_iterator;
@@ -44,16 +40,23 @@ protected:
 
 	using HashValue = size_t;
 	using Self = TwoLevelHashTable<Key, Cell, Hash, Grower, Allocator, ImplTable>;
+
 public:
 	using Impl = ImplTable;
 
 	static constexpr size_t NUM_BUCKETS = 1 << BITS_FOR_BUCKET;
 	static constexpr size_t MAX_BUCKET = NUM_BUCKETS - 1;
 
-	size_t hash(const Key & x) const { return Hash::operator()(x); }
+	size_t hash(const Key & x) const
+	{
+		return Hash::operator()(x);
+	}
 
 	/// NOTE Плохо для хэш-таблиц больше чем на 2^32 ячеек.
-	static size_t getBucketFromHash(size_t hash_value) { return (hash_value >> (32 - BITS_FOR_BUCKET)) & MAX_BUCKET; }
+	static size_t getBucketFromHash(size_t hash_value)
+	{
+		return (hash_value >> (32 - BITS_FOR_BUCKET)) & MAX_BUCKET;
+	}
 
 protected:
 	typename Impl::iterator beginOfNextNonEmptyBucket(size_t & bucket)
@@ -87,9 +90,11 @@ public:
 	Impl impls[NUM_BUCKETS];
 
 
-    TwoLevelHashTable() {}
+	TwoLevelHashTable()
+	{
+	}
 
-    /// Скопировать данные из другой (обычной) хэш-таблицы. У неё должна быть такая же хэш-функция.
+	/// Скопировать данные из другой (обычной) хэш-таблицы. У неё должна быть такая же хэш-функция.
 	template <typename Source>
 	TwoLevelHashTable(const Source & src)
 	{
@@ -121,13 +126,23 @@ public:
 		friend class TwoLevelHashTable;
 
 		iterator(Self * container_, size_t bucket_, typename Impl::iterator current_it_)
-			: container(container_), bucket(bucket_), current_it(current_it_) {}
+			: container(container_), bucket(bucket_), current_it(current_it_)
+		{
+		}
 
 	public:
-		iterator() {}
+		iterator()
+		{
+		}
 
-		bool operator== (const iterator & rhs) const { return bucket == rhs.bucket && current_it == rhs.current_it; }
-		bool operator!= (const iterator & rhs) const { return !(*this == rhs); }
+		bool operator==(const iterator & rhs) const
+		{
+			return bucket == rhs.bucket && current_it == rhs.current_it;
+		}
+		bool operator!=(const iterator & rhs) const
+		{
+			return !(*this == rhs);
+		}
 
 		iterator & operator++()
 		{
@@ -141,11 +156,23 @@ public:
 			return *this;
 		}
 
-		value_type & operator* () const { return *current_it; }
-		value_type * operator->() const { return &*current_it; }
+		value_type & operator*() const
+		{
+			return *current_it;
+		}
+		value_type * operator->() const
+		{
+			return &*current_it;
+		}
 
-		Cell * getPtr() const { return current_it.getPtr(); }
-		size_t getHash() const { return current_it.getHash(); }
+		Cell * getPtr() const
+		{
+			return current_it.getPtr();
+		}
+		size_t getHash() const
+		{
+			return current_it.getHash();
+		}
 	};
 
 
@@ -158,14 +185,26 @@ public:
 		friend class TwoLevelHashTable;
 
 		const_iterator(Self * container_, size_t bucket_, typename Impl::const_iterator current_it_)
-			: container(container_), bucket(bucket_), current_it(current_it_) {}
+			: container(container_), bucket(bucket_), current_it(current_it_)
+		{
+		}
 
 	public:
-		const_iterator() {}
-		const_iterator(const iterator & rhs) : container(rhs.container), bucket(rhs.bucket), current_it(rhs.current_it) {}
+		const_iterator()
+		{
+		}
+		const_iterator(const iterator & rhs) : container(rhs.container), bucket(rhs.bucket), current_it(rhs.current_it)
+		{
+		}
 
-		bool operator== (const const_iterator & rhs) const { return bucket == rhs.bucket && current_it == rhs.current_it; }
-		bool operator!= (const const_iterator & rhs) const { return !(*this == rhs); }
+		bool operator==(const const_iterator & rhs) const
+		{
+			return bucket == rhs.bucket && current_it == rhs.current_it;
+		}
+		bool operator!=(const const_iterator & rhs) const
+		{
+			return !(*this == rhs);
+		}
 
 		const_iterator & operator++()
 		{
@@ -179,11 +218,23 @@ public:
 			return *this;
 		}
 
-		const value_type & operator* () const { return *current_it; }
-		const value_type * operator->() const { return &*current_it; }
+		const value_type & operator*() const
+		{
+			return *current_it;
+		}
+		const value_type * operator->() const
+		{
+			return &*current_it;
+		}
 
-		const Cell * getPtr() const { return current_it.getPtr(); }
-		size_t getHash() const { return current_it.getHash(); }
+		const Cell * getPtr() const
+		{
+			return current_it.getPtr();
+		}
+		size_t getHash() const
+		{
+			return current_it.getHash();
+		}
 	};
 
 
@@ -201,8 +252,14 @@ public:
 		return { this, buck, impl_it };
 	}
 
-	const_iterator end() const 		{ return { this, MAX_BUCKET, impls[MAX_BUCKET].end() }; }
-	iterator end() 					{ return { this, MAX_BUCKET, impls[MAX_BUCKET].end() }; }
+	const_iterator end() const
+	{
+		return { this, MAX_BUCKET, impls[MAX_BUCKET].end() };
+	}
+	iterator end()
+	{
+		return { this, MAX_BUCKET, impls[MAX_BUCKET].end() };
+	}
 
 
 	/// Вставить значение. В случае хоть сколько-нибудь сложных значений, лучше используйте функцию emplace.
@@ -258,9 +315,7 @@ public:
 		size_t buck = getBucketFromHash(hash_value);
 
 		typename Impl::iterator found = impls[buck].find(x, hash_value);
-		return found != impls[buck].end()
-			? iterator(this, buck, found)
-			: end();
+		return found != impls[buck].end() ? iterator(this, buck, found) : end();
 	}
 
 
@@ -270,9 +325,7 @@ public:
 		size_t buck = getBucketFromHash(hash_value);
 
 		typename Impl::const_iterator found = impls[buck].find(x, hash_value);
-		return found != impls[buck].end()
-			? const_iterator(this, buck, found)
-			: end();
+		return found != impls[buck].end() ? const_iterator(this, buck, found) : end();
 	}
 
 
@@ -320,7 +373,7 @@ public:
 
 	bool empty() const
 	{
-	    for (size_t i = 0; i < NUM_BUCKETS; ++i)
+		for (size_t i = 0; i < NUM_BUCKETS; ++i)
 			if (!impls[i].empty())
 				return false;
 

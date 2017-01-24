@@ -4,7 +4,6 @@
 
 namespace DB
 {
-
 /** Если прямо сейчас не s, то ошибка.
   * Если word_boundary установлен в true, и последний символ строки - словарный (\w),
   *  то проверяется, что последующий символ строки не словарный.
@@ -84,5 +83,4 @@ protected:
 
 	bool parseImpl(Pos & pos, Pos end, ASTPtr & node, Pos & max_parsed_pos, Expected & expected) override;
 };
-
 }

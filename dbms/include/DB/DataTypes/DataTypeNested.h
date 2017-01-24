@@ -1,12 +1,11 @@
 #pragma once
 
-#include <DB/DataTypes/IDataTypeDummy.h>
 #include <DB/Core/NamesAndTypes.h>
+#include <DB/DataTypes/IDataTypeDummy.h>
 
 
 namespace DB
 {
-
 /** Хранит набор пар (имя, тип) для вложенной структуры данных.
   * Используется только при создании таблицы. Во всех остальных случаях не используется, так как раскрывается в набор отдельных столбцов с типами.
   */
@@ -26,7 +25,10 @@ public:
 		return std::make_shared<DataTypeNested>(nested);
 	}
 
-	const NamesAndTypesListPtr & getNestedTypesList() const { return nested; }
+	const NamesAndTypesListPtr & getNestedTypesList() const
+	{
+		return nested;
+	}
 
 	static std::string concatenateNestedName(const std::string & nested_table_name, const std::string & nested_field_name);
 	/// Возвращает префикс имени до первой точки '.'. Или имя без изменений, если точки нет.
@@ -37,5 +39,4 @@ public:
 	/// Создает новый список в котором колонки типа Nested заменены на несколько вида имя_колонки.имя_вложенной_ячейки
 	static NamesAndTypesListPtr expandNestedColumns(const NamesAndTypesList & names_and_types);
 };
-
 }

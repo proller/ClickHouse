@@ -1,16 +1,17 @@
 #pragma once
 
-#include <DB/DataStreams/IProfilingBlockInputStream.h>
 #include <DB/Common/PODArray.h>
+#include <DB/DataStreams/IProfilingBlockInputStream.h>
 
 
-namespace Poco { class Logger; }
+namespace Poco
+{
+class Logger;
+}
 
 
 namespace DB
 {
-
-
 /// Tiny struct, stores number of a Part from which current row was fetched, and insertion flag.
 struct RowSourcePart
 {
@@ -24,12 +25,21 @@ struct RowSourcePart
 	}
 
 	/// Data is equal to getSourceNum() if flag is false
-	UInt8 getData() const		{ return data; }
+	UInt8 getData() const
+	{
+		return data;
+	}
 
-	size_t getSourceNum() const { return data & MASK_NUMBER; }
+	size_t getSourceNum() const
+	{
+		return data & MASK_NUMBER;
+	}
 
 	/// In CollapsingMergeTree case flag means "skip this rows"
-	bool getSkipFlag() const 	{ return (data & MASK_FLAG) != 0; }
+	bool getSkipFlag() const
+	{
+		return (data & MASK_FLAG) != 0;
+	}
 
 	void setSourceNum(size_t source_num)
 	{
@@ -59,10 +69,15 @@ using MergedRowSources = PODArray<RowSourcePart>;
 class ColumnGathererStream : public IProfilingBlockInputStream
 {
 public:
-	ColumnGathererStream(const BlockInputStreams & source_streams, const String & column_name_,
-						 const MergedRowSources & row_source_, size_t block_preferred_size_ = DEFAULT_MERGE_BLOCK_SIZE);
+	ColumnGathererStream(const BlockInputStreams & source_streams,
+		const String & column_name_,
+		const MergedRowSources & row_source_,
+		size_t block_preferred_size_ = DEFAULT_MERGE_BLOCK_SIZE);
 
-	String getName() const override { return "ColumnGatherer"; }
+	String getName() const override
+	{
+		return "ColumnGatherer";
+	}
 
 	String getID() const override;
 
@@ -71,7 +86,6 @@ public:
 	void readSuffixImpl() override;
 
 private:
-
 	String name;
 	ColumnWithTypeAndName column;
 	const MergedRowSources & row_source;
@@ -106,5 +120,4 @@ private:
 
 	Poco::Logger * log;
 };
-
 }

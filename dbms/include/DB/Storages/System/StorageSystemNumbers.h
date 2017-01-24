@@ -6,7 +6,6 @@
 
 namespace DB
 {
-
 class Context;
 
 
@@ -16,18 +15,26 @@ class Context;
   */
 class StorageSystemNumbers : private ext::shared_ptr_helper<StorageSystemNumbers>, public IStorage
 {
-friend class ext::shared_ptr_helper<StorageSystemNumbers>;
+	friend class ext::shared_ptr_helper<StorageSystemNumbers>;
 
 public:
 	static StoragePtr create(const std::string & name_, bool multithreaded_ = false);
 
-	std::string getName() const override { return "SystemNumbers"; }
-	std::string getTableName() const override { return name; }
+	std::string getName() const override
+	{
+		return "SystemNumbers";
+	}
+	std::string getTableName() const override
+	{
+		return name;
+	}
 
-	const NamesAndTypesList & getColumnsListImpl() const override { return columns; }
+	const NamesAndTypesList & getColumnsListImpl() const override
+	{
+		return columns;
+	}
 
-	BlockInputStreams read(
-		const Names & column_names,
+	BlockInputStreams read(const Names & column_names,
 		ASTPtr query,
 		const Context & context,
 		const Settings & settings,
@@ -42,5 +49,4 @@ private:
 
 	StorageSystemNumbers(const std::string & name_, bool multithreaded_);
 };
-
 }

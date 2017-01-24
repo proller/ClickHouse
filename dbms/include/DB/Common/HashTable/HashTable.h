@@ -10,22 +10,22 @@
 
 #include <common/likely.h>
 
+#include <DB/Common/Exception.h>
 #include <DB/Core/Defines.h>
 #include <DB/Core/Types.h>
-#include <DB/Common/Exception.h>
 
-#include <DB/IO/WriteBuffer.h>
-#include <DB/IO/WriteHelpers.h>
 #include <DB/IO/ReadBuffer.h>
 #include <DB/IO/ReadHelpers.h>
 #include <DB/IO/VarInt.h>
+#include <DB/IO/WriteBuffer.h>
+#include <DB/IO/WriteHelpers.h>
 
 #include <DB/Common/HashTable/HashTableAllocator.h>
 
 #ifdef DBMS_HASH_MAP_DEBUG_RESIZES
-	#include <iostream>
-	#include <iomanip>
-	#include <DB/Common/Stopwatch.h>
+#include <iostream>
+#include <iomanip>
+#include <DB/Common/Stopwatch.h>
 #endif
 
 /** NOTE HashTable could only be used for memmoveable (position independent) types.
@@ -55,25 +55,37 @@ namespace ErrorCodes
 struct HashTableNoState
 {
 	/// Сериализация, в бинарном и текстовом виде.
-	void write(DB::WriteBuffer & wb) const 		{}
-	void writeText(DB::WriteBuffer & wb) const 	{}
+	void write(DB::WriteBuffer & wb) const
+	{
+	}
+	void writeText(DB::WriteBuffer & wb) const
+	{
+	}
 
 	/// Десериализация, в бинарном и текстовом виде.
-	void read(DB::ReadBuffer & rb) 				{}
-	void readText(DB::ReadBuffer & rb) 			{}
+	void read(DB::ReadBuffer & rb)
+	{
+	}
+	void readText(DB::ReadBuffer & rb)
+	{
+	}
 };
 
 
 /// Эти функции могут быть перегружены для пользовательских типов.
 namespace ZeroTraits
 {
+template <typename T>
+bool check(const T x)
+{
+	return x == 0;
+}
 
 template <typename T>
-bool check(const T x) { return x == 0; }
-
-template <typename T>
-void set(T & x) { x = 0; }
-
+void set(T & x)
+{
+	x = 0;
+}
 };
 
 
@@ -91,57 +103,110 @@ struct HashTableCell
 	using value_type = Key;
 	Key key;
 
-	HashTableCell() {}
+	HashTableCell()
+	{
+	}
 
 	/// Создать ячейку с заданным ключём / ключём и значением.
-	HashTableCell(const Key & key_, const State & state) : key(key_) {}
-///	HashTableCell(const value_type & value_, const State & state) : key(value_) {}
+	HashTableCell(const Key & key_, const State & state) : key(key_)
+	{
+	}
+	///	HashTableCell(const value_type & value_, const State & state) : key(value_) {}
 
 	/// Получить то, что будет value_type контейнера.
-	value_type & getValue()				{ return key; }
-	const value_type & getValue() const { return key; }
+	value_type & getValue()
+	{
+		return key;
+	}
+	const value_type & getValue() const
+	{
+		return key;
+	}
 
 	/// Получить ключ.
-	static Key & getKey(value_type & value)	{ return value; }
-	static const Key & getKey(const value_type & value) { return value; }
+	static Key & getKey(value_type & value)
+	{
+		return value;
+	}
+	static const Key & getKey(const value_type & value)
+	{
+		return value;
+	}
 
 	/// Равны ли ключи у ячеек.
-	bool keyEquals(const Key & key_) const { return key == key_; }
-	bool keyEquals(const Key & key_, size_t hash_) const { return key == key_; }
+	bool keyEquals(const Key & key_) const
+	{
+		return key == key_;
+	}
+	bool keyEquals(const Key & key_, size_t hash_) const
+	{
+		return key == key_;
+	}
 
 	/// Если ячейка умеет запоминать в себе значение хэш-функции, то запомнить его.
-	void setHash(size_t hash_value) {}
+	void setHash(size_t hash_value)
+	{
+	}
 
 	/// Если ячейка умеет запоминать в себе значение хэш-функции, то вернуть запомненное значение.
 	/// Оно должно быть хотя бы один раз вычислено до этого.
 	/// Если запоминание значения хэш-функции не предусмотрено, то просто вычислить хэш.
-	size_t getHash(const Hash & hash) const { return hash(key); }
+	size_t getHash(const Hash & hash) const
+	{
+		return hash(key);
+	}
 
 	/// Является ли ключ нулевым. В основном буфере, ячейки с нулевым ключём, считаются пустыми.
 	/// Если нулевые ключи могут быть вставлены в таблицу, то ячейка для нулевого ключа хранится отдельно, не в основном буфере.
 	/// Нулевые ключи должны быть такими, что занулённый кусок памяти представляет собой нулевой ключ.
-	bool isZero(const State & state) const { return isZero(key, state); }
-	static bool isZero(const Key & key, const State & state) { return ZeroTraits::check(key); }
+	bool isZero(const State & state) const
+	{
+		return isZero(key, state);
+	}
+	static bool isZero(const Key & key, const State & state)
+	{
+		return ZeroTraits::check(key);
+	}
 
 	/// Установить значение ключа в ноль.
-	void setZero() { ZeroTraits::set(key); }
+	void setZero()
+	{
+		ZeroTraits::set(key);
+	}
 
 	/// Нужно ли хранить нулевой ключ отдельно (то есть, могут ли в хэш-таблицу вставить нулевой ключ).
 	static constexpr bool need_zero_value_storage = true;
 
 	/// Является ли ячейка удалённой.
-	bool isDeleted() const { return false; }
+	bool isDeleted() const
+	{
+		return false;
+	}
 
 	/// Установить отображаемое значение, если есть (для HashMap), в соответствующиее из value.
-	void setMapped(const value_type & value) {}
+	void setMapped(const value_type & value)
+	{
+	}
 
 	/// Сериализация, в бинарном и текстовом виде.
-	void write(DB::WriteBuffer & wb) const 		{ DB::writeBinary(key, wb); }
-	void writeText(DB::WriteBuffer & wb) const 	{ DB::writeDoubleQuoted(key, wb); }
+	void write(DB::WriteBuffer & wb) const
+	{
+		DB::writeBinary(key, wb);
+	}
+	void writeText(DB::WriteBuffer & wb) const
+	{
+		DB::writeDoubleQuoted(key, wb);
+	}
 
 	/// Десериализация, в бинарном и текстовом виде.
-	void read(DB::ReadBuffer & rb)		{ DB::readBinary(key, rb); }
-	void readText(DB::ReadBuffer & rb)	{ DB::writeDoubleQuoted(key, rb); }
+	void read(DB::ReadBuffer & rb)
+	{
+		DB::readBinary(key, rb);
+	}
+	void readText(DB::ReadBuffer & rb)
+	{
+		DB::writeDoubleQuoted(key, rb);
+	}
 };
 
 
@@ -155,19 +220,38 @@ struct HashTableGrower
 	UInt8 size_degree = initial_size_degree;
 
 	/// Размер хэш-таблицы в ячейках.
-	size_t bufSize() const				{ return 1 << size_degree; }
+	size_t bufSize() const
+	{
+		return 1 << size_degree;
+	}
 
-	size_t maxFill() const				{ return 1 << (size_degree - 1); }
-	size_t mask() const					{ return bufSize() - 1; }
+	size_t maxFill() const
+	{
+		return 1 << (size_degree - 1);
+	}
+	size_t mask() const
+	{
+		return bufSize() - 1;
+	}
 
 	/// Из значения хэш-функции получить номер ячейки в хэш-таблице.
-	size_t place(size_t x) const 		{ return x & mask(); }
+	size_t place(size_t x) const
+	{
+		return x & mask();
+	}
 
 	/// Следующая ячейка в цепочке разрешения коллизий.
-	size_t next(size_t pos) const		{ ++pos; return pos & mask(); }
+	size_t next(size_t pos) const
+	{
+		++pos;
+		return pos & mask();
+	}
 
 	/// Является ли хэш-таблица достаточно заполненной. Нужно увеличить размер хэш-таблицы, или удалить из неё что-нибудь ненужное.
-	bool overflow(size_t elems) const	{ return elems > maxFill(); }
+	bool overflow(size_t elems) const
+	{
+		return elems > maxFill();
+	}
 
 	/// Увеличить размер хэш-таблицы.
 	void increaseSize()
@@ -178,11 +262,9 @@ struct HashTableGrower
 	/// Установить размер буфера по количеству элементов хэш-таблицы. Используется при десериализации хэш-таблицы.
 	void set(size_t num_elems)
 	{
-		size_degree = num_elems <= 1
-			 ? initial_size_degree
-			 : ((initial_size_degree > static_cast<size_t>(log2(num_elems - 1)) + 2)
-				 ? initial_size_degree
-				 : (static_cast<size_t>(log2(num_elems - 1)) + 2));
+		size_degree = num_elems <= 1 ? initial_size_degree : ((initial_size_degree > static_cast<size_t>(log2(num_elems - 1)) + 2)
+																	 ? initial_size_degree
+																	 : (static_cast<size_t>(log2(num_elems - 1)) + 2));
 	}
 
 	void setBufSize(size_t buf_size_)
@@ -200,15 +282,34 @@ struct HashTableGrower
 template <size_t key_bits>
 struct HashTableFixedGrower
 {
-	size_t bufSize() const				{ return 1 << key_bits; }
-	size_t place(size_t x) const 		{ return x; }
+	size_t bufSize() const
+	{
+		return 1 << key_bits;
+	}
+	size_t place(size_t x) const
+	{
+		return x;
+	}
 	/// Тут можно было бы написать __builtin_unreachable(), но компилятор не до конца всё оптимизирует, и получается менее эффективно.
-	size_t next(size_t pos) const		{ return pos + 1; }
-	bool overflow(size_t elems) const	{ return false; }
+	size_t next(size_t pos) const
+	{
+		return pos + 1;
+	}
+	bool overflow(size_t elems) const
+	{
+		return false;
+	}
 
-	void increaseSize() { __builtin_unreachable(); }
-	void set(size_t num_elems) {}
-	void setBufSize(size_t buf_size_) {}
+	void increaseSize()
+	{
+		__builtin_unreachable();
+	}
+	void set(size_t num_elems)
+	{
+	}
+	void setBufSize(size_t buf_size_)
+	{
+	}
 };
 
 
@@ -221,43 +322,64 @@ struct ZeroValueStorage<true, Cell>
 {
 private:
 	bool has_zero = false;
-	char zero_value_storage[sizeof(Cell)] __attribute__((__aligned__(__alignof__(Cell))));	/// Кусок памяти для элемента с ключём 0.
+	char zero_value_storage[sizeof(Cell)] __attribute__((__aligned__(__alignof__(Cell)))); /// Кусок памяти для элемента с ключём 0.
 
 public:
-	bool hasZero() const { return has_zero; }
-	void setHasZero() { has_zero = true; }
-	void clearHasZero() { has_zero = false; }
+	bool hasZero() const
+	{
+		return has_zero;
+	}
+	void setHasZero()
+	{
+		has_zero = true;
+	}
+	void clearHasZero()
+	{
+		has_zero = false;
+	}
 
-	Cell * zeroValue() 			 { return reinterpret_cast<Cell*>(zero_value_storage); }
-	const Cell * zeroValue() const	 { return reinterpret_cast<const Cell*>(zero_value_storage); }
+	Cell * zeroValue()
+	{
+		return reinterpret_cast<Cell *>(zero_value_storage);
+	}
+	const Cell * zeroValue() const
+	{
+		return reinterpret_cast<const Cell *>(zero_value_storage);
+	}
 };
 
 template <typename Cell>
 struct ZeroValueStorage<false, Cell>
 {
-	bool hasZero() const { return false; }
-	void setHasZero() { throw DB::Exception("HashTable: logical error", DB::ErrorCodes::LOGICAL_ERROR); }
-	void clearHasZero() {}
+	bool hasZero() const
+	{
+		return false;
+	}
+	void setHasZero()
+	{
+		throw DB::Exception("HashTable: logical error", DB::ErrorCodes::LOGICAL_ERROR);
+	}
+	void clearHasZero()
+	{
+	}
 
-	Cell * zeroValue() 			 { return nullptr; }
-	const Cell * zeroValue() const	 { return nullptr; }
+	Cell * zeroValue()
+	{
+		return nullptr;
+	}
+	const Cell * zeroValue() const
+	{
+		return nullptr;
+	}
 };
 
 
-template
-<
-	typename Key,
-	typename Cell,
-	typename Hash,
-	typename Grower,
-	typename Allocator
->
-class HashTable :
-	private boost::noncopyable,
-	protected Hash,
-	protected Allocator,
-	protected Cell::State,
-	protected ZeroValueStorage<Cell::need_zero_value_storage, Cell> 	/// empty base optimization
+template <typename Key, typename Cell, typename Hash, typename Grower, typename Allocator>
+class HashTable : private boost::noncopyable,
+				  protected Hash,
+				  protected Allocator,
+				  protected Cell::State,
+				  protected ZeroValueStorage<Cell::need_zero_value_storage, Cell> /// empty base optimization
 {
 protected:
 	friend class const_iterator;
@@ -271,8 +393,8 @@ protected:
 	using Self = HashTable<Key, Cell, Hash, Grower, Allocator>;
 	using cell_type = Cell;
 
-	size_t m_size = 0;		/// Количество элементов
-	Cell * buf;				/// Кусок памяти для всех элементов кроме элемента с ключём 0.
+	size_t m_size = 0; /// Количество элементов
+	Cell * buf; /// Кусок памяти для всех элементов кроме элемента с ключём 0.
 	Grower grower;
 
 #ifdef DBMS_HASH_MAP_COUNT_COLLISIONS
@@ -380,9 +502,8 @@ protected:
 
 #ifdef DBMS_HASH_MAP_DEBUG_RESIZES
 		watch.stop();
-		std::cerr << std::fixed << std::setprecision(3)
-			<< "Resize from " << old_size << " to " << grower.bufSize() << " took " << watch.elapsedSeconds() << " sec."
-			<< std::endl;
+		std::cerr << std::fixed << std::setprecision(3) << "Resize from " << old_size << " to " << grower.bufSize() << " took "
+				  << watch.elapsedSeconds() << " sec." << std::endl;
 #endif
 	}
 
@@ -426,7 +547,10 @@ public:
 	using key_type = Key;
 	using value_type = typename Cell::value_type;
 
-	size_t hash(const Key & x) const { return Hash::operator()(x); }
+	size_t hash(const Key & x) const
+	{
+		return Hash::operator()(x);
+	}
 
 
 	HashTable()
@@ -453,8 +577,7 @@ public:
 	class Reader final : private Cell::State
 	{
 	public:
-		Reader(DB::ReadBuffer & in_)
-		: in(in_)
+		Reader(DB::ReadBuffer & in_) : in(in_)
 		{
 		}
 
@@ -507,11 +630,21 @@ public:
 		friend class HashTable;
 
 	public:
-		iterator() {}
-		iterator(Self * container_, Cell * ptr_) : container(container_), ptr(ptr_) {}
+		iterator()
+		{
+		}
+		iterator(Self * container_, Cell * ptr_) : container(container_), ptr(ptr_)
+		{
+		}
 
-		bool operator== (const iterator & rhs) const { return ptr == rhs.ptr; }
-		bool operator!= (const iterator & rhs) const { return ptr != rhs.ptr; }
+		bool operator==(const iterator & rhs) const
+		{
+			return ptr == rhs.ptr;
+		}
+		bool operator!=(const iterator & rhs) const
+		{
+			return ptr != rhs.ptr;
+		}
 
 		iterator & operator++()
 		{
@@ -526,11 +659,23 @@ public:
 			return *this;
 		}
 
-		value_type & operator* () const { return ptr->getValue(); }
-		value_type * operator->() const { return &ptr->getValue(); }
+		value_type & operator*() const
+		{
+			return ptr->getValue();
+		}
+		value_type * operator->() const
+		{
+			return &ptr->getValue();
+		}
 
-		Cell * getPtr() const { return ptr; }
-		size_t getHash() const { return ptr->getHash(*container); }
+		Cell * getPtr() const
+		{
+			return ptr;
+		}
+		size_t getHash() const
+		{
+			return ptr->getHash(*container);
+		}
 	};
 
 
@@ -542,12 +687,24 @@ public:
 		friend class HashTable;
 
 	public:
-		const_iterator() {}
-		const_iterator(const Self * container_, const Cell * ptr_) : container(container_), ptr(ptr_) {}
-		const_iterator(const iterator & rhs) : container(rhs.container), ptr(rhs.ptr) {}
+		const_iterator()
+		{
+		}
+		const_iterator(const Self * container_, const Cell * ptr_) : container(container_), ptr(ptr_)
+		{
+		}
+		const_iterator(const iterator & rhs) : container(rhs.container), ptr(rhs.ptr)
+		{
+		}
 
-		bool operator== (const const_iterator & rhs) const { return ptr == rhs.ptr; }
-		bool operator!= (const const_iterator & rhs) const { return ptr != rhs.ptr; }
+		bool operator==(const const_iterator & rhs) const
+		{
+			return ptr == rhs.ptr;
+		}
+		bool operator!=(const const_iterator & rhs) const
+		{
+			return ptr != rhs.ptr;
+		}
 
 		const_iterator & operator++()
 		{
@@ -562,11 +719,23 @@ public:
 			return *this;
 		}
 
-		const value_type & operator* () const { return ptr->getValue(); }
-		const value_type * operator->() const { return &ptr->getValue(); }
+		const value_type & operator*() const
+		{
+			return ptr->getValue();
+		}
+		const value_type * operator->() const
+		{
+			return &ptr->getValue();
+		}
 
-		const Cell * getPtr() const { return ptr; }
-		size_t getHash() const { return ptr->getHash(*container); }
+		const Cell * getPtr() const
+		{
+			return ptr;
+		}
+		size_t getHash() const
+		{
+			return ptr->getHash(*container);
+		}
 	};
 
 
@@ -600,15 +769,33 @@ public:
 		return iterator(this, ptr);
 	}
 
-	const_iterator end() const 		{ return const_iterator(this, buf + grower.bufSize()); }
-	iterator end() 					{ return iterator(this, buf + grower.bufSize()); }
+	const_iterator end() const
+	{
+		return const_iterator(this, buf + grower.bufSize());
+	}
+	iterator end()
+	{
+		return iterator(this, buf + grower.bufSize());
+	}
 
 
 protected:
-	const_iterator iteratorTo(const Cell * ptr) const 	{ return const_iterator(this, ptr); }
-	iterator iteratorTo(Cell * ptr) 					{ return iterator(this, ptr); }
-	const_iterator iteratorToZero() const 	{ return iteratorTo(this->zeroValue()); }
-	iterator iteratorToZero() 				{ return iteratorTo(this->zeroValue()); }
+	const_iterator iteratorTo(const Cell * ptr) const
+	{
+		return const_iterator(this, ptr);
+	}
+	iterator iteratorTo(Cell * ptr)
+	{
+		return iterator(this, ptr);
+	}
+	const_iterator iteratorToZero() const
+	{
+		return iteratorTo(this->zeroValue());
+	}
+	iterator iteratorToZero()
+	{
+		return iteratorTo(this->zeroValue());
+	}
 
 
 	/// Если ключ нулевой - вставить его в специальное место и вернуть true.
@@ -651,7 +838,7 @@ protected:
 			return;
 		}
 
-		new(&buf[place_value]) Cell(x, *this);
+		new (&buf[place_value]) Cell(x, *this);
 		buf[place_value].setHash(hash_value);
 		inserted = true;
 		++m_size;
@@ -865,12 +1052,12 @@ public:
 
 	size_t size() const
 	{
-	    return m_size;
+		return m_size;
 	}
 
 	bool empty() const
 	{
-	    return 0 == m_size;
+		return 0 == m_size;
 	}
 
 	void clear()

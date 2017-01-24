@@ -12,9 +12,9 @@
 #include <DB/Core/Protocol.h>
 #include <DB/Core/QueryProcessingStage.h>
 
+#include <DB/DataStreams/BlockStreamProfileInfo.h>
 #include <DB/DataStreams/IBlockInputStream.h>
 #include <DB/DataStreams/IBlockOutputStream.h>
-#include <DB/DataStreams/BlockStreamProfileInfo.h>
 
 #include <DB/Interpreters/Settings.h>
 
@@ -23,7 +23,6 @@
 
 namespace DB
 {
-
 class ClientInfo;
 
 /// Поток блоков читающих из таблицы и ее имя
@@ -50,50 +49,30 @@ class Connection : private boost::noncopyable
 	friend class MultiplexedConnections;
 
 public:
-	Connection(const String & host_, UInt16 port_, const String & default_database_,
-		const String & user_, const String & password_,
-		const String & client_name_ = "client",
-		Protocol::Compression::Enum compression_ = Protocol::Compression::Enable,
-		Poco::Timespan connect_timeout_ = Poco::Timespan(DBMS_DEFAULT_CONNECT_TIMEOUT_SEC, 0),
-		Poco::Timespan receive_timeout_ = Poco::Timespan(DBMS_DEFAULT_RECEIVE_TIMEOUT_SEC, 0),
-		Poco::Timespan send_timeout_ = Poco::Timespan(DBMS_DEFAULT_SEND_TIMEOUT_SEC, 0),
-		Poco::Timespan ping_timeout_ = Poco::Timespan(DBMS_DEFAULT_PING_TIMEOUT_SEC, 0))
-		:
-		host(host_), port(port_), default_database(default_database_),
-		user(user_), password(password_), resolved_address(host, port),
-		client_name(client_name_),
-		compression(compression_),
-		connect_timeout(connect_timeout_), receive_timeout(receive_timeout_), send_timeout(send_timeout_),
-		ping_timeout(ping_timeout_),
-		log_wrapper(*this)
-	{
-		/// Don't connect immediately, only on first need.
-
-		if (user.empty())
-			user = "default";
-
-		setDescription();
-	}
-
-	Connection(const String & host_, UInt16 port_, const Poco::Net::SocketAddress & resolved_address_,
+	Connection(const String & host_,
+		UInt16 port_,
 		const String & default_database_,
-		const String & user_, const String & password_,
+		const String & user_,
+		const String & password_,
 		const String & client_name_ = "client",
 		Protocol::Compression::Enum compression_ = Protocol::Compression::Enable,
 		Poco::Timespan connect_timeout_ = Poco::Timespan(DBMS_DEFAULT_CONNECT_TIMEOUT_SEC, 0),
 		Poco::Timespan receive_timeout_ = Poco::Timespan(DBMS_DEFAULT_RECEIVE_TIMEOUT_SEC, 0),
 		Poco::Timespan send_timeout_ = Poco::Timespan(DBMS_DEFAULT_SEND_TIMEOUT_SEC, 0),
 		Poco::Timespan ping_timeout_ = Poco::Timespan(DBMS_DEFAULT_PING_TIMEOUT_SEC, 0))
-		:
-		host(host_), port(port_),
-		default_database(default_database_),
-		user(user_), password(password_),
-		resolved_address(resolved_address_),
-		client_name(client_name_),
-		compression(compression_),
-		connect_timeout(connect_timeout_), receive_timeout(receive_timeout_), send_timeout(send_timeout_),
-		ping_timeout(ping_timeout_),
-		log_wrapper(*this)
+		: host(host_),
+		  port(port_),
+		  default_database(default_database_),
+		  user(user_),
+		  password(password_),
+		  resolved_address(host, port),
+		  client_name(client_name_),
+		  compression(compression_),
+		  connect_timeout(connect_timeout_),
+		  receive_timeout(receive_timeout_),
+		  send_timeout(send_timeout_),
+		  ping_timeout(ping_timeout_),
+		  log_wrapper(*this)
 	{
 		/// Don't connect immediately, only on first need.
 
@@ -103,7 +82,41 @@ public:
 		setDescription();
 	}
 
-	virtual ~Connection() {};
+	Connection(const String & host_,
+		UInt16 port_,
+		const Poco::Net::SocketAddress & resolved_address_,
+		const String & default_database_,
+		const String & user_,
+		const String & password_,
+		const String & client_name_ = "client",
+		Protocol::Compression::Enum compression_ = Protocol::Compression::Enable,
+		Poco::Timespan connect_timeout_ = Poco::Timespan(DBMS_DEFAULT_CONNECT_TIMEOUT_SEC, 0),
+		Poco::Timespan receive_timeout_ = Poco::Timespan(DBMS_DEFAULT_RECEIVE_TIMEOUT_SEC, 0),
+		Poco::Timespan send_timeout_ = Poco::Timespan(DBMS_DEFAULT_SEND_TIMEOUT_SEC, 0),
+		Poco::Timespan ping_timeout_ = Poco::Timespan(DBMS_DEFAULT_PING_TIMEOUT_SEC, 0))
+		: host(host_),
+		  port(port_),
+		  default_database(default_database_),
+		  user(user_),
+		  password(password_),
+		  resolved_address(resolved_address_),
+		  client_name(client_name_),
+		  compression(compression_),
+		  connect_timeout(connect_timeout_),
+		  receive_timeout(receive_timeout_),
+		  send_timeout(send_timeout_),
+		  ping_timeout(ping_timeout_),
+		  log_wrapper(*this)
+	{
+		/// Don't connect immediately, only on first need.
+
+		if (user.empty())
+			user = "default";
+
+		setDescription();
+	}
+
+	virtual ~Connection(){};
 
 	/// Set throttler of network traffic. One throttler could be used for multiple connections to limit total traffic.
 	void setThrottler(const ThrottlerPtr & throttler_)
@@ -122,7 +135,9 @@ public:
 		Progress progress;
 		BlockStreamProfileInfo profile_info;
 
-		Packet() : type(Protocol::Server::Hello) {}
+		Packet() : type(Protocol::Server::Hello)
+		{
+		}
 	};
 
 	/// Change default database. Changes will take effect on next reconnect.
@@ -139,8 +154,7 @@ public:
 	const String & getDefaultDatabase() const;
 
 	/// If last flag is true, you need to call sendExternalTablesData after.
-	void sendQuery(
-		const String & query,
+	void sendQuery(const String & query,
 		const String & query_id_ = "",
 		UInt64 stage = QueryProcessingStage::Complete,
 		const Settings * settings = nullptr,
@@ -180,8 +194,14 @@ public:
 	  */
 	void fillBlockExtraInfo(BlockExtraInfo & info) const;
 
-	size_t outBytesCount() const { return out ? out->count() : 0; }
-	size_t inBytesCount() const { return in ? in->count() : 0; }
+	size_t outBytesCount() const
+	{
+		return out ? out->count() : 0;
+	}
+	size_t inBytesCount() const
+	{
+		return in ? in->count() : 0;
+	}
 
 private:
 	String host;
@@ -214,7 +234,7 @@ private:
 	std::shared_ptr<WriteBuffer> out;
 
 	String query_id;
-	UInt64 compression;		/// Enable data compression for communication.
+	UInt64 compression; /// Enable data compression for communication.
 	/// What compression algorithm to use while sending data for INSERT queries and external tables.
 	CompressionMethod network_compression_method = CompressionMethod::LZ4;
 
@@ -240,8 +260,7 @@ private:
 	class LoggerWrapper
 	{
 	public:
-		LoggerWrapper(Connection & parent_)
-			: log(nullptr), parent(parent_)
+		LoggerWrapper(Connection & parent_) : log(nullptr), parent(parent_)
 		{
 		}
 
@@ -272,5 +291,4 @@ private:
 
 	void initBlockInput();
 };
-
 }

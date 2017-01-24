@@ -1,23 +1,20 @@
 #pragma once
 
-#include <DB/IO/WriteBufferFromFile.h>
+#include <DB/DataStreams/IBlockOutputStream.h>
 #include <DB/IO/CompressedWriteBuffer.h>
 #include <DB/IO/HashingWriteBuffer.h>
+#include <DB/IO/WriteBufferFromFile.h>
 #include <DB/Storages/MergeTree/MergeTreeData.h>
-#include <DB/DataStreams/IBlockOutputStream.h>
 
 #include <DB/Columns/ColumnArray.h>
 
 
 namespace DB
 {
-
-
 class IMergedBlockOutputStream : public IBlockOutputStream
 {
 public:
-	IMergedBlockOutputStream(
-		MergeTreeData & storage_,
+	IMergedBlockOutputStream(MergeTreeData & storage_,
 		size_t min_compress_block_size_,
 		size_t max_compress_block_size_,
 		CompressionMethod compression_method_,
@@ -28,8 +25,7 @@ protected:
 
 	struct ColumnStream
 	{
-		ColumnStream(
-			const String & escaped_column_name_,
+		ColumnStream(const String & escaped_column_name_,
 			const String & data_path,
 			const std::string & data_file_extension_,
 			const std::string & marks_path,
@@ -62,12 +58,21 @@ protected:
 
 	using ColumnStreams = std::map<String, std::unique_ptr<ColumnStream>>;
 
-	void addStream(const String & path, const String & name, const IDataType & type, size_t estimated_size,
-		size_t level, const String & filename, bool skip_offsets);
+	void addStream(const String & path,
+		const String & name,
+		const IDataType & type,
+		size_t estimated_size,
+		size_t level,
+		const String & filename,
+		bool skip_offsets);
 
 	/// Записать данные одного столбца.
-	void writeData(const String & name, const IDataType & type, const IColumn & column, OffsetColumns & offset_columns,
-		size_t level, bool skip_offsets);
+	void writeData(const String & name,
+		const IDataType & type,
+		const IColumn & column,
+		OffsetColumns & offset_columns,
+		size_t level,
+		bool skip_offsets);
 
 	MergeTreeData & storage;
 
@@ -85,8 +90,13 @@ protected:
 
 private:
 	/// Internal version of writeData.
-	void writeDataImpl(const String & name, const IDataType & type, const IColumn & column,
-		OffsetColumns & offset_columns, size_t level, bool write_array_data, bool skip_offsets);
+	void writeDataImpl(const String & name,
+		const IDataType & type,
+		const IColumn & column,
+		OffsetColumns & offset_columns,
+		size_t level,
+		bool write_array_data,
+		bool skip_offsets);
 };
 
 
@@ -97,13 +107,9 @@ class MergedBlockOutputStream : public IMergedBlockOutputStream
 {
 public:
 	MergedBlockOutputStream(
-		MergeTreeData & storage_,
-		String part_path_,
-		const NamesAndTypesList & columns_list_,
-		CompressionMethod compression_method);
+		MergeTreeData & storage_, String part_path_, const NamesAndTypesList & columns_list_, CompressionMethod compression_method);
 
-	MergedBlockOutputStream(
-		MergeTreeData & storage_,
+	MergedBlockOutputStream(MergeTreeData & storage_,
 		String part_path_,
 		const NamesAndTypesList & columns_list_,
 		CompressionMethod compression_method,
@@ -123,8 +129,7 @@ public:
 	void writeSuffix() override;
 
 	MergeTreeData::DataPart::Checksums writeSuffixAndGetChecksums(
-		const NamesAndTypesList & total_column_list,
-		MergeTreeData::DataPart::Checksums * additional_column_checksums = nullptr);
+		const NamesAndTypesList & total_column_list, MergeTreeData::DataPart::Checksums * additional_column_checksums = nullptr);
 
 	MergeTreeData::DataPart::Checksums writeSuffixAndGetChecksums();
 
@@ -171,5 +176,4 @@ private:
 	bool sync;
 	bool skip_offsets;
 };
-
 }

@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 class WriteBuffer;
 
 
@@ -26,6 +25,4 @@ public:
 private:
 	WriteBuffer & ostr;
 };
-
 }
-

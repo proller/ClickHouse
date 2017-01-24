@@ -5,8 +5,6 @@
 
 namespace DB
 {
-
-
 /** Позволяет из одного источника сделать несколько.
   * Используется для однопроходного выполнения сразу нескольких запросов.
   *
@@ -18,7 +16,9 @@ namespace DB
 class ForkBlockInputStreams : private boost::noncopyable
 {
 public:
-	ForkBlockInputStreams(BlockInputStreamPtr source_) : source(source_) {}
+	ForkBlockInputStreams(BlockInputStreamPtr source_) : source(source_)
+	{
+	}
 
 	/// Создать источник. Вызывайте функцию столько раз, сколько размноженных источников вам нужно.
 	BlockInputStreamPtr createInput()
@@ -70,5 +70,4 @@ private:
 
 using ForkPtr = std::shared_ptr<ForkBlockInputStreams>;
 using Forks = std::vector<ForkPtr>;
-
 }

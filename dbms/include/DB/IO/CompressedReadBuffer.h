@@ -1,13 +1,12 @@
 #pragma once
 
-#include <DB/IO/CompressedReadBufferBase.h>
 #include <DB/IO/BufferWithOwnMemory.h>
+#include <DB/IO/CompressedReadBufferBase.h>
 #include <DB/IO/ReadBuffer.h>
 
 
 namespace DB
 {
-
 class CompressedReadBuffer : public CompressedReadBufferBase, public BufferWithOwnMemory<ReadBuffer>
 {
 private:
@@ -16,8 +15,7 @@ private:
 	bool nextImpl() override;
 
 public:
-	CompressedReadBuffer(ReadBuffer & in_)
-		: CompressedReadBufferBase(&in_), BufferWithOwnMemory<ReadBuffer>(0)
+	CompressedReadBuffer(ReadBuffer & in_) : CompressedReadBufferBase(&in_), BufferWithOwnMemory<ReadBuffer>(0)
 	{
 	}
 
@@ -29,5 +27,4 @@ public:
 		return size_compressed;
 	}
 };
-
 }

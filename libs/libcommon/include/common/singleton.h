@@ -19,7 +19,8 @@
   *
   * class SomeSingleton : public Some, public Singleton<SomeSingleton> {}
   */
-template<class Subject> class Singleton
+template <class Subject>
+class Singleton
 {
 public:
 	static Subject & instance()
@@ -33,6 +34,6 @@ protected:
 	Singleton(){};
 
 private:
-	Singleton(const Singleton&);
-	Singleton& operator=(const Singleton&);
+	Singleton(const Singleton &);
+	Singleton & operator=(const Singleton &);
 };

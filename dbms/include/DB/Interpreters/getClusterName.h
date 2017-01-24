@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 class IAST;
 
 /// Получить имя кластера из AST.
@@ -17,5 +16,4 @@ class IAST;
   * Поэтому, рассмотрим такой случай отдельно.
   */
 std::string getClusterName(const IAST & node);
-
 }

@@ -10,32 +10,32 @@
 
 namespace detail
 {
-	template <class T, bool is_nothrow_move_assignable = std::is_nothrow_move_assignable<T>::value>
-	struct MoveOrCopyIfThrow;
+template <class T, bool is_nothrow_move_assignable = std::is_nothrow_move_assignable<T>::value>
+struct MoveOrCopyIfThrow;
 
-	template <class T>
-	struct MoveOrCopyIfThrow<T, true>
+template <class T>
+struct MoveOrCopyIfThrow<T, true>
+{
+	void operator()(T && src, T & dst) const
 	{
-		void operator()(T && src, T & dst) const
-		{
-			dst = std::forward<T>(src);
-		}
-	};
-
-	template <class T>
-	struct MoveOrCopyIfThrow<T, false>
-	{
-		void operator()(T && src, T & dst) const
-		{
-			dst = src;
-		}
-	};
-
-	template <class T>
-	void moveOrCopyIfThrow(T && src, T & dst)
-	{
-		MoveOrCopyIfThrow<T>()(std::forward<T>(src), dst);
+		dst = std::forward<T>(src);
 	}
+};
+
+template <class T>
+struct MoveOrCopyIfThrow<T, false>
+{
+	void operator()(T && src, T & dst) const
+	{
+		dst = src;
+	}
+};
+
+template <class T>
+void moveOrCopyIfThrow(T && src, T & dst)
+{
+	MoveOrCopyIfThrow<T>()(std::forward<T>(src), dst);
+}
 };
 
 /** Очень простая thread-safe очередь ограниченной длины.
@@ -53,8 +53,9 @@ private:
 	Poco::Semaphore empty_count;
 
 public:
-	ConcurrentBoundedQueue(size_t max_fill)
-		: fill_count(0, max_fill), empty_count(max_fill, max_fill) {}
+	ConcurrentBoundedQueue(size_t max_fill) : fill_count(0, max_fill), empty_count(max_fill, max_fill)
+	{
+	}
 
 	void push(const T & x)
 	{
@@ -66,8 +67,8 @@ public:
 		fill_count.set();
 	}
 
-	template <class ... Args>
-	void emplace(Args && ... args)
+	template <class... Args>
+	void emplace(Args &&... args)
 	{
 		empty_count.wait();
 		{
@@ -102,8 +103,8 @@ public:
 		return false;
 	}
 
-	template <class ... Args>
-	bool tryEmplace(DB::UInt64 milliseconds, Args && ... args)
+	template <class... Args>
+	bool tryEmplace(DB::UInt64 milliseconds, Args &&... args)
 	{
 		if (empty_count.tryWait(milliseconds))
 		{

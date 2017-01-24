@@ -1,23 +1,21 @@
 #pragma once
 
 #include <DB/Common/LRUCache.h>
-#include <DB/Common/SipHash.h>
 #include <DB/Common/ProfileEvents.h>
+#include <DB/Common/SipHash.h>
 #include <DB/IO/BufferWithOwnMemory.h>
 #include <DB/Interpreters/AggregationCommon.h>
 
 
 namespace ProfileEvents
 {
-	extern const Event UncompressedCacheHits;
-	extern const Event UncompressedCacheMisses;
-	extern const Event UncompressedCacheWeightLost;
+extern const Event UncompressedCacheHits;
+extern const Event UncompressedCacheMisses;
+extern const Event UncompressedCacheWeightLost;
 }
 
 namespace DB
 {
-
-
 struct UncompressedCacheCell
 {
 	Memory data;
@@ -41,8 +39,9 @@ private:
 	using Base = LRUCache<UInt128, UncompressedCacheCell, UInt128TrivialHash, UncompressedSizeWeightFunction>;
 
 public:
-	UncompressedCache(size_t max_size_in_bytes)
-		: Base(max_size_in_bytes) {}
+	UncompressedCache(size_t max_size_in_bytes) : Base(max_size_in_bytes)
+	{
+	}
 
 	/// Calculate key from path to file and offset.
 	static UInt128 hash(const String & path_to_file, size_t offset)
@@ -78,5 +77,4 @@ public:
 };
 
 using UncompressedCachePtr = std::shared_ptr<UncompressedCache>;
-
 }

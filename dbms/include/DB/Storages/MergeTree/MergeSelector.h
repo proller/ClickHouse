@@ -2,13 +2,12 @@
 
 #include <cstddef>
 #include <ctime>
-#include <vector>
 #include <functional>
+#include <vector>
 
 
 namespace DB
 {
-
 /** Interface of algorithm to select data parts to merge
  *   (merge is also known as "compaction").
   * Following properties depend on it:
@@ -50,11 +49,10 @@ public:
 	/** Function could be called at any frequency and it must decide, should you do any merge at all.
 	  * If better not to do any merge, it returns empty result.
 	  */
-	virtual PartsInPartition select(
-		const Partitions & partitions,
-		const size_t max_total_size_to_merge) = 0;
+	virtual PartsInPartition select(const Partitions & partitions, const size_t max_total_size_to_merge) = 0;
 
-	virtual ~IMergeSelector() {}
+	virtual ~IMergeSelector()
+	{
+	}
 };
-
 }

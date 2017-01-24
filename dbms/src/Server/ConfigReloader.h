@@ -2,19 +2,21 @@
 
 #include <DB/Common/ConfigProcessor.h>
 
-#include <time.h>
-#include <string>
-#include <thread>
-#include <mutex>
 #include <condition_variable>
 #include <list>
+#include <mutex>
+#include <string>
+#include <thread>
+#include <time.h>
 
 
-namespace Poco { class Logger; }
+namespace Poco
+{
+class Logger;
+}
 
 namespace DB
 {
-
 class Context;
 
 /** Every two seconds checks configuration files for update.
@@ -30,21 +32,24 @@ public:
 	  * users_config_path is usually /path/to/.../clickhouse-server/users.xml (i.e. value of <users_config> tag)
 	  * include_from_path is usually /path/to/.../etc/metrika.xml (i.e. value of <include_from> tag)
 	  */
-	ConfigReloader(const std::string & main_config_path_, const std::string & users_config_path_, const std::string & include_from_path_, Context * context_);
+	ConfigReloader(const std::string & main_config_path_,
+		const std::string & users_config_path_,
+		const std::string & include_from_path_,
+		Context * context_);
 
 	~ConfigReloader();
 
 private:
-
 	struct FileWithTimestamp
 	{
 		std::string path;
 		time_t modification_time;
 
-		FileWithTimestamp(const std::string & path_, time_t modification_time_)
-			: path(path_), modification_time(modification_time_) {}
+		FileWithTimestamp(const std::string & path_, time_t modification_time_) : path(path_), modification_time(modification_time_)
+		{
+		}
 
-		bool operator < (const FileWithTimestamp & rhs) const
+		bool operator<(const FileWithTimestamp & rhs) const
 		{
 			return path < rhs.path;
 		}
@@ -69,13 +74,12 @@ private:
 
 		bool isDifferOrNewerThan(const FilesChangesTracker & rhs)
 		{
-			return (files.size() != rhs.files.size()) ||
-					!std::equal(files.begin(), files.end(), rhs.files.begin(), FileWithTimestamp::isTheSame);
+			return (files.size() != rhs.files.size())
+				|| !std::equal(files.begin(), files.end(), rhs.files.begin(), FileWithTimestamp::isTheSame);
 		}
 	};
 
 private:
-
 	/// Make sense to separate this function on two threads
 	void reloadIfNewer(bool force_main, bool force_users);
 	void run();
@@ -84,7 +88,6 @@ private:
 	ConfigurationPtr loadConfigFor(const std::string & root_config_path, bool throw_error);
 
 private:
-
 	static constexpr auto reload_interval = std::chrono::seconds(2);
 
 	std::string main_config_path;
@@ -96,12 +99,11 @@ private:
 	FilesChangesTracker last_main_config_files;
 	FilesChangesTracker last_users_config_files;
 
-	bool quit {false};
+	bool quit{ false };
 	std::mutex mutex;
 	std::condition_variable cond;
 	std::thread thread;
 
 	Poco::Logger * log = &Logger::get("ConfigReloader");
 };
-
 }

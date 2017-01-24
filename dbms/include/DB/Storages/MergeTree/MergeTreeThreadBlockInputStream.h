@@ -6,7 +6,6 @@
 
 namespace DB
 {
-
 class MergeTreeReader;
 class MergeTreeReadPool;
 struct MergeTreeReadTask;
@@ -21,22 +20,33 @@ class MergeTreeThreadBlockInputStream : public IProfilingBlockInputStream
 {
 	/// "thread" index (there are N threads and each thread is assigned index in interval [0..N-1])
 	std::size_t thread;
+
 public:
-	MergeTreeThreadBlockInputStream(
-		const std::size_t thread,
-		const std::shared_ptr<MergeTreeReadPool> & pool, const std::size_t min_marks_to_read, const std::size_t block_size,
-		MergeTreeData & storage, const bool use_uncompressed_cache, const ExpressionActionsPtr & prewhere_actions,
-		const String & prewhere_column, const Settings & settings, const Names & virt_column_names);
+	MergeTreeThreadBlockInputStream(const std::size_t thread,
+		const std::shared_ptr<MergeTreeReadPool> & pool,
+		const std::size_t min_marks_to_read,
+		const std::size_t block_size,
+		MergeTreeData & storage,
+		const bool use_uncompressed_cache,
+		const ExpressionActionsPtr & prewhere_actions,
+		const String & prewhere_column,
+		const Settings & settings,
+		const Names & virt_column_names);
 
-    ~MergeTreeThreadBlockInputStream() override;
+	~MergeTreeThreadBlockInputStream() override;
 
-	String getName() const override { return "MergeTreeThread"; }
+	String getName() const override
+	{
+		return "MergeTreeThread";
+	}
 
 	String getID() const override;
 
 protected:
 	/// Будем вызывать progressImpl самостоятельно.
-	void progress(const Progress & value) override {}
+	void progress(const Progress & value) override
+	{
+	}
 
 	Block readImpl() override;
 
@@ -69,6 +79,4 @@ private:
 	MergeTreeReaderPtr reader;
 	MergeTreeReaderPtr pre_reader;
 };
-
-
 }

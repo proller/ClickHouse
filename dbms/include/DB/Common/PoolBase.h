@@ -1,9 +1,9 @@
 #pragma once
 
-#include <mutex>
 #include <condition_variable>
-#include <Poco/Timespan.h>
+#include <mutex>
 #include <boost/noncopyable.hpp>
+#include <Poco/Timespan.h>
 
 #include <common/logger_useful.h>
 #include <DB/Common/Exception.h>
@@ -33,12 +33,10 @@ public:
 	using Ptr = std::shared_ptr<PoolBase<TObject>>;
 
 private:
-
 	/** Объект с флагом, используется ли он сейчас. */
 	struct PooledObject
 	{
-		PooledObject(ObjectPtr object_, PoolBase & pool_)
-			: object(object_), pool(pool_)
+		PooledObject(ObjectPtr object_, PoolBase & pool_) : object(object_), pool(pool_)
 		{
 		}
 
@@ -54,7 +52,10 @@ private:
 	  */
 	struct PoolEntryHelper
 	{
-		PoolEntryHelper(PooledObject & data_) : data(data_) { data.in_use = true; }
+		PoolEntryHelper(PooledObject & data_) : data(data_)
+		{
+			data.in_use = true;
+		}
 		~PoolEntryHelper()
 		{
 			std::unique_lock<std::mutex> lock(data.pool.mutex);
@@ -72,7 +73,9 @@ public:
 	public:
 		friend class PoolBase<Object>;
 
-		Entry() {}	/// Для отложенной инициализации.
+		Entry()
+		{
+		} /// Для отложенной инициализации.
 
 		/** Объект Entry защищает ресурс от использования другим потоком.
 		 * Следующие методы запрещены для rvalue, чтобы нельзя было написать подобное
@@ -85,12 +88,27 @@ public:
 		Object & operator*() && = delete;
 		const Object & operator*() const && = delete;
 
-		Object * operator->() &			{ return &*data->data.object; }
-		const Object * operator->() const &	{ return &*data->data.object; }
-		Object & operator*() &				{ return *data->data.object; }
-		const Object & operator*() const &	{ return *data->data.object; }
+		Object * operator->() &
+		{
+			return &*data->data.object;
+		}
+		const Object * operator->() const &
+		{
+			return &*data->data.object;
+		}
+		Object & operator*() &
+		{
+			return *data->data.object;
+		}
+		const Object & operator*() const &
+		{
+			return *data->data.object;
+		}
 
-		bool isNull() const { return data == nullptr; }
+		bool isNull() const
+		{
+			return data == nullptr;
+		}
 
 		PoolBase * getPool() const
 		{
@@ -102,10 +120,14 @@ public:
 	private:
 		std::shared_ptr<PoolEntryHelper> data;
 
-		Entry(PooledObject & object) : data(std::make_shared<PoolEntryHelper>(object)) {}
+		Entry(PooledObject & object) : data(std::make_shared<PoolEntryHelper>(object))
+		{
+		}
 	};
 
-	virtual ~PoolBase() {}
+	virtual ~PoolBase()
+	{
+	}
 
 	/** Выделяет объект для работы. При timeout < 0 таймаут бесконечный. */
 	Entry get(Poco::Timespan::TimeDiff timeout)
@@ -154,11 +176,9 @@ private:
 	std::condition_variable available;
 
 protected:
-
 	Logger * log;
 
-	PoolBase(unsigned max_items_, Logger * log_)
-	   : max_items(max_items_), log(log_)
+	PoolBase(unsigned max_items_, Logger * log_) : max_items(max_items_), log(log_)
 	{
 		items.reserve(max_items);
 	}
@@ -166,4 +186,3 @@ protected:
 	/** Создает новый объект для помещения в пул. */
 	virtual ObjectPtr allocObject() = 0;
 };
-

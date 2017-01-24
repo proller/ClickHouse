@@ -3,15 +3,13 @@
 #include <memory>
 #include <time.h>
 
-#include <DB/IO/createReadBufferFromFileBase.h>
 #include <DB/IO/CompressedReadBufferBase.h>
 #include <DB/IO/UncompressedCache.h>
+#include <DB/IO/createReadBufferFromFileBase.h>
 
 
 namespace DB
 {
-
-
 /** Буфер для чтения из сжатого файла с использованием кэша разжатых блоков.
   * Кэш внешний - передаётся в качестве аргумента в конструктор.
   * Позволяет увеличить производительность в случае, когда часто читаются одни и те же блоки.
@@ -41,18 +39,20 @@ private:
 	clockid_t clock_type;
 
 public:
-	CachedCompressedReadBuffer(
-		const std::string & path_, UncompressedCache * cache_, size_t estimated_size_, size_t aio_threshold_,
+	CachedCompressedReadBuffer(const std::string & path_,
+		UncompressedCache * cache_,
+		size_t estimated_size_,
+		size_t aio_threshold_,
 		size_t buf_size_ = DBMS_DEFAULT_BUFFER_SIZE);
 
 
 	void seek(size_t offset_in_compressed_file, size_t offset_in_decompressed_block);
 
-	void setProfileCallback(const ReadBufferFromFileBase::ProfileCallback & profile_callback_, clockid_t clock_type_ = CLOCK_MONOTONIC_COARSE)
+	void setProfileCallback(
+		const ReadBufferFromFileBase::ProfileCallback & profile_callback_, clockid_t clock_type_ = CLOCK_MONOTONIC_COARSE)
 	{
 		profile_callback = profile_callback_;
 		clock_type = clock_type_;
 	}
 };
-
 }

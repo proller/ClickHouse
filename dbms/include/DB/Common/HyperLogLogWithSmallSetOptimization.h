@@ -1,23 +1,16 @@
 #pragma once
 
-#include <DB/Common/HyperLogLogCounter.h>
 #include <DB/Common/HashTable/SmallTable.h>
+#include <DB/Common/HyperLogLogCounter.h>
 
 namespace DB
 {
-
-
 /** Для маленького количества ключей - массив фиксированного размера "на стеке".
   * Для большого - выделяется HyperLogLog.
   * Смотрите также более практичную реализацию в CombinedCardinalityEstimator.h,
   *  где используется также хэш-таблица для множеств среднего размера.
   */
-template <
-	typename Key,
-	UInt8 small_set_size,
-	UInt8 K,
-	typename Hash = IntHash32<Key>,
-	typename DenominatorType = double>
+template <typename Key, UInt8 small_set_size, UInt8 K, typename Hash = IntHash32<Key>, typename DenominatorType = double>
 class HyperLogLogWithSmallSetOptimization
 {
 private:
@@ -141,6 +134,4 @@ public:
 			small.write(out);
 	}
 };
-
-
 }

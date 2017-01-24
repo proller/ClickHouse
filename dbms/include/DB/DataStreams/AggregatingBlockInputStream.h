@@ -1,15 +1,13 @@
 #pragma once
 
-#include <DB/Interpreters/Aggregator.h>
-#include <DB/IO/ReadBufferFromFile.h>
-#include <DB/IO/CompressedReadBuffer.h>
 #include <DB/DataStreams/IProfilingBlockInputStream.h>
+#include <DB/IO/CompressedReadBuffer.h>
+#include <DB/IO/ReadBufferFromFile.h>
+#include <DB/Interpreters/Aggregator.h>
 
 
 namespace DB
 {
-
-
 /** Агрегирует поток блоков, используя заданные столбцы-ключи и агрегатные функции.
   * Столбцы с агрегатными функциями добавляет в конец блока.
   * Если final=false, агрегатные функции не финализируются, то есть, не заменяются на своё значение, а содержат промежуточное состояние вычислений.
@@ -28,7 +26,10 @@ public:
 		children.push_back(input_);
 	}
 
-	String getName() const override { return "Aggregating"; }
+	String getName() const override
+	{
+		return "Aggregating";
+	}
 
 	String getID() const override
 	{
@@ -62,5 +63,4 @@ protected:
 
 	Logger * log = &Logger::get("AggregatingBlockInputStream");
 };
-
 }

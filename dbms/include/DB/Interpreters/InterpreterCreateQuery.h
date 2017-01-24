@@ -1,15 +1,14 @@
 #pragma once
 
-#include <DB/Storages/IStorage.h>
+#include <DB/Common/ThreadPool.h>
 #include <DB/Interpreters/Context.h>
 #include <DB/Interpreters/IInterpreter.h>
 #include <DB/Storages/ColumnDefault.h>
-#include <DB/Common/ThreadPool.h>
+#include <DB/Storages/IStorage.h>
 
 
 namespace DB
 {
-
 class ASTCreateQuery;
 
 
@@ -25,8 +24,7 @@ public:
 
 	/// List of columns and their types in AST.
 	static ASTPtr formatColumns(const NamesAndTypesList & columns);
-	static ASTPtr formatColumns(
-		NamesAndTypesList columns,
+	static ASTPtr formatColumns(NamesAndTypesList columns,
 		const NamesAndTypesList & materialized_columns,
 		const NamesAndTypesList & alias_columns,
 		const ColumnDefaults & column_defaults);
@@ -69,6 +67,4 @@ private:
 	/// Skip safety threshold when loading tables.
 	bool has_force_restore_data_flag = false;
 };
-
-
 }

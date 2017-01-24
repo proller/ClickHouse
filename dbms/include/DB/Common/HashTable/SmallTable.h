@@ -14,15 +14,8 @@
   *  и делать fallback в этом случае (например, использовать полноценную хэш-таблицу).
   */
 
-template
-<
-	typename Key,
-	typename Cell,
-	size_t capacity
->
-class SmallTable :
-	private boost::noncopyable,
-	protected Cell::State
+template <typename Key, typename Cell, size_t capacity>
+class SmallTable : private boost::noncopyable, protected Cell::State
 {
 protected:
 	friend class const_iterator;
@@ -32,8 +25,8 @@ protected:
 	using Self = SmallTable<Key, Cell, capacity>;
 	using cell_type = Cell;
 
-	size_t m_size = 0;		/// Количество элементов.
-	Cell buf[capacity];		/// Кусок памяти для всех элементов.
+	size_t m_size = 0; /// Количество элементов.
+	Cell buf[capacity]; /// Кусок памяти для всех элементов.
 
 
 	/// Найти ячейку с тем же ключём или пустую ячейку, начиная с заданного места и далее по цепочке разрешения коллизий.
@@ -70,8 +63,7 @@ public:
 	class Reader final : private Cell::State
 	{
 	public:
-		Reader(DB::ReadBuffer & in_)
-		: in(in_)
+		Reader(DB::ReadBuffer & in_) : in(in_)
 		{
 		}
 
@@ -128,11 +120,21 @@ public:
 		friend class SmallTable;
 
 	public:
-		iterator() {}
-		iterator(Self * container_, Cell * ptr_) : container(container_), ptr(ptr_) {}
+		iterator()
+		{
+		}
+		iterator(Self * container_, Cell * ptr_) : container(container_), ptr(ptr_)
+		{
+		}
 
-		bool operator== (const iterator & rhs) const { return ptr == rhs.ptr; }
-		bool operator!= (const iterator & rhs) const { return ptr != rhs.ptr; }
+		bool operator==(const iterator & rhs) const
+		{
+			return ptr == rhs.ptr;
+		}
+		bool operator!=(const iterator & rhs) const
+		{
+			return ptr != rhs.ptr;
+		}
 
 		iterator & operator++()
 		{
@@ -140,10 +142,19 @@ public:
 			return *this;
 		}
 
-		value_type & operator* () const { return ptr->getValue(); }
-		value_type * operator->() const { return &ptr->getValue(); }
+		value_type & operator*() const
+		{
+			return ptr->getValue();
+		}
+		value_type * operator->() const
+		{
+			return &ptr->getValue();
+		}
 
-		Cell * getPtr() const { return ptr; }
+		Cell * getPtr() const
+		{
+			return ptr;
+		}
 	};
 
 
@@ -155,12 +166,24 @@ public:
 		friend class SmallTable;
 
 	public:
-		const_iterator() {}
-		const_iterator(const Self * container_, const Cell * ptr_) : container(container_), ptr(ptr_) {}
-		const_iterator(const iterator & rhs) : container(rhs.container), ptr(rhs.ptr) {}
+		const_iterator()
+		{
+		}
+		const_iterator(const Self * container_, const Cell * ptr_) : container(container_), ptr(ptr_)
+		{
+		}
+		const_iterator(const iterator & rhs) : container(rhs.container), ptr(rhs.ptr)
+		{
+		}
 
-		bool operator== (const const_iterator & rhs) const { return ptr == rhs.ptr; }
-		bool operator!= (const const_iterator & rhs) const { return ptr != rhs.ptr; }
+		bool operator==(const const_iterator & rhs) const
+		{
+			return ptr == rhs.ptr;
+		}
+		bool operator!=(const const_iterator & rhs) const
+		{
+			return ptr != rhs.ptr;
+		}
 
 		const_iterator & operator++()
 		{
@@ -168,23 +191,50 @@ public:
 			return *this;
 		}
 
-		const value_type & operator* () const { return ptr->getValue(); }
-		const value_type * operator->() const { return &ptr->getValue(); }
+		const value_type & operator*() const
+		{
+			return ptr->getValue();
+		}
+		const value_type * operator->() const
+		{
+			return &ptr->getValue();
+		}
 
-		const Cell * getPtr() const { return ptr; }
+		const Cell * getPtr() const
+		{
+			return ptr;
+		}
 	};
 
 
-	const_iterator begin() const 	{ return iteratorTo(buf); }
-	iterator begin() 				{ return iteratorTo(buf); }
+	const_iterator begin() const
+	{
+		return iteratorTo(buf);
+	}
+	iterator begin()
+	{
+		return iteratorTo(buf);
+	}
 
-	const_iterator end() const 		{ return iteratorTo(buf + m_size); }
-	iterator end() 					{ return iteratorTo(buf + m_size); }
+	const_iterator end() const
+	{
+		return iteratorTo(buf + m_size);
+	}
+	iterator end()
+	{
+		return iteratorTo(buf + m_size);
+	}
 
 
 protected:
-	const_iterator iteratorTo(const Cell * ptr) const 	{ return const_iterator(this, ptr); }
-	iterator iteratorTo(Cell * ptr) 					{ return iterator(this, ptr); }
+	const_iterator iteratorTo(const Cell * ptr) const
+	{
+		return const_iterator(this, ptr);
+	}
+	iterator iteratorTo(Cell * ptr)
+	{
+		return iterator(this, ptr);
+	}
 
 
 public:
@@ -233,7 +283,7 @@ public:
 		inserted = res == buf + m_size;
 		if (inserted)
 		{
-			new(res) Cell(x, *this);
+			new (res) Cell(x, *this);
 			++m_size;
 		}
 	}
@@ -250,7 +300,7 @@ public:
 			if (res == buf + capacity)
 				return false;
 
-			new(res) Cell(x, *this);
+			new (res) Cell(x, *this);
 			++m_size;
 		}
 		return true;
@@ -266,13 +316,19 @@ public:
 
 	void ALWAYS_INLINE insertUnique(Key x)
 	{
-		new(&buf[m_size]) Cell(x, *this);
+		new (&buf[m_size]) Cell(x, *this);
 		++m_size;
 	}
 
 
-	iterator ALWAYS_INLINE find(Key x) 				{ return iteratorTo(findCell(x)); }
-	const_iterator ALWAYS_INLINE find(Key x) const 	{ return iteratorTo(findCell(x)); }
+	iterator ALWAYS_INLINE find(Key x)
+	{
+		return iteratorTo(findCell(x));
+	}
+	const_iterator ALWAYS_INLINE find(Key x) const
+	{
+		return iteratorTo(findCell(x));
+	}
 
 
 	void write(DB::WriteBuffer & wb) const
@@ -338,12 +394,12 @@ public:
 
 	size_t size() const
 	{
-	    return m_size;
+		return m_size;
 	}
 
 	bool empty() const
 	{
-	    return 0 == m_size;
+		return 0 == m_size;
 	}
 
 	void clear()
@@ -362,23 +418,16 @@ public:
 };
 
 
-struct HashUnused {};
+struct HashUnused
+{
+};
 
 
-template
-<
-	typename Key,
-	size_t capacity
->
+template <typename Key, size_t capacity>
 using SmallSet = SmallTable<Key, HashTableCell<Key, HashUnused>, capacity>;
 
 
-template
-<
-	typename Key,
-	typename Cell,
-	size_t capacity
->
+template <typename Key, typename Cell, size_t capacity>
 class SmallMapTable : public SmallTable<Key, Cell, capacity>
 {
 public:
@@ -391,16 +440,11 @@ public:
 		typename SmallMapTable::iterator it;
 		bool inserted;
 		this->emplace(x, it, inserted);
-		new(&it->second) mapped_type();
+		new (&it->second) mapped_type();
 		return it->second;
 	}
 };
 
 
-template
-<
-	typename Key,
-	typename Mapped,
-	size_t capacity
->
+template <typename Key, typename Mapped, size_t capacity>
 using SmallMap = SmallMapTable<Key, HashMapCell<Key, Mapped, HashUnused>, capacity>;

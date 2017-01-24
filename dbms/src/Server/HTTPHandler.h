@@ -1,25 +1,22 @@
 #pragma once
 
-#include <DB/Common/CurrentMetrics.h>
 #include "Server.h"
+#include <DB/Common/CurrentMetrics.h>
 
 
 namespace CurrentMetrics
 {
-	extern const Metric HTTPConnection;
+extern const Metric HTTPConnection;
 }
 
 namespace DB
 {
-
 class WriteBufferFromHTTPServerResponse;
 
 class HTTPHandler : public Poco::Net::HTTPRequestHandler
 {
 public:
-	HTTPHandler(Server & server_)
-		: server(server_)
-		, log(&Logger::get("HTTPHandler"))
+	HTTPHandler(Server & server_) : server(server_), log(&Logger::get("HTTPHandler"))
 	{
 	}
 
@@ -32,23 +29,18 @@ public:
 
 	void handleRequest(Poco::Net::HTTPServerRequest & request, Poco::Net::HTTPServerResponse & response) override;
 
-	void trySendExceptionToClient(const std::string & s,
-		Poco::Net::HTTPServerRequest & request, Poco::Net::HTTPServerResponse & response,
-		Output & used_output);
+	void trySendExceptionToClient(
+		const std::string & s, Poco::Net::HTTPServerRequest & request, Poco::Net::HTTPServerResponse & response, Output & used_output);
 
 private:
 	Server & server;
 
-	CurrentMetrics::Increment metric_increment{CurrentMetrics::HTTPConnection};
+	CurrentMetrics::Increment metric_increment{ CurrentMetrics::HTTPConnection };
 
 	Logger * log;
 
 	/// Also initializes 'used_output'.
 	void processQuery(
-		Poco::Net::HTTPServerRequest & request,
-		HTMLForm & params,
-		Poco::Net::HTTPServerResponse & response,
-		Output & used_output);
+		Poco::Net::HTTPServerRequest & request, HTMLForm & params, Poco::Net::HTTPServerResponse & response, Output & used_output);
 };
-
 }

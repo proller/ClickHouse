@@ -4,11 +4,11 @@
 
 #include <DB/Core/FieldVisitors.h>
 
-#include <DB/IO/WriteHelpers.h>
 #include <DB/IO/ReadHelpers.h>
+#include <DB/IO/WriteHelpers.h>
 
-#include <DB/DataTypes/DataTypesNumberFixed.h>
 #include <DB/DataTypes/DataTypeArray.h>
+#include <DB/DataTypes/DataTypesNumberFixed.h>
 
 #include <DB/AggregateFunctions/IUnaryAggregateFunction.h>
 
@@ -17,12 +17,11 @@
 
 namespace DB
 {
-
 template <typename ArgumentFieldType>
 struct AggregateFunctionQuantileData
 {
 	using Sample = ReservoirSampler<ArgumentFieldType, ReservoirSamplerOnEmpty::RETURN_NAN_OR_ZERO>;
-	Sample sample;	/// TODO Добавить MemoryTracker
+	Sample sample; /// TODO Добавить MemoryTracker
 };
 
 
@@ -32,8 +31,8 @@ struct AggregateFunctionQuantileData
   * Для дат и дат-с-временем returns_float следует задавать равным false.
   */
 template <typename ArgumentFieldType, bool returns_float = true>
-class AggregateFunctionQuantile final
-	: public IUnaryAggregateFunction<AggregateFunctionQuantileData<ArgumentFieldType>, AggregateFunctionQuantile<ArgumentFieldType, returns_float> >
+class AggregateFunctionQuantile final : public IUnaryAggregateFunction<AggregateFunctionQuantileData<ArgumentFieldType>,
+											AggregateFunctionQuantile<ArgumentFieldType, returns_float>>
 {
 private:
 	using Sample = typename AggregateFunctionQuantileData<ArgumentFieldType>::Sample;
@@ -42,9 +41,14 @@ private:
 	DataTypePtr type;
 
 public:
-	AggregateFunctionQuantile(double level_ = 0.5) : level(level_) {}
+	AggregateFunctionQuantile(double level_ = 0.5) : level(level_)
+	{
+	}
 
-	String getName() const override { return "quantile"; }
+	String getName() const override
+	{
+		return "quantile";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -62,7 +66,8 @@ public:
 	void setParameters(const Array & params) override
 	{
 		if (params.size() != 1)
-			throw Exception("Aggregate function " + getName() + " requires exactly one parameter.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+			throw Exception(
+				"Aggregate function " + getName() + " requires exactly one parameter.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
 		level = applyVisitor(FieldVisitorConvertToNumber<Float64>(), params[0]);
 	}
@@ -106,8 +111,8 @@ public:
   * Возвращает массив результатов.
   */
 template <typename ArgumentFieldType, bool returns_float = true>
-class AggregateFunctionQuantiles final
-	: public IUnaryAggregateFunction<AggregateFunctionQuantileData<ArgumentFieldType>, AggregateFunctionQuantiles<ArgumentFieldType, returns_float> >
+class AggregateFunctionQuantiles final : public IUnaryAggregateFunction<AggregateFunctionQuantileData<ArgumentFieldType>,
+											 AggregateFunctionQuantiles<ArgumentFieldType, returns_float>>
 {
 private:
 	using Sample = typename AggregateFunctionQuantileData<ArgumentFieldType>::Sample;
@@ -117,7 +122,10 @@ private:
 	DataTypePtr type;
 
 public:
-	String getName() const override { return "quantiles"; }
+	String getName() const override
+	{
+		return "quantiles";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -135,7 +143,8 @@ public:
 	void setParameters(const Array & params) override
 	{
 		if (params.empty())
-			throw Exception("Aggregate function " + getName() + " requires at least one parameter.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+			throw Exception(
+				"Aggregate function " + getName() + " requires at least one parameter.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
 		size_t size = params.size();
 		levels.resize(size);
@@ -185,12 +194,12 @@ public:
 		}
 		else
 		{
-			typename ColumnVector<ArgumentFieldType>::Container_t & data_to = static_cast<ColumnVector<ArgumentFieldType> &>(arr_to.getData()).getData();
+			typename ColumnVector<ArgumentFieldType>::Container_t & data_to
+				= static_cast<ColumnVector<ArgumentFieldType> &>(arr_to.getData()).getData();
 
 			for (size_t i = 0; i < size; ++i)
 				data_to.push_back(sample.quantileInterpolated(levels[i]));
 		}
 	}
 };
-
 }

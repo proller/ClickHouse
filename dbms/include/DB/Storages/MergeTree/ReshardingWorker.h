@@ -1,22 +1,21 @@
 #pragma once
 
-#include <DB/Storages/MergeTree/ReshardingJob.h>
-#include <DB/Storages/AlterCommands.h>
 #include <common/logger_useful.h>
+#include <DB/Storages/AlterCommands.h>
+#include <DB/Storages/MergeTree/ReshardingJob.h>
 
 #include <zkutil/RWLock.h>
 #include <zkutil/SingleBarrier.h>
 
 #include <Poco/Util/LayeredConfiguration.h>
 
-#include <string>
-#include <thread>
 #include <atomic>
 #include <functional>
+#include <string>
+#include <thread>
 
 namespace DB
 {
-
 class Context;
 class Cluster;
 class StorageReplicatedMergeTree;
@@ -36,13 +35,12 @@ public:
 	enum StatusCode
 	{
 		STATUS_OK = 0,
-		STATUS_ERROR,	/// An error occurred on a performer.
-		STATUS_ON_HOLD	/// Job is stopped.
+		STATUS_ERROR, /// An error occurred on a performer.
+		STATUS_ON_HOLD /// Job is stopped.
 	};
 
 public:
-	ReshardingWorker(const Poco::Util::AbstractConfiguration & config,
-		const std::string & config_name, Context & context_);
+	ReshardingWorker(const Poco::Util::AbstractConfiguration & config, const std::string & config_name, Context & context_);
 
 	ReshardingWorker(const ReshardingWorker &) = delete;
 	ReshardingWorker & operator=(const ReshardingWorker &) = delete;
@@ -77,8 +75,8 @@ public:
 	void addPartitions(const std::string & coordinator_id, const PartitionList & partition_list);
 	/// Rearrange partitions into two categories: coordinated job, uncoordinated job.
 	/// Returns an iterator to the beginning of the list of uncoordinated jobs.
-	ReshardingWorker::PartitionList::iterator categorizePartitions(const std::string & coordinator_id,
-		ReshardingWorker::PartitionList & partition_list);
+	ReshardingWorker::PartitionList::iterator categorizePartitions(
+		const std::string & coordinator_id, ReshardingWorker::PartitionList & partition_list);
 	/// Get the number of partitions of a distributed job. Called from performers.
 	size_t getPartitionCount(const std::string & coordinator_id);
 	/// Get the number of performers.
@@ -92,8 +90,7 @@ public:
 	/// Set the shard-independent status of a given coordinator.
 	void setStatus(const std::string & coordinator_id, StatusCode status, const std::string & msg = "");
 	/// Set the status of a shard under a given coordinator.
-	void setStatus(const std::string & coordinator_id, const std::string & hostname,
-		StatusCode status, const std::string & msg = "");
+	void setStatus(const std::string & coordinator_id, const std::string & hostname, StatusCode status, const std::string & msg = "");
 
 	zkutil::RWLock createDeletionLock(const std::string & coordinator_id);
 
@@ -117,7 +114,7 @@ private:
 	struct TargetShardInfo
 	{
 		TargetShardInfo(size_t shard_no_, const std::string & part_name_, const std::string & hash_)
-			: part_name{part_name_}, hash{hash_}, shard_no{shard_no_}
+			: part_name{ part_name_ }, hash{ hash_ }, shard_no{ shard_no_ }
 		{
 		}
 
@@ -282,8 +279,7 @@ private:
 	/// Access the global lock handler.
 	zkutil::RWLock getGlobalLock();
 	/// Acccess the given coordinator lock handler.
-	zkutil::RWLock getCoordinatorLock(const std::string & coordinator_id,
-		bool usable_in_emergency = false);
+	zkutil::RWLock getCoordinatorLock(const std::string & coordinator_id, bool usable_in_emergency = false);
 
 	/// The following functions are to design access barrier handlers we use
 	/// to synchronize the progression of distributed jobs.
@@ -339,17 +335,16 @@ private:
 		ReshardingWorker & resharding_worker;
 		std::thread thread_routine;
 
-		std::atomic<ReshardingWorker::AnomalyType> anomaly_type{ReshardingWorker::ANOMALY_NONE};
-		std::atomic<bool> is_started{false};
-		std::atomic<bool> must_stop{false};
+		std::atomic<ReshardingWorker::AnomalyType> anomaly_type{ ReshardingWorker::ANOMALY_NONE };
+		std::atomic<bool> is_started{ false };
+		std::atomic<bool> must_stop{ false };
 	};
 
 	/// Guarded exception-safe handling of the class above.
 	class ScopedAnomalyMonitor final
 	{
 	public:
-		ScopedAnomalyMonitor(AnomalyMonitor & anomaly_monitor_)
-			: anomaly_monitor{anomaly_monitor_}
+		ScopedAnomalyMonitor(AnomalyMonitor & anomaly_monitor_) : anomaly_monitor{ anomaly_monitor_ }
 		{
 			anomaly_monitor.start();
 		}
@@ -376,7 +371,7 @@ private:
 private:
 	ReshardingJob current_job;
 	std::thread job_tracker;
-	AnomalyMonitor anomaly_monitor{*this};
+	AnomalyMonitor anomaly_monitor{ *this };
 
 	std::string task_queue_path;
 	std::string host_task_queue_path;
@@ -393,10 +388,9 @@ private:
 	/// Helper that acquires an alive ZooKeeper session.
 	zkutil::GetZooKeeper get_zookeeper;
 
-	std::atomic<bool> is_started{false};
-	std::atomic<bool> must_stop{false};
+	std::atomic<bool> is_started{ false };
+	std::atomic<bool> must_stop{ false };
 };
 
 using ReshardingWorkerPtr = std::shared_ptr<ReshardingWorker>;
-
 }

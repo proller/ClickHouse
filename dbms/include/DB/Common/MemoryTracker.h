@@ -7,7 +7,7 @@
 
 namespace CurrentMetrics
 {
-	extern const Metric MemoryTracking;
+extern const Metric MemoryTracking;
 }
 
 
@@ -17,9 +17,9 @@ namespace CurrentMetrics
   */
 class MemoryTracker
 {
-	std::atomic<Int64> amount {0};
-	std::atomic<Int64> peak {0};
-	Int64 limit {0};
+	std::atomic<Int64> amount{ 0 };
+	std::atomic<Int64> peak{ 0 };
+	Int64 limit{ 0 };
 
 	/// To test exception safety of calling code, memory tracker throws an exception on each memory allocation with specified probability.
 	double fault_probability = 0;
@@ -35,8 +35,12 @@ class MemoryTracker
 	const char * description = nullptr;
 
 public:
-	MemoryTracker() {}
-	MemoryTracker(Int64 limit_) : limit(limit_) {}
+	MemoryTracker()
+	{
+	}
+	MemoryTracker(Int64 limit_) : limit(limit_)
+	{
+	}
 
 	~MemoryTracker();
 

@@ -1,12 +1,11 @@
 #pragma once
 
-#include <DB/Columns/IColumn.h>
 #include <DB/Columns/ColumnsCommon.h>
+#include <DB/Columns/IColumn.h>
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int SIZES_OF_COLUMNS_DOESNT_MATCH;
@@ -20,24 +19,65 @@ namespace ErrorCodes
 class IColumnDummy : public IColumn
 {
 public:
-	IColumnDummy(size_t s_) : s(s_) {}
+	IColumnDummy(size_t s_) : s(s_)
+	{
+	}
 
 	virtual ColumnPtr cloneDummy(size_t s_) const = 0;
 
-	ColumnPtr cloneResized(size_t s_) const override { return cloneDummy(s_); }
-	bool isConst() const override { return true; }
-	size_t size() const override { return s; }
-	void insertDefault() override { ++s; }
-	void popBack(size_t n) override { s -= n; }
-	size_t byteSize() const override { return 0; }
-	size_t allocatedSize() const override { return 0; }
-	int compareAt(size_t n, size_t m, const IColumn & rhs_, int nan_direction_hint) const override { return 0; }
+	ColumnPtr cloneResized(size_t s_) const override
+	{
+		return cloneDummy(s_);
+	}
+	bool isConst() const override
+	{
+		return true;
+	}
+	size_t size() const override
+	{
+		return s;
+	}
+	void insertDefault() override
+	{
+		++s;
+	}
+	void popBack(size_t n) override
+	{
+		s -= n;
+	}
+	size_t byteSize() const override
+	{
+		return 0;
+	}
+	size_t allocatedSize() const override
+	{
+		return 0;
+	}
+	int compareAt(size_t n, size_t m, const IColumn & rhs_, int nan_direction_hint) const override
+	{
+		return 0;
+	}
 
-	Field operator[](size_t n) const override { throw Exception("Cannot get value from " + getName(), ErrorCodes::NOT_IMPLEMENTED); }
-	void get(size_t n, Field & res) const override { throw Exception("Cannot get value from " + getName(), ErrorCodes::NOT_IMPLEMENTED); };
-	void insert(const Field & x) override { throw Exception("Cannot insert element into " + getName(), ErrorCodes::NOT_IMPLEMENTED); }
-	StringRef getDataAt(size_t n) const override { throw Exception("Method getDataAt is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED); }
-	void insertData(const char * pos, size_t length) override { throw Exception("Method insertData is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED); }
+	Field operator[](size_t n) const override
+	{
+		throw Exception("Cannot get value from " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+	}
+	void get(size_t n, Field & res) const override
+	{
+		throw Exception("Cannot get value from " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+	};
+	void insert(const Field & x) override
+	{
+		throw Exception("Cannot insert element into " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+	}
+	StringRef getDataAt(size_t n) const override
+	{
+		throw Exception("Method getDataAt is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+	}
+	void insertData(const char * pos, size_t length) override
+	{
+		throw Exception("Method insertData is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+	}
 
 	StringRef serializeValueIntoArena(size_t n, Arena & arena, char const *& begin) const override
 	{
@@ -95,5 +135,4 @@ public:
 private:
 	size_t s;
 };
-
 }

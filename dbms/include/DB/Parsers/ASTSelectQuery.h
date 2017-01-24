@@ -1,13 +1,12 @@
 #pragma once
 
-#include <DB/Parsers/IAST.h>
-#include <DB/Parsers/ASTQueryWithOutput.h>
 #include <DB/Core/Names.h>
+#include <DB/Parsers/ASTQueryWithOutput.h>
+#include <DB/Parsers/IAST.h>
 
 
 namespace DB
 {
-
 struct ASTTablesInSelectQueryElement;
 
 
@@ -20,7 +19,10 @@ public:
 	ASTSelectQuery(const StringRange range_);
 
 	/** Получить текст, который идентифицирует этот элемент. */
-	String getID() const override { return "SelectQuery"; };
+	String getID() const override
+	{
+		return "SelectQuery";
+	};
 
 	/// Проверить наличие функции arrayJoin. (Не большого ARRAY JOIN.)
 	static bool hasArrayJoin(const ASTPtr & ast);
@@ -34,7 +36,10 @@ public:
 	/// Переписывает select_expression_list, чтобы вернуть только необходимые столбцы в правильном порядке.
 	void rewriteSelectExpressionList(const Names & required_column_names);
 
-	bool isUnionAllHead() const { return (prev_union_all == nullptr) && next_union_all != nullptr; }
+	bool isUnionAllHead() const
+	{
+		return (prev_union_all == nullptr) && next_union_all != nullptr;
+	}
 
 	ASTPtr clone() const override;
 
@@ -84,5 +89,4 @@ public:
 protected:
 	void formatQueryImpl(const FormatSettings & settings, FormatState & state, FormatStateStacked frame) const override;
 };
-
 }

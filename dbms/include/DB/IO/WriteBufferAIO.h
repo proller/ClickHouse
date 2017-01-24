@@ -1,31 +1,33 @@
 #pragma once
 
-#include <DB/IO/WriteBufferFromFileBase.h>
-#include <DB/IO/WriteBuffer.h>
-#include <DB/IO/BufferWithOwnMemory.h>
-#include <DB/Core/Defines.h>
 #include <DB/Common/AIO.h>
 #include <DB/Common/CurrentMetrics.h>
+#include <DB/Core/Defines.h>
+#include <DB/IO/BufferWithOwnMemory.h>
+#include <DB/IO/WriteBuffer.h>
+#include <DB/IO/WriteBufferFromFileBase.h>
 
 #include <string>
-#include <unistd.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 
 namespace CurrentMetrics
 {
-	extern const Metric OpenFileForWrite;
+extern const Metric OpenFileForWrite;
 }
 
 namespace DB
 {
-
 /** Класс для асинхронной записи данных.
   */
 class WriteBufferAIO : public WriteBufferFromFileBase
 {
 public:
-	WriteBufferAIO(const std::string & filename_, size_t buffer_size_ = DBMS_DEFAULT_BUFFER_SIZE, int flags_ = -1, mode_t mode_ = 0666,
+	WriteBufferAIO(const std::string & filename_,
+		size_t buffer_size_ = DBMS_DEFAULT_BUFFER_SIZE,
+		int flags_ = -1,
+		mode_t mode_ = 0666,
 		char * existing_memory_ = nullptr);
 	~WriteBufferAIO() override;
 
@@ -34,8 +36,14 @@ public:
 
 	off_t getPositionInFile() override;
 	void sync() override;
-	std::string getFileName() const override { return filename; }
-	int getFD() const override { return fd; }
+	std::string getFileName() const override
+	{
+		return filename;
+	}
+	int getFD() const override
+	{
+		return fd;
+	}
 
 private:
 	void nextImpl() override;
@@ -57,10 +65,10 @@ private:
 
 	/// Описание асинхронного запроса на запись.
 	iocb request = { 0 };
-	std::vector<iocb *> request_ptrs{&request};
-	std::vector<io_event> events{1};
+	std::vector<iocb *> request_ptrs{ &request };
+	std::vector<io_event> events{ 1 };
 
-	AIOContext aio_context{1};
+	AIOContext aio_context{ 1 };
 
 	const std::string filename;
 
@@ -93,7 +101,6 @@ private:
 	/// Асинхронная операция завершилась неудачно?
 	bool aio_failed = false;
 
-	CurrentMetrics::Increment metric_increment{CurrentMetrics::OpenFileForWrite};
+	CurrentMetrics::Increment metric_increment{ CurrentMetrics::OpenFileForWrite };
 };
-
 }

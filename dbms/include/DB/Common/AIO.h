@@ -1,18 +1,18 @@
 #pragma once
 
-#include <DB/Common/Exception.h>
-#include <common/logger_useful.h>
-#include <common/singleton.h>
-#include <Poco/Logger.h>
-#include <boost/range/iterator_range.hpp>
-#include <boost/noncopyable.hpp>
 #include <condition_variable>
 #include <future>
-#include <mutex>
 #include <map>
+#include <mutex>
+#include <unistd.h>
+#include <boost/noncopyable.hpp>
+#include <boost/range/iterator_range.hpp>
 #include <linux/aio_abi.h>
 #include <sys/syscall.h>
-#include <unistd.h>
+#include <Poco/Logger.h>
+#include <common/logger_useful.h>
+#include <common/singleton.h>
+#include <DB/Common/Exception.h>
 
 
 /** Небольшие обёртки для асинхронного ввода-вывода.
@@ -35,7 +35,7 @@ inline int io_submit(aio_context_t ctx, long nr, struct iocb * iocbpp[])
 	return syscall(__NR_io_submit, ctx, nr, iocbpp);
 }
 
-inline int io_getevents(aio_context_t ctx, long min_nr, long max_nr, io_event *events, struct timespec * timeout)
+inline int io_getevents(aio_context_t ctx, long min_nr, long max_nr, io_event * events, struct timespec * timeout)
 {
 	return syscall(__NR_io_getevents, ctx, min_nr, max_nr, events, timeout);
 }
@@ -61,7 +61,6 @@ struct AIOContext : private boost::noncopyable
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int AIO_COMPLETION_ERROR;
@@ -76,7 +75,7 @@ class AIOContextPool : public Singleton<AIOContextPool>
 	static const auto max_concurrent_events = 128;
 	static const auto timeout_sec = 1;
 
-	AIOContext aio_context{max_concurrent_events};
+	AIOContext aio_context{ max_concurrent_events };
 
 	using ID = size_t;
 	using BytesRead = ssize_t;
@@ -87,8 +86,8 @@ class AIOContextPool : public Singleton<AIOContextPool>
 	mutable std::condition_variable have_resources;
 	std::map<ID, std::promise<BytesRead>> promises;
 
-	std::atomic<bool> cancelled{false};
-	std::thread io_completion_monitor{&AIOContextPool::doMonitor, this};
+	std::atomic<bool> cancelled{ false };
+	std::thread io_completion_monitor{ &AIOContextPool::doMonitor, this };
 
 	~AIOContextPool()
 	{
@@ -128,15 +127,14 @@ class AIOContextPool : public Singleton<AIOContextPool>
 
 	int getCompletionEvents(io_event events[], const int max_events)
 	{
-		timespec timeout{timeout_sec};
+		timespec timeout{ timeout_sec };
 
 		auto num_events = 0;
 
 		/// request 1 to `max_events` events
 		while ((num_events = io_getevents(aio_context.ctx, 1, max_events, events, &timeout)) < 0)
 			if (errno != EINTR)
-				throwFromErrno("io_getevents: Failed to wait for asynchronous IO completion",
-					ErrorCodes::AIO_COMPLETION_ERROR, errno);
+				throwFromErrno("io_getevents: Failed to wait for asynchronous IO completion", ErrorCodes::AIO_COMPLETION_ERROR, errno);
 
 		return num_events;
 	}
@@ -146,7 +144,7 @@ class AIOContextPool : public Singleton<AIOContextPool>
 		if (num_events == 0)
 			return;
 
-		const std::lock_guard<std::mutex> lock{mutex};
+		const std::lock_guard<std::mutex> lock{ mutex };
 
 		/// look at returned events and find corresponding promise, set result and erase promise from map
 		for (const auto & event : boost::make_iterator_range(events, events + num_events))
@@ -180,7 +178,7 @@ class AIOContextPool : public Singleton<AIOContextPool>
 
 	void reportExceptionToAnyProducer()
 	{
-		const std::lock_guard<std::mutex> lock{mutex};
+		const std::lock_guard<std::mutex> lock{ mutex };
 
 		const auto any_promise_it = std::begin(promises);
 		any_promise_it->second.set_exception(std::current_exception());
@@ -190,7 +188,7 @@ public:
 	/// Request AIO read operation for iocb, returns a future with number of bytes read
 	std::future<BytesRead> post(struct iocb & iocb)
 	{
-		std::unique_lock<std::mutex> lock{mutex};
+		std::unique_lock<std::mutex> lock{ mutex };
 
 		/// get current id and increment it by one
 		const auto request_id = id++;
@@ -201,7 +199,7 @@ public:
 		iocb.aio_data = request_id;
 
 		auto num_requests = 0;
-		struct iocb * requests[] { &iocb };
+		struct iocb * requests[]{ &iocb };
 
 		/// submit a request
 		while ((num_requests = io_submit(aio_context.ctx, 1, requests)) < 0)
@@ -210,13 +208,10 @@ public:
 				/// wait until at least one event has been completed (or a spurious wakeup) and try again
 				have_resources.wait(lock);
 			else if (errno != EINTR)
-				throwFromErrno("io_submit: Failed to submit a request for asynchronous IO",
-					ErrorCodes::AIO_SUBMIT_ERROR, errno);
+				throwFromErrno("io_submit: Failed to submit a request for asynchronous IO", ErrorCodes::AIO_SUBMIT_ERROR, errno);
 		}
 
 		return promises[request_id].get_future();
 	}
 };
-
-
 }

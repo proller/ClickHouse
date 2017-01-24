@@ -2,17 +2,17 @@
 
 #include <Poco/UTF8Encoding.h>
 #include <Poco/Unicode.h>
-#include <DB/DataTypes/DataTypesNumberFixed.h>
-#include <DB/DataTypes/DataTypeString.h>
-#include <DB/DataTypes/DataTypeFixedString.h>
-#include <DB/DataTypes/DataTypeArray.h>
-#include <DB/Columns/ColumnString.h>
 #include <DB/Columns/ColumnArray.h>
-#include <DB/Columns/ColumnFixedString.h>
 #include <DB/Columns/ColumnConst.h>
+#include <DB/Columns/ColumnFixedString.h>
+#include <DB/Columns/ColumnString.h>
 #include <DB/Common/Volnitsky.h>
-#include <DB/Functions/IFunction.h>
+#include <DB/DataTypes/DataTypeArray.h>
+#include <DB/DataTypes/DataTypeFixedString.h>
+#include <DB/DataTypes/DataTypeString.h>
+#include <DB/DataTypes/DataTypesNumberFixed.h>
 #include <DB/Functions/FunctionsStringSearch.h>
+#include <DB/Functions/IFunction.h>
 #include <DB/IO/ReadBufferFromMemory.h>
 
 /** Функции для извлечения параметров визитов.
@@ -34,7 +34,6 @@
 
 namespace DB
 {
-
 struct HasParam
 {
 	using ResultType = UInt8;
@@ -45,7 +44,7 @@ struct HasParam
 	}
 };
 
-template<typename NumericType>
+template <typename NumericType>
 struct ExtractNumericType
 {
 	using ResultType = NumericType;
@@ -87,15 +86,15 @@ struct ExtractRaw
 		UInt8 close_char = 0;
 		switch (open_char)
 		{
-			case '[':
-				close_char = ']';
-				break;
-			case '{':
-				close_char = '}';
-				break;
-			case '"':
-				close_char = '"';
-				break;
+		case '[':
+			close_char = ']';
+			break;
+		case '{':
+			close_char = '}';
+			break;
+		case '"':
+			close_char = '"';
+			break;
 		}
 
 		if (close_char != 0)
@@ -195,69 +194,69 @@ struct ExtractString
 		{
 			switch (*pos)
 			{
+			case '\\':
+				++pos;
+				if (pos >= end)
+					return false;
+
+				switch (*pos)
+				{
+				case '"':
+					res_data.push_back('"');
+					break;
 				case '\\':
+					res_data.push_back('\\');
+					break;
+				case '/':
+					res_data.push_back('/');
+					break;
+				case 'b':
+					res_data.push_back('\b');
+					break;
+				case 'f':
+					res_data.push_back('\f');
+					break;
+				case 'n':
+					res_data.push_back('\n');
+					break;
+				case 'r':
+					res_data.push_back('\r');
+					break;
+				case 't':
+					res_data.push_back('\t');
+					break;
+				case 'u':
+				{
 					++pos;
-					if (pos >= end)
+
+					int unicode;
+					if (!tryUnhex(pos, end, unicode))
+						return false;
+					pos += 3;
+
+					res_data.resize(res_data.size() + 6); /// максимальный размер UTF8 многобайтовой последовательности
+
+					Poco::UTF8Encoding utf8;
+					int length = utf8.convert(unicode, const_cast<UInt8 *>(&res_data[0]) + res_data.size() - 6, 6);
+
+					if (!length)
 						return false;
 
-					switch(*pos)
-					{
-						case '"':
-							res_data.push_back('"');
-							break;
-						case '\\':
-							res_data.push_back('\\');
-							break;
-						case '/':
-							res_data.push_back('/');
-							break;
-						case 'b':
-							res_data.push_back('\b');
-							break;
-						case 'f':
-							res_data.push_back('\f');
-							break;
-						case 'n':
-							res_data.push_back('\n');
-							break;
-						case 'r':
-							res_data.push_back('\r');
-							break;
-						case 't':
-							res_data.push_back('\t');
-							break;
-						case 'u':
-						{
-							++pos;
-
-							int unicode;
-							if (!tryUnhex(pos, end, unicode))
-								return false;
-							pos += 3;
-
-							res_data.resize(res_data.size() + 6);	/// максимальный размер UTF8 многобайтовой последовательности
-
-							Poco::UTF8Encoding utf8;
-							int length = utf8.convert(unicode, const_cast<UInt8 *>(&res_data[0]) + res_data.size() - 6, 6);
-
-							if (!length)
-								return false;
-
-							res_data.resize(res_data.size() - 6 + length);
-							break;
-						}
-						default:
-							res_data.push_back(*pos);
-							break;
-					}
-					++pos;
+					res_data.resize(res_data.size() - 6 + length);
 					break;
-				case '"':
-					return true;
+				}
 				default:
 					res_data.push_back(*pos);
-					++pos;
 					break;
+				}
+				++pos;
+				break;
+			case '"':
+				return true;
+			default:
+				res_data.push_back(*pos);
+				++pos;
+				break;
 			}
 		}
 		return false;
@@ -287,9 +286,8 @@ struct ExtractParamImpl
 	using ResultType = typename ParamExtractor::ResultType;
 
 	/// Предполагается, что res нужного размера и инициализирован нулями.
-	static void vector_constant(const ColumnString::Chars_t & data, const ColumnString::Offsets_t & offsets,
-		std::string needle,
-		PaddedPODArray<ResultType> & res)
+	static void vector_constant(
+		const ColumnString::Chars_t & data, const ColumnString::Offsets_t & offsets, std::string needle, PaddedPODArray<ResultType> & res)
 	{
 		/// Ищем параметр просто как подстроку вида "name":
 		needle = "\"" + needle + "\":";
@@ -333,41 +331,44 @@ struct ExtractParamImpl
 		if (pos == std::string::npos)
 			res = 0;
 		else
-			res = ParamExtractor::extract(
-				reinterpret_cast<const UInt8 *>(data.data() + pos + needle.size()),
-				reinterpret_cast<const UInt8 *>(data.data() + data.size())
-			);
+			res = ParamExtractor::extract(reinterpret_cast<const UInt8 *>(data.data() + pos + needle.size()),
+				reinterpret_cast<const UInt8 *>(data.data() + data.size()));
 	}
 
-	static void vector_vector(
-		const ColumnString::Chars_t & haystack_data, const ColumnString::Offsets_t & haystack_offsets,
-		const ColumnString::Chars_t & needle_data, const ColumnString::Offsets_t & needle_offsets,
+	static void vector_vector(const ColumnString::Chars_t & haystack_data,
+		const ColumnString::Offsets_t & haystack_offsets,
+		const ColumnString::Chars_t & needle_data,
+		const ColumnString::Offsets_t & needle_offsets,
 		PaddedPODArray<ResultType> & res)
 	{
-		throw Exception("Functions 'visitParamHas' and 'visitParamExtract*' doesn't support non-constant needle argument", ErrorCodes::ILLEGAL_COLUMN);
+		throw Exception(
+			"Functions 'visitParamHas' and 'visitParamExtract*' doesn't support non-constant needle argument", ErrorCodes::ILLEGAL_COLUMN);
 	}
 
-	static void constant_vector(
-		const String & haystack,
-		const ColumnString::Chars_t & needle_data, const ColumnString::Offsets_t & needle_offsets,
+	static void constant_vector(const String & haystack,
+		const ColumnString::Chars_t & needle_data,
+		const ColumnString::Offsets_t & needle_offsets,
 		PaddedPODArray<ResultType> & res)
 	{
-		throw Exception("Functions 'visitParamHas' and 'visitParamExtract*' doesn't support non-constant needle argument", ErrorCodes::ILLEGAL_COLUMN);
+		throw Exception(
+			"Functions 'visitParamHas' and 'visitParamExtract*' doesn't support non-constant needle argument", ErrorCodes::ILLEGAL_COLUMN);
 	}
 };
 
 
 /** Для случая когда тип поля, которое нужно извлечь - строка.
  */
-template<typename ParamExtractor>
+template <typename ParamExtractor>
 struct ExtractParamToStringImpl
 {
-	static void vector(const ColumnString::Chars_t & data, const ColumnString::Offsets_t & offsets,
-					   std::string needle,
-					   ColumnString::Chars_t & res_data, ColumnString::Offsets_t & res_offsets)
+	static void vector(const ColumnString::Chars_t & data,
+		const ColumnString::Offsets_t & offsets,
+		std::string needle,
+		ColumnString::Chars_t & res_data,
+		ColumnString::Offsets_t & res_offsets)
 	{
 		/// Константа 5 взята из функции, выполняющей похожую задачу FunctionsStringSearch.h::ExtractImpl
-		res_data.reserve(data.size()  / 5);
+		res_data.reserve(data.size() / 5);
 		res_offsets.resize(offsets.size());
 
 		/// Ищем параметр просто как подстроку вида "name":
@@ -414,21 +415,41 @@ struct ExtractParamToStringImpl
 };
 
 
-struct NameVisitParamHas			{ static constexpr auto name = "visitParamHas"; };
-struct NameVisitParamExtractUInt	{ static constexpr auto name = "visitParamExtractUInt"; };
-struct NameVisitParamExtractInt		{ static constexpr auto name = "visitParamExtractInt"; };
-struct NameVisitParamExtractFloat	{ static constexpr auto name = "visitParamExtractFloat"; };
-struct NameVisitParamExtractBool	{ static constexpr auto name = "visitParamExtractBool"; };
-struct NameVisitParamExtractRaw		{ static constexpr auto name = "visitParamExtractRaw"; };
-struct NameVisitParamExtractString	{ static constexpr auto name = "visitParamExtractString"; };
+struct NameVisitParamHas
+{
+	static constexpr auto name = "visitParamHas";
+};
+struct NameVisitParamExtractUInt
+{
+	static constexpr auto name = "visitParamExtractUInt";
+};
+struct NameVisitParamExtractInt
+{
+	static constexpr auto name = "visitParamExtractInt";
+};
+struct NameVisitParamExtractFloat
+{
+	static constexpr auto name = "visitParamExtractFloat";
+};
+struct NameVisitParamExtractBool
+{
+	static constexpr auto name = "visitParamExtractBool";
+};
+struct NameVisitParamExtractRaw
+{
+	static constexpr auto name = "visitParamExtractRaw";
+};
+struct NameVisitParamExtractString
+{
+	static constexpr auto name = "visitParamExtractString";
+};
 
 
 using FunctionVisitParamHas = FunctionsStringSearch<ExtractParamImpl<HasParam>, NameVisitParamHas>;
-using FunctionVisitParamExtractUInt = FunctionsStringSearch<ExtractParamImpl<ExtractNumericType<UInt64> >, NameVisitParamExtractUInt>;
-using FunctionVisitParamExtractInt = FunctionsStringSearch<ExtractParamImpl<ExtractNumericType<Int64> >, NameVisitParamExtractInt>;
-using FunctionVisitParamExtractFloat = FunctionsStringSearch<ExtractParamImpl<ExtractNumericType<Float64> >, NameVisitParamExtractFloat>;
+using FunctionVisitParamExtractUInt = FunctionsStringSearch<ExtractParamImpl<ExtractNumericType<UInt64>>, NameVisitParamExtractUInt>;
+using FunctionVisitParamExtractInt = FunctionsStringSearch<ExtractParamImpl<ExtractNumericType<Int64>>, NameVisitParamExtractInt>;
+using FunctionVisitParamExtractFloat = FunctionsStringSearch<ExtractParamImpl<ExtractNumericType<Float64>>, NameVisitParamExtractFloat>;
 using FunctionVisitParamExtractBool = FunctionsStringSearch<ExtractParamImpl<ExtractBool>, NameVisitParamExtractBool>;
 using FunctionVisitParamExtractRaw = FunctionsStringSearchToString<ExtractParamToStringImpl<ExtractRaw>, NameVisitParamExtractRaw>;
 using FunctionVisitParamExtractString = FunctionsStringSearchToString<ExtractParamToStringImpl<ExtractString>, NameVisitParamExtractString>;
-
 }

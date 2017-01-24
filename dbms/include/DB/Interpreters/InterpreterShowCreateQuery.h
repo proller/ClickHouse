@@ -6,15 +6,14 @@
 
 namespace DB
 {
-
-
 /** Вернуть одну строку с одним столбцом statement типа String с текстом запроса, создающего указанную таблицу.
 	*/
 class InterpreterShowCreateQuery : public IInterpreter
 {
 public:
-	InterpreterShowCreateQuery(ASTPtr query_ptr_, Context & context_)
-		: query_ptr(query_ptr_), context(context_) {}
+	InterpreterShowCreateQuery(ASTPtr query_ptr_, Context & context_) : query_ptr(query_ptr_), context(context_)
+	{
+	}
 
 	BlockIO execute() override;
 
@@ -25,6 +24,4 @@ private:
 	Block getSampleBlock();
 	BlockInputStreamPtr executeImpl();
 };
-
-
 }

@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 /** ALTER запрос
  *  ALTER TABLE [db.]name_type
  *  	ADD COLUMN col_name type [AFTER col_after],
@@ -105,5 +104,4 @@ public:
 protected:
 	void formatImpl(const FormatSettings & settings, FormatState & state, FormatStateStacked frame) const override;
 };
-
 }

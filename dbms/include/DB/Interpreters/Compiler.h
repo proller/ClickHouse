@@ -2,24 +2,22 @@
 
 #include <dlfcn.h>
 
-#include <string>
-#include <mutex>
 #include <functional>
-#include <unordered_set>
+#include <mutex>
+#include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <common/logger_useful.h>
 
-#include <DB/Core/Types.h>
 #include <DB/Common/Exception.h>
-#include <DB/Common/UInt128.h>
 #include <DB/Common/ThreadPool.h>
+#include <DB/Common/UInt128.h>
+#include <DB/Core/Types.h>
 
 
 namespace DB
 {
-
-
 /** Позволяет открыть динамическую библиотеку и получить из неё указатель на функцию.
   */
 class SharedLibrary : private boost::noncopyable
@@ -76,7 +74,7 @@ public:
 	using HashedKey = UInt128;
 
 	using CodeGenerator = std::function<std::string()>;
-	using ReadyCallback = std::function<void(SharedLibraryPtr&)>;
+	using ReadyCallback = std::function<void(SharedLibraryPtr &)>;
 
 	/** Увеличить счётчик для заданного ключа key на единицу.
 	  * Если результат компиляции уже есть (уже открыт, или есть файл с библиотекой),
@@ -86,8 +84,7 @@ public:
 	  *  инициировать компиляцию в отдельном потоке, если есть свободные потоки, и вернуть nullptr.
 	  * Иначе вернуть nullptr.
 	  */
-	SharedLibraryPtr getOrCount(
-		const std::string & key,
+	SharedLibraryPtr getOrCount(const std::string & key,
 		UInt32 min_count_to_compile,
 		const std::string & additional_compiler_flags,
 		CodeGenerator get_code,
@@ -115,12 +112,10 @@ private:
 	Logger * log = &Logger::get("Compiler");
 
 
-	void compile(
-		HashedKey hashed_key,
+	void compile(HashedKey hashed_key,
 		std::string file_name,
 		const std::string & additional_compiler_flags,
 		CodeGenerator get_code,
 		ReadyCallback on_ready);
 };
-
 }

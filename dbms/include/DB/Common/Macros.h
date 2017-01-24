@@ -1,12 +1,11 @@
 #pragma once
 
-#include <DB/Core/Types.h>
-#include <Poco/Util/AbstractConfiguration.h>
 #include <map>
+#include <Poco/Util/AbstractConfiguration.h>
+#include <DB/Core/Types.h>
 
 namespace DB
 {
-
 /** Раскрывает в строке макросы из конфига.
   */
 class Macros
@@ -25,5 +24,4 @@ private:
 
 	MacroMap macros;
 };
-
 }

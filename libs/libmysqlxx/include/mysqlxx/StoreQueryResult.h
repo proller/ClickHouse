@@ -8,7 +8,6 @@
 
 namespace mysqlxx
 {
-
 class Connection;
 
 
@@ -27,10 +26,12 @@ class StoreQueryResult : public std::vector<Row>, public ResultBase
 public:
 	StoreQueryResult(MYSQL_RES * res_, Connection * conn_, const Query * query_);
 
-	size_t num_rows() const { return size(); }
+	size_t num_rows() const
+	{
+		return size();
+	}
 
 private:
-
 	/** Не смотря на то, что весь результат выполнения запроса загружается на клиента,
 	  *  и все указатели MYSQL_ROW на отдельные строки различные,
 	  *  при этом функция mysql_fetch_lengths() возвращает длины
@@ -41,5 +42,4 @@ private:
 	using Lengths = std::vector<MYSQL_LENGTH>;
 	Lengths lengths;
 };
-
 }

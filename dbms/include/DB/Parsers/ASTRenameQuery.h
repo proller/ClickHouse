@@ -5,8 +5,6 @@
 
 namespace DB
 {
-
-
 /** RENAME запрос
   */
 class ASTRenameQuery : public IAST
@@ -28,12 +26,20 @@ public:
 	Elements elements;
 
 	ASTRenameQuery() = default;
-	ASTRenameQuery(const StringRange range_) : IAST(range_) {}
-	
-	/** Получить текст, который идентифицирует этот элемент. */
-	String getID() const override { return "Rename"; };
+	ASTRenameQuery(const StringRange range_) : IAST(range_)
+	{
+	}
 
-	ASTPtr clone() const override { return std::make_shared<ASTRenameQuery>(*this); }
+	/** Получить текст, который идентифицирует этот элемент. */
+	String getID() const override
+	{
+		return "Rename";
+	};
+
+	ASTPtr clone() const override
+	{
+		return std::make_shared<ASTRenameQuery>(*this);
+	}
 
 protected:
 	void formatImpl(const FormatSettings & settings, FormatState & state, FormatStateStacked frame) const override
@@ -46,10 +52,9 @@ protected:
 				settings.ostr << ", ";
 
 			settings.ostr << (!it->from.database.empty() ? backQuoteIfNeed(it->from.database) + "." : "") << backQuoteIfNeed(it->from.table)
-				<< (settings.hilite ? hilite_keyword : "") << " TO " << (settings.hilite ? hilite_none : "")
-				<< (!it->to.database.empty() ? backQuoteIfNeed(it->to.database) + "." : "") << backQuoteIfNeed(it->to.table);
+						  << (settings.hilite ? hilite_keyword : "") << " TO " << (settings.hilite ? hilite_none : "")
+						  << (!it->to.database.empty() ? backQuoteIfNeed(it->to.database) + "." : "") << backQuoteIfNeed(it->to.table);
 		}
 	}
 };
-
 }

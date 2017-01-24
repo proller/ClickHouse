@@ -8,7 +8,7 @@
 
 namespace CurrentMetrics
 {
-	extern const Metric OpenFileForWrite;
+extern const Metric OpenFileForWrite;
 }
 
 
@@ -18,7 +18,6 @@ namespace CurrentMetrics
 
 namespace DB
 {
-
 /** Accepts path to file and opens it, or pre-opened file descriptor.
   * Closes file by himself (thus "owns" a file descriptor).
   */
@@ -26,11 +25,10 @@ class WriteBufferFromFile : public WriteBufferFromFileDescriptor
 {
 private:
 	std::string file_name;
-	CurrentMetrics::Increment metric_increment{CurrentMetrics::OpenFileForWrite};
+	CurrentMetrics::Increment metric_increment{ CurrentMetrics::OpenFileForWrite };
 
 public:
-	WriteBufferFromFile(
-		const std::string & file_name_,
+	WriteBufferFromFile(const std::string & file_name_,
 		size_t buf_size = DBMS_DEFAULT_BUFFER_SIZE,
 		int flags = -1,
 		mode_t mode = 0666,
@@ -38,8 +36,7 @@ public:
 		size_t alignment = 0);
 
 	/// Use pre-opened file descriptor.
-	WriteBufferFromFile(
-		int fd,
+	WriteBufferFromFile(int fd,
 		size_t buf_size = DBMS_DEFAULT_BUFFER_SIZE,
 		int flags = -1,
 		mode_t mode = 0666,
@@ -56,5 +53,4 @@ public:
 		return file_name;
 	}
 };
-
 }

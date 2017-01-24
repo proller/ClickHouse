@@ -1,21 +1,23 @@
 #pragma once
 
-#include <DB/Parsers/IParserBase.h>
-#include <DB/Parsers/ParserQueryWithOutput.h>
+#include <DB/Parsers/ASTShowProcesslistQuery.h>
 #include <DB/Parsers/CommonParsers.h>
 #include <DB/Parsers/ExpressionElementParsers.h>
-#include <DB/Parsers/ASTShowProcesslistQuery.h>
+#include <DB/Parsers/IParserBase.h>
+#include <DB/Parsers/ParserQueryWithOutput.h>
 
 
 namespace DB
 {
-
 /** Запрос SHOW PROCESSLIST
   */
 class ParserShowProcesslistQuery : public IParserBase
 {
 protected:
-	const char * getName() const { return "SHOW PROCESSLIST query"; }
+	const char * getName() const
+	{
+		return "SHOW PROCESSLIST query";
+	}
 
 	bool parseImpl(Pos & pos, Pos end, ASTPtr & node, Pos & max_parsed_pos, Expected & expected)
 	{
@@ -45,5 +47,4 @@ protected:
 		return true;
 	}
 };
-
 }

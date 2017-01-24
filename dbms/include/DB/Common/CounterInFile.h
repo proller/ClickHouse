@@ -3,18 +3,18 @@
 #include <fcntl.h>
 #include <sys/file.h>
 
-#include <string>
 #include <iostream>
+#include <string>
 
-#include <Poco/File.h>
-#include <Poco/Exception.h>
 #include <mutex>
+#include <Poco/Exception.h>
+#include <Poco/File.h>
 #include <Poco/ScopedLock.h>
 
 #include <DB/Common/Exception.h>
 #include <DB/IO/ReadBufferFromFileDescriptor.h>
-#include <DB/IO/WriteBufferFromFileDescriptor.h>
 #include <DB/IO/ReadHelpers.h>
+#include <DB/IO/WriteBufferFromFileDescriptor.h>
 #include <DB/IO/WriteHelpers.h>
 
 #include <common/Common.h>
@@ -29,7 +29,9 @@ class CounterInFile
 {
 public:
 	/// path - имя файла, включая путь
-	CounterInFile(const std::string & path_) : path(path_) {}
+	CounterInFile(const std::string & path_) : path(path_)
+	{
+	}
 
 	/** Добавить delta к числу в файле и вернуть новое значение.
 	 * Если параметр create_if_need не установлен в true, то
@@ -52,7 +54,7 @@ public:
 		if (file_doesnt_exists && !create_if_need)
 		{
 			throw Poco::Exception("File " + path + " does not exist. "
-			"You must create it manulally with appropriate value or 0 for first start.");
+												   "You must create it manulally with appropriate value or 0 for first start.");
 		}
 
 		int fd = open(path.c_str(), O_RDWR | O_CREAT, 0666);
@@ -110,7 +112,7 @@ public:
 
 	Int64 add(Int64 delta, bool create_if_need = false)
 	{
-		return add(delta, [](UInt64){}, create_if_need);
+		return add(delta, [](UInt64) {}, create_if_need);
 	}
 
 	const std::string & getPath() const

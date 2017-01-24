@@ -1,15 +1,13 @@
 #pragma once
 
-#include <DB/Common/Throttler.h>
+#include <mutex>
+#include <Poco/ScopedLock.h>
 #include <DB/Client/Connection.h>
 #include <DB/Client/ConnectionPool.h>
-#include <Poco/ScopedLock.h>
-#include <mutex>
+#include <DB/Common/Throttler.h>
 
 namespace DB
 {
-
-
 /** Для получения данных сразу из нескольких реплик (соединений) из одного или нексольких шардов
   * в рамках одного потока. В качестве вырожденного случая, может также работать с одним соединением.
   * Предполагается, что все функции кроме sendCancel всегда выполняются в одном потоке.
@@ -27,8 +25,11 @@ public:
 	  * дополнительная информация.
 	  * Если флаг get_all_replicas установлен, достаются все соединения.
 	  */
-	MultiplexedConnections(IConnectionPool * pool_, const Settings * settings_, ThrottlerPtr throttler_,
-		bool append_extra_info = false, PoolMode pool_mode_ = PoolMode::GET_MANY);
+	MultiplexedConnections(IConnectionPool * pool_,
+		const Settings * settings_,
+		ThrottlerPtr throttler_,
+		bool append_extra_info = false,
+		PoolMode pool_mode_ = PoolMode::GET_MANY);
 
 	/** Принимает пулы, один для каждого шарда, из которих нужно будет достать одно или несколько
 	  * соединений.
@@ -36,15 +37,17 @@ public:
 	  * дополнительная информация.
 	  * Если флаг do_broadcast установлен, достаются все соединения.
 	  */
-	MultiplexedConnections(ConnectionPools & pools_, const Settings * settings_, ThrottlerPtr throttler_,
-		bool append_extra_info = false, PoolMode pool_mode_ = PoolMode::GET_MANY);
+	MultiplexedConnections(ConnectionPools & pools_,
+		const Settings * settings_,
+		ThrottlerPtr throttler_,
+		bool append_extra_info = false,
+		PoolMode pool_mode_ = PoolMode::GET_MANY);
 
 	/// Отправить на реплики всё содержимое внешних таблиц.
 	void sendExternalTablesData(std::vector<ExternalTablesData> & data);
 
 	/// Отправить запрос на реплики.
-	void sendQuery(
-		const String & query,
+	void sendQuery(const String & query,
 		const String & query_id = "",
 		UInt64 stage = QueryProcessingStage::Complete,
 		const ClientInfo * client_info = nullptr,
@@ -73,11 +76,17 @@ public:
 
 	/// Возвращает количесто реплик.
 	/// Без блокировки, потому что sendCancel() не меняет это количество.
-	size_t size() const { return replica_map.size(); }
+	size_t size() const
+	{
+		return replica_map.size();
+	}
 
 	/// Проверить, есть ли действительные реплики.
 	/// Без блокировки, потому что sendCancel() не меняет состояние реплик.
-	bool hasActiveConnections() const { return active_connection_total_count > 0; }
+	bool hasActiveConnections() const
+	{
+		return active_connection_total_count > 0;
+	}
 
 private:
 	/// Соединения 1-го шарда, затем соединения 2-го шарда, и т.д.
@@ -165,5 +174,4 @@ private:
 	/// в отдельном потоке.
 	mutable std::mutex cancel_mutex;
 };
-
 }

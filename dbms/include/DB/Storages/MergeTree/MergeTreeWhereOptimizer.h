@@ -1,16 +1,18 @@
 #pragma once
 
 #include <memory>
-#include <unordered_map>
 #include <set>
+#include <unordered_map>
 #include <DB/Core/Block.h>
 
 
-namespace Poco { class Logger; }
+namespace Poco
+{
+class Logger;
+}
 
 namespace DB
 {
-
 class IAST;
 using ASTPtr = std::shared_ptr<IAST>;
 
@@ -33,12 +35,11 @@ using IdentifierNameSet = std::set<std::string>;
 class MergeTreeWhereOptimizer
 {
 public:
-	MergeTreeWhereOptimizer(const MergeTreeWhereOptimizer&) = delete;
-	MergeTreeWhereOptimizer& operator=(const MergeTreeWhereOptimizer&) = delete;
+	MergeTreeWhereOptimizer(const MergeTreeWhereOptimizer &) = delete;
+	MergeTreeWhereOptimizer & operator=(const MergeTreeWhereOptimizer &) = delete;
 
 	MergeTreeWhereOptimizer(
-		ASTPtr & query, const Context & context, const MergeTreeData & data, const Names & column_names,
-		Poco::Logger * log);
+		ASTPtr & query, const Context & context, const MergeTreeData & data, const Names & column_names, Poco::Logger * log);
 
 private:
 	void optimize(ASTSelectQuery & select) const;
@@ -83,6 +84,4 @@ private:
 	std::size_t total_column_size{};
 	NameSet array_joined_names;
 };
-
-
 }

@@ -1,17 +1,16 @@
 #pragma once
 
-#include <DB/Core/Names.h>
-#include <DB/Common/Exception.h>
-#include <DB/Core/QueryProcessingStage.h>
-#include <DB/Storages/ITableDeclaration.h>
-#include <Poco/RWLock.h>
 #include <memory>
 #include <experimental/optional>
+#include <Poco/RWLock.h>
+#include <DB/Common/Exception.h>
+#include <DB/Core/Names.h>
+#include <DB/Core/QueryProcessingStage.h>
+#include <DB/Storages/ITableDeclaration.h>
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int TABLE_IS_DROPPED;
@@ -41,7 +40,6 @@ class AlterCommands;
 /// For RESHARD PARTITION.
 using WeightedZooKeeperPath = std::pair<String, UInt64>;
 using WeightedZooKeeperPaths = std::vector<WeightedZooKeeperPath>;
-
 
 
 /** Не дает изменять описание таблицы (в том числе переименовывать и удалять таблицу).
@@ -86,19 +84,34 @@ public:
 	virtual std::string getName() const = 0;
 
 	/** Возвращает true, если хранилище получает данные с удалённого сервера или серверов. */
-	virtual bool isRemote() const { return false; }
+	virtual bool isRemote() const
+	{
+		return false;
+	}
 
 	/** Возвращает true, если хранилище поддерживает запросы с секцией SAMPLE. */
-	virtual bool supportsSampling() const { return false; }
+	virtual bool supportsSampling() const
+	{
+		return false;
+	}
 
 	/** Возвращает true, если хранилище поддерживает запросы с секцией FINAL. */
-	virtual bool supportsFinal() const { return false; }
+	virtual bool supportsFinal() const
+	{
+		return false;
+	}
 
 	/** Возвращает true, если хранилище поддерживает запросы с секцией PREWHERE. */
-	virtual bool supportsPrewhere() const { return false; }
+	virtual bool supportsPrewhere() const
+	{
+		return false;
+	}
 
 	/** Возвращает true, если хранилище поддерживает несколько реплик. */
-	virtual bool supportsParallelReplicas() const { return false; }
+	virtual bool supportsParallelReplicas() const
+	{
+		return false;
+	}
 
 	/** Не дает изменять структуру или имя таблицы.
 	  * Если в рамках этого лока будут изменены данные в таблице, нужно указать will_modify_data=true.
@@ -123,7 +136,7 @@ public:
 		auto data_lock = lockDataForAlter();
 		auto structure_lock = lockStructureForAlter();
 
-		return {std::move(data_lock), std::move(structure_lock)};
+		return { std::move(data_lock), std::move(structure_lock) };
 	}
 
 	/** Не дает изменять данные в таблице. (Более того, не дает посмотреть на структуру таблицы с намерением изменить данные).
@@ -166,8 +179,7 @@ public:
 	  *
 	  * Гарантируется, что структура таблицы не изменится за время жизни возвращенных потоков (то есть не будет ALTER, RENAME и DROP).
 	  */
-	virtual BlockInputStreams read(
-		const Names & column_names,
+	virtual BlockInputStreams read(const Names & column_names,
 		ASTPtr query,
 		const Context & context,
 		const Settings & settings,
@@ -184,9 +196,7 @@ public:
 	  *
 	  * Гарантируется, что структура таблицы не изменится за время жизни возвращенных потоков (то есть не будет ALTER, RENAME и DROP).
 	  */
-	virtual BlockOutputStreamPtr write(
-		ASTPtr query,
-		const Settings & settings)
+	virtual BlockOutputStreamPtr write(ASTPtr query, const Settings & settings)
 	{
 		throw Exception("Method write is not supported by storage " + getName(), ErrorCodes::NOT_IMPLEMENTED);
 	}
@@ -194,7 +204,9 @@ public:
 	/** Удалить данные таблицы. Вызывается перед удалением директории с данными.
 	  * Если не требуется никаких действий, кроме удаления директории с данными, этот метод можно оставить пустым.
 	  */
-	virtual void drop() {}
+	virtual void drop()
+	{
+	}
 
 	/** Переименовать таблицу.
 	  * Переименование имени в файле с метаданными, имени в списке таблиц в оперативке, осуществляется отдельно.
@@ -245,10 +257,14 @@ public:
 
 	/** Выполнить запрос RESHARD PARTITION.
 	  */
-	virtual void reshardPartitions(ASTPtr query, const String & database_name,
-		const Field & first_partition, const Field & last_partition,
+	virtual void reshardPartitions(ASTPtr query,
+		const String & database_name,
+		const Field & first_partition,
+		const Field & last_partition,
 		const WeightedZooKeeperPaths & weighted_zookeeper_paths,
-		const ASTPtr & sharding_key_expr, bool do_copy, const Field & coordinator,
+		const ASTPtr & sharding_key_expr,
+		bool do_copy,
+		const Field & coordinator,
 		const Settings & settings)
 	{
 		throw Exception("Method reshardPartition is not supported by storage " + getName(), ErrorCodes::NOT_IMPLEMENTED);
@@ -267,15 +283,23 @@ public:
 	  * По-умолчанию - ничего не делать.
 	  * Может вызываться одновременно из разных потоков, даже после вызова drop().
 	  */
-	virtual void shutdown() {}
+	virtual void shutdown()
+	{
+	}
 
-	bool is_dropped{false};
+	bool is_dropped{ false };
 
 	/// Поддерживается ли индекс в секции IN
-	virtual bool supportsIndexForIn() const { return false; }
+	virtual bool supportsIndexForIn() const
+	{
+		return false;
+	}
 
 	/// проверяет валидность данных
-	virtual bool checkData() const { throw DB::Exception("Check query is not supported for " + getName() + " storage"); }
+	virtual bool checkData() const
+	{
+		throw DB::Exception("Check query is not supported for " + getName() + " storage");
+	}
 
 protected:
 	using ITableDeclaration::ITableDeclaration;
@@ -311,5 +335,4 @@ using StorageVector = std::vector<StoragePtr>;
 
 /// имя таблицы -> таблица
 using Tables = std::map<String, StoragePtr>;
-
 }

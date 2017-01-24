@@ -5,23 +5,26 @@
 
 namespace DB
 {
-
-
 /** Подзарос SELECT
   */
 class ASTSubquery : public ASTWithAlias
 {
 public:
 	ASTSubquery() = default;
-	ASTSubquery(const StringRange range_) : ASTWithAlias(range_) {}
+	ASTSubquery(const StringRange range_) : ASTWithAlias(range_)
+	{
+	}
 
 	/** Получить текст, который идентифицирует этот элемент. */
-	String getID() const override { return "Subquery"; }
+	String getID() const override
+	{
+		return "Subquery";
+	}
 
 	ASTPtr clone() const override
 	{
 		const auto res = std::make_shared<ASTSubquery>(*this);
-		ASTPtr ptr{res};
+		ASTPtr ptr{ res };
 
 		res->children.clear();
 
@@ -31,7 +34,10 @@ public:
 		return ptr;
 	}
 
-	String getColumnName() const override { return getTreeID(); }
+	String getColumnName() const override
+	{
+		return getTreeID();
+	}
 
 protected:
 	void formatImplWithoutAlias(const FormatSettings & settings, FormatState & state, FormatStateStacked frame) const override
@@ -47,5 +53,4 @@ protected:
 		settings.ostr << nl_or_nothing << indent_str << ")";
 	}
 };
-
 }

@@ -1,27 +1,25 @@
 #include <DB/Interpreters/Aggregator.h>
 
-#include <DB/AggregateFunctions/AggregateFunctionCount.h>
-#include <DB/AggregateFunctions/AggregateFunctionSum.h>
+#include <DB/AggregateFunctions/AggregateFunctionArray.h>
 #include <DB/AggregateFunctions/AggregateFunctionAvg.h>
-#include <DB/AggregateFunctions/AggregateFunctionsMinMaxAny.h>
-#include <DB/AggregateFunctions/AggregateFunctionsArgMinMax.h>
-#include <DB/AggregateFunctions/AggregateFunctionUniq.h>
-#include <DB/AggregateFunctions/AggregateFunctionUniqUpTo.h>
+#include <DB/AggregateFunctions/AggregateFunctionCount.h>
 #include <DB/AggregateFunctions/AggregateFunctionGroupArray.h>
 #include <DB/AggregateFunctions/AggregateFunctionGroupUniqArray.h>
-#include <DB/AggregateFunctions/AggregateFunctionQuantile.h>
-#include <DB/AggregateFunctions/AggregateFunctionQuantileTiming.h>
 #include <DB/AggregateFunctions/AggregateFunctionIf.h>
-#include <DB/AggregateFunctions/AggregateFunctionArray.h>
-#include <DB/AggregateFunctions/AggregateFunctionState.h>
 #include <DB/AggregateFunctions/AggregateFunctionMerge.h>
 #include <DB/AggregateFunctions/AggregateFunctionNull.h>
+#include <DB/AggregateFunctions/AggregateFunctionQuantile.h>
+#include <DB/AggregateFunctions/AggregateFunctionQuantileTiming.h>
+#include <DB/AggregateFunctions/AggregateFunctionState.h>
+#include <DB/AggregateFunctions/AggregateFunctionSum.h>
+#include <DB/AggregateFunctions/AggregateFunctionUniq.h>
+#include <DB/AggregateFunctions/AggregateFunctionUniqUpTo.h>
+#include <DB/AggregateFunctions/AggregateFunctionsArgMinMax.h>
+#include <DB/AggregateFunctions/AggregateFunctionsMinMaxAny.h>
 
 
 namespace DB
 {
-
-
 /** Шаблон цикла агрегации, позволяющий сгенерировать специализированный вариант для конкретной комбинации агрегатных функций.
   * Отличается от обычного тем, что вызовы агрегатных функций должны инлайниться, а цикл обновления агрегатных функций должен развернуться.
   *
@@ -70,17 +68,18 @@ struct TypeList<THead, TTail...>
 
 struct AggregateFunctionsUpdater
 {
-	AggregateFunctionsUpdater(
-		const Aggregator::AggregateFunctionsPlainPtrs & aggregate_functions_,
+	AggregateFunctionsUpdater(const Aggregator::AggregateFunctionsPlainPtrs & aggregate_functions_,
 		const Sizes & offsets_of_aggregate_states_,
 		Aggregator::AggregateColumns & aggregate_columns_,
 		AggregateDataPtr & value_,
 		size_t row_num_,
 		Arena * arena_)
 		: aggregate_functions(aggregate_functions_),
-		offsets_of_aggregate_states(offsets_of_aggregate_states_),
-		aggregate_columns(aggregate_columns_),
-		value(value_), row_num(row_num_), arena(arena_)
+		  offsets_of_aggregate_states(offsets_of_aggregate_states_),
+		  aggregate_columns(aggregate_columns_),
+		  value(value_),
+		  row_num(row_num_),
+		  arena(arena_)
 	{
 	}
 
@@ -98,22 +97,19 @@ struct AggregateFunctionsUpdater
 template <typename AggregateFunction, size_t column_num>
 void AggregateFunctionsUpdater::operator()()
 {
-	static_cast<AggregateFunction *>(aggregate_functions[column_num])->add(
-		value + offsets_of_aggregate_states[column_num],
-		&aggregate_columns[column_num][0],
-		row_num, arena);
+	static_cast<AggregateFunction *>(aggregate_functions[column_num])
+		->add(value + offsets_of_aggregate_states[column_num], &aggregate_columns[column_num][0], row_num, arena);
 }
 
 struct AggregateFunctionsCreator
 {
-	AggregateFunctionsCreator(
-		const Aggregator::AggregateFunctionsPlainPtrs & aggregate_functions_,
+	AggregateFunctionsCreator(const Aggregator::AggregateFunctionsPlainPtrs & aggregate_functions_,
 		const Sizes & offsets_of_aggregate_states_,
 		Aggregator::AggregateColumns & aggregate_columns_,
 		AggregateDataPtr & aggregate_data_)
 		: aggregate_functions(aggregate_functions_),
-		offsets_of_aggregate_states(offsets_of_aggregate_states_),
-		aggregate_data(aggregate_data_)
+		  offsets_of_aggregate_states(offsets_of_aggregate_states_),
+		  aggregate_data(aggregate_data_)
 	{
 	}
 
@@ -149,8 +145,7 @@ void AggregateFunctionsCreator::operator()()
 
 
 template <typename Method, typename AggregateFunctionsList>
-void NO_INLINE Aggregator::executeSpecialized(
-	Method & method,
+void NO_INLINE Aggregator::executeSpecialized(Method & method,
 	Arena * aggregates_pool,
 	size_t rows,
 	ConstColumnPlainPtrs & key_columns,
@@ -175,8 +170,7 @@ void NO_INLINE Aggregator::executeSpecialized(
 #pragma GCC diagnostic ignored "-Wuninitialized"
 
 template <bool no_more_keys, typename Method, typename AggregateFunctionsList>
-void NO_INLINE Aggregator::executeSpecializedCase(
-	Method & method,
+void NO_INLINE Aggregator::executeSpecializedCase(Method & method,
 	typename Method::State & state,
 	Arena * aggregates_pool,
 	size_t rows,
@@ -191,13 +185,13 @@ void NO_INLINE Aggregator::executeSpecializedCase(
 	typename Method::Key prev_key;
 	for (size_t i = 0; i < rows; ++i)
 	{
-		bool inserted;			/// Вставили новый ключ, или такой ключ уже был?
-		bool overflow = false;	/// Новый ключ не поместился в хэш-таблицу из-за no_more_keys.
+		bool inserted; /// Вставили новый ключ, или такой ключ уже был?
+		bool overflow = false; /// Новый ключ не поместился в хэш-таблицу из-за no_more_keys.
 
 		/// Получаем ключ для вставки в хэш-таблицу.
 		typename Method::Key key = state.getKey(key_columns, params.keys_size, i, key_sizes, keys, *aggregates_pool);
 
-		if (!no_more_keys)	/// Вставляем.
+		if (!no_more_keys) /// Вставляем.
 		{
 			/// Оптимизация для часто повторяющихся ключей.
 			if (!Method::no_consecutive_keys_optimization)
@@ -245,8 +239,8 @@ void NO_INLINE Aggregator::executeSpecializedCase(
 
 			AggregateDataPtr place = aggregates_pool->alloc(total_size_of_aggregate_states);
 
-			AggregateFunctionsList::forEach(AggregateFunctionsCreator(
-				aggregate_functions, offsets_of_aggregate_states, aggregate_columns, place));
+			AggregateFunctionsList::forEach(
+				AggregateFunctionsCreator(aggregate_functions, offsets_of_aggregate_states, aggregate_columns, place));
 
 			aggregate_data = place;
 		}
@@ -256,8 +250,8 @@ void NO_INLINE Aggregator::executeSpecializedCase(
 		AggregateDataPtr value = (!no_more_keys || !overflow) ? Method::getAggregateData(it->second) : overflow_row;
 
 		/// Добавляем значения в агрегатные функции.
-		AggregateFunctionsList::forEach(AggregateFunctionsUpdater(
-			aggregate_functions, offsets_of_aggregate_states, aggregate_columns, value, i, aggregates_pool));
+		AggregateFunctionsList::forEach(
+			AggregateFunctionsUpdater(aggregate_functions, offsets_of_aggregate_states, aggregate_columns, value, i, aggregates_pool));
 	}
 }
 
@@ -265,15 +259,10 @@ void NO_INLINE Aggregator::executeSpecializedCase(
 
 template <typename AggregateFunctionsList>
 void NO_INLINE Aggregator::executeSpecializedWithoutKey(
-	AggregatedDataWithoutKey & res,
-	size_t rows,
-	AggregateColumns & aggregate_columns,
-	Arena * arena) const
+	AggregatedDataWithoutKey & res, size_t rows, AggregateColumns & aggregate_columns, Arena * arena) const
 {
 	/// Оптимизация в случае единственной агрегатной функции count.
-	AggregateFunctionCount * agg_count = params.aggregates_size == 1
-		? typeid_cast<AggregateFunctionCount *>(aggregate_functions[0])
-		: NULL;
+	AggregateFunctionCount * agg_count = params.aggregates_size == 1 ? typeid_cast<AggregateFunctionCount *>(aggregate_functions[0]) : NULL;
 
 	if (agg_count)
 		agg_count->addDelta(res, rows);
@@ -281,12 +270,11 @@ void NO_INLINE Aggregator::executeSpecializedWithoutKey(
 	{
 		for (size_t i = 0; i < rows; ++i)
 		{
-			AggregateFunctionsList::forEach(AggregateFunctionsUpdater(
-				aggregate_functions, offsets_of_aggregate_states, aggregate_columns, res, i, arena));
+			AggregateFunctionsList::forEach(
+				AggregateFunctionsUpdater(aggregate_functions, offsets_of_aggregate_states, aggregate_columns, res, i, arena));
 		}
 	}
 }
-
 }
 
 
@@ -311,4 +299,7 @@ void NO_INLINE Aggregator::executeSpecializedWithoutKey(
   *
   * Поэтому, мы можем обойти проблему таким образом:
   */
-extern "C" void __attribute__((__visibility__("default"), __noreturn__)) __cxa_pure_virtual() { abort(); };
+extern "C" void __attribute__((__visibility__("default"), __noreturn__)) __cxa_pure_virtual()
+{
+	abort();
+};

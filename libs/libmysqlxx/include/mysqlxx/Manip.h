@@ -3,14 +3,13 @@
 #include <cstring>
 #include <iostream>
 
-#include <mysqlxx/Types.h>
-#include <mysqlxx/Row.h>
 #include <mysqlxx/Null.h>
+#include <mysqlxx/Row.h>
+#include <mysqlxx/Types.h>
 
 
 namespace mysqlxx
 {
-
 /** @brief Манипулятор ostream, который escape-ит строки для записи в tab delimited файл.
   * Использование: tab_separated_ostr << mysqlxx::escape << x;
   */
@@ -38,50 +37,99 @@ struct EscapeManipResult
 {
 	std::ostream & ostr;
 
-	EscapeManipResult(std::ostream & ostr_) : ostr(ostr_) {}
+	EscapeManipResult(std::ostream & ostr_) : ostr(ostr_)
+	{
+	}
 
-	std::ostream & operator<< (bool value) 					{ return ostr << static_cast<int>(value); }
-	std::ostream & operator<< (char value) 					{ return ostr << static_cast<int>(value); }
-	std::ostream & operator<< (unsigned char value) 		{ return ostr << static_cast<int>(value); }
-	std::ostream & operator<< (signed char value)			{ return ostr << static_cast<int>(value); }
-	std::ostream & operator<< (short value)					{ return ostr << value; }
-	std::ostream & operator<< (unsigned short value)		{ return ostr << value; }
-	std::ostream & operator<< (int value)					{ return ostr << value; }
-	std::ostream & operator<< (unsigned int value)			{ return ostr << value; }
-	std::ostream & operator<< (long value)					{ return ostr << value; }
-	std::ostream & operator<< (unsigned long value)			{ return ostr << value; }
-	std::ostream & operator<< (float value)					{ return ostr << value; }
-	std::ostream & operator<< (double value)				{ return ostr << value; }
-	std::ostream & operator<< (long long value)				{ return ostr << value; }
-	std::ostream & operator<< (unsigned long long value)	{ return ostr << value; }
-	std::ostream & operator<< (LocalDate value)				{ return ostr << value; }
-	std::ostream & operator<< (LocalDateTime value)			{ return ostr << value; }
+	std::ostream & operator<<(bool value)
+	{
+		return ostr << static_cast<int>(value);
+	}
+	std::ostream & operator<<(char value)
+	{
+		return ostr << static_cast<int>(value);
+	}
+	std::ostream & operator<<(unsigned char value)
+	{
+		return ostr << static_cast<int>(value);
+	}
+	std::ostream & operator<<(signed char value)
+	{
+		return ostr << static_cast<int>(value);
+	}
+	std::ostream & operator<<(short value)
+	{
+		return ostr << value;
+	}
+	std::ostream & operator<<(unsigned short value)
+	{
+		return ostr << value;
+	}
+	std::ostream & operator<<(int value)
+	{
+		return ostr << value;
+	}
+	std::ostream & operator<<(unsigned int value)
+	{
+		return ostr << value;
+	}
+	std::ostream & operator<<(long value)
+	{
+		return ostr << value;
+	}
+	std::ostream & operator<<(unsigned long value)
+	{
+		return ostr << value;
+	}
+	std::ostream & operator<<(float value)
+	{
+		return ostr << value;
+	}
+	std::ostream & operator<<(double value)
+	{
+		return ostr << value;
+	}
+	std::ostream & operator<<(long long value)
+	{
+		return ostr << value;
+	}
+	std::ostream & operator<<(unsigned long long value)
+	{
+		return ostr << value;
+	}
+	std::ostream & operator<<(LocalDate value)
+	{
+		return ostr << value;
+	}
+	std::ostream & operator<<(LocalDateTime value)
+	{
+		return ostr << value;
+	}
 
-	std::ostream & operator<< (const std::string & value)
+	std::ostream & operator<<(const std::string & value)
 	{
 		writeEscapedData(value.data(), value.length());
 		return ostr;
 	}
 
 
-	std::ostream & operator<< (const char * value)
+	std::ostream & operator<<(const char * value)
 	{
 		while (const char * it = std::strpbrk(value, "\t\n\\"))
 		{
 			ostr.write(value, it - value);
 			switch (*it)
 			{
-				case '\t':
-					ostr.write("\\t", 2);
-					break;
-				case '\n':
-					ostr.write("\\n", 2);
-					break;
-				case '\\':
-					ostr.write("\\\\", 2);
-					break;
-				default:
-					;
+			case '\t':
+				ostr.write("\\t", 2);
+				break;
+			case '\n':
+				ostr.write("\\n", 2);
+				break;
+			case '\\':
+				ostr.write("\\\\", 2);
+				break;
+			default:;
 			}
 			value = it + 1;
 		}
@@ -89,14 +137,14 @@ struct EscapeManipResult
 	}
 
 
-	std::ostream & operator<< (const Value & string)
+	std::ostream & operator<<(const Value & string)
 	{
 		writeEscapedData(string.data(), string.size());
 		return ostr;
 	}
 
 
-	std::ostream & operator<< (const Row & row)
+	std::ostream & operator<<(const Row & row)
 	{
 		for (size_t i = 0; i < row.size(); ++i)
 		{
@@ -117,25 +165,24 @@ struct EscapeManipResult
 
 
 	template <typename T>
-	std::ostream & operator<< (const Null<T> & value)
+	std::ostream & operator<<(const Null<T> & value)
 	{
-		if(value.is_null)
+		if (value.is_null)
 			ostr << "\\N";
 		else
 			*this << value.data;
 
-		return ostr ;
+		return ostr;
 	}
 
 
 	template <typename T>
-	std::ostream & operator<< (const std::vector<T> & value)
+	std::ostream & operator<<(const std::vector<T> & value)
 	{
 		throw Poco::Exception(std::string(__PRETTY_FUNCTION__) + " is not implemented");
 	}
 
 private:
-
 	void writeEscapedData(const char * data, size_t length)
 	{
 		size_t i = 0;
@@ -154,7 +201,7 @@ private:
 	}
 };
 
-inline EscapeManipResult operator<< (std::ostream & ostr, escape_enum manip)
+inline EscapeManipResult operator<<(std::ostream & ostr, escape_enum manip)
 {
 	return EscapeManipResult(ostr);
 }
@@ -165,26 +212,76 @@ struct QuoteManipResult
 public:
 	std::ostream & ostr;
 
-	QuoteManipResult(std::ostream & ostr_) : ostr(ostr_) {}
+	QuoteManipResult(std::ostream & ostr_) : ostr(ostr_)
+	{
+	}
 
-	std::ostream & operator<< (bool value) 					{ return ostr << static_cast<int>(value); }
-	std::ostream & operator<< (char value) 					{ return ostr << static_cast<int>(value); }
-	std::ostream & operator<< (unsigned char value) 		{ return ostr << static_cast<int>(value); }
-	std::ostream & operator<< (signed char value)			{ return ostr << static_cast<int>(value); }
-	std::ostream & operator<< (short value)					{ return ostr << value; }
-	std::ostream & operator<< (unsigned short value)		{ return ostr << value; }
-	std::ostream & operator<< (int value)					{ return ostr << value; }
-	std::ostream & operator<< (unsigned int value)			{ return ostr << value; }
-	std::ostream & operator<< (long value)					{ return ostr << value; }
-	std::ostream & operator<< (unsigned long value)			{ return ostr << value; }
-	std::ostream & operator<< (float value)					{ return ostr << value; }
-	std::ostream & operator<< (double value)				{ return ostr << value; }
-	std::ostream & operator<< (long long value)				{ return ostr << value; }
-	std::ostream & operator<< (unsigned long long value)	{ return ostr << value; }
-	std::ostream & operator<< (LocalDate value)				{ return ostr << '\'' << value << '\''; }
-	std::ostream & operator<< (LocalDateTime value)			{ return ostr << '\'' << value << '\''; }
+	std::ostream & operator<<(bool value)
+	{
+		return ostr << static_cast<int>(value);
+	}
+	std::ostream & operator<<(char value)
+	{
+		return ostr << static_cast<int>(value);
+	}
+	std::ostream & operator<<(unsigned char value)
+	{
+		return ostr << static_cast<int>(value);
+	}
+	std::ostream & operator<<(signed char value)
+	{
+		return ostr << static_cast<int>(value);
+	}
+	std::ostream & operator<<(short value)
+	{
+		return ostr << value;
+	}
+	std::ostream & operator<<(unsigned short value)
+	{
+		return ostr << value;
+	}
+	std::ostream & operator<<(int value)
+	{
+		return ostr << value;
+	}
+	std::ostream & operator<<(unsigned int value)
+	{
+		return ostr << value;
+	}
+	std::ostream & operator<<(long value)
+	{
+		return ostr << value;
+	}
+	std::ostream & operator<<(unsigned long value)
+	{
+		return ostr << value;
+	}
+	std::ostream & operator<<(float value)
+	{
+		return ostr << value;
+	}
+	std::ostream & operator<<(double value)
+	{
+		return ostr << value;
+	}
+	std::ostream & operator<<(long long value)
+	{
+		return ostr << value;
+	}
+	std::ostream & operator<<(unsigned long long value)
+	{
+		return ostr << value;
+	}
+	std::ostream & operator<<(LocalDate value)
+	{
+		return ostr << '\'' << value << '\'';
+	}
+	std::ostream & operator<<(LocalDateTime value)
+	{
+		return ostr << '\'' << value << '\'';
+	}
 
-	std::ostream & operator<< (const std::string & value)
+	std::ostream & operator<<(const std::string & value)
 	{
 		ostr.put('\'');
 		writeEscapedData(value.data(), value.length());
@@ -194,7 +291,7 @@ public:
 	}
 
 
-	std::ostream & operator<< (const char * value)
+	std::ostream & operator<<(const char * value)
 	{
 		ostr.put('\'');
 		writeEscapedCString(value);
@@ -203,9 +300,9 @@ public:
 	}
 
 	template <typename T>
-	std::ostream & operator<< (const Null<T> & value)
+	std::ostream & operator<<(const Null<T> & value)
 	{
-		if(value.is_null)
+		if (value.is_null)
 		{
 			ostr << "\\N";
 		}
@@ -213,17 +310,16 @@ public:
 		{
 			*this << value.data;
 		}
-		return ostr ;
+		return ostr;
 	}
 
 	template <typename T>
-	std::ostream & operator<< (const std::vector<T> & value)
+	std::ostream & operator<<(const std::vector<T> & value)
 	{
 		throw Poco::Exception(std::string(__PRETTY_FUNCTION__) + " is not implemented");
 	}
 
 private:
-
 	void writeEscapedCString(const char * value)
 	{
 		while (const char * it = std::strpbrk(value, "'\\\""))
@@ -231,17 +327,16 @@ private:
 			ostr.write(value, it - value);
 			switch (*it)
 			{
-				case '"':
-					ostr.write("\\\"", 2);
-					break;
-				case '\'':
-					ostr.write("\\'", 2);
-					break;
-				case '\\':
-					ostr.write("\\\\", 2);
-					break;
-				default:
-					;
+			case '"':
+				ostr.write("\\\"", 2);
+				break;
+			case '\'':
+				ostr.write("\\'", 2);
+				break;
+			case '\\':
+				ostr.write("\\\\", 2);
+				break;
+			default:;
 			}
 			value = it + 1;
 		}
@@ -267,7 +362,7 @@ private:
 	}
 };
 
-inline QuoteManipResult operator<< (std::ostream & ostr, quote_enum manip)
+inline QuoteManipResult operator<<(std::ostream & ostr, quote_enum manip)
 {
 	return QuoteManipResult(ostr);
 }
@@ -295,25 +390,25 @@ inline void parseEscapeSequence(std::istream & istr, std::string & value)
 	if (!istr.good())
 		throw Poco::Exception("Cannot parse string: unexpected end of input.");
 
-	switch(c)
+	switch (c)
 	{
-		case 'b':
-			value.push_back('\b');
-			break;
-		case 'f':
-			value.push_back('\f');
-			break;
-		case 'n':
-			value.push_back('\n');
-			break;
-		case 'r':
-			value.push_back('\r');
-			break;
-		case 't':
-			value.push_back('\t');
-			break;
-		default:
-			value.push_back(c);
+	case 'b':
+		value.push_back('\b');
+		break;
+	case 'f':
+		value.push_back('\f');
+		break;
+	case 'n':
+		value.push_back('\n');
+		break;
+	case 'r':
+		value.push_back('\r');
+		break;
+	case 't':
+		value.push_back('\t');
+		break;
+	default:
+		value.push_back(c);
 		break;
 	}
 }
@@ -323,24 +418,80 @@ struct UnEscapeManipResult
 {
 	std::istream & istr;
 
-	UnEscapeManipResult(std::istream & istr_) : istr(istr_) {}
+	UnEscapeManipResult(std::istream & istr_) : istr(istr_)
+	{
+	}
 
-	std::istream & operator>> (bool 				& value) { int tmp = 0; istr >> tmp; value = tmp; return istr; }
-	std::istream & operator>> (char 				& value) { int tmp = 0; istr >> tmp; value = tmp; return istr; }
-	std::istream & operator>> (unsigned char 		& value) { int tmp = 0; istr >> tmp; value = tmp; return istr; }
-	std::istream & operator>> (signed char 			& value) { int tmp = 0; istr >> tmp; value = tmp; return istr; }
-	std::istream & operator>> (short 				& value) { return istr >> value; }
-	std::istream & operator>> (unsigned short 		& value) { return istr >> value; }
-	std::istream & operator>> (int 					& value) { return istr >> value; }
-	std::istream & operator>> (unsigned int 		& value) { return istr >> value; }
-	std::istream & operator>> (long 				& value) { return istr >> value; }
-	std::istream & operator>> (unsigned long 		& value) { return istr >> value; }
-	std::istream & operator>> (float 				& value) { return istr >> value; }
-	std::istream & operator>> (double 				& value) { return istr >> value; }
-	std::istream & operator>> (long long 			& value) { return istr >> value; }
-	std::istream & operator>> (unsigned long long 	& value) { return istr >> value; }
+	std::istream & operator>>(bool & value)
+	{
+		int tmp = 0;
+		istr >> tmp;
+		value = tmp;
+		return istr;
+	}
+	std::istream & operator>>(char & value)
+	{
+		int tmp = 0;
+		istr >> tmp;
+		value = tmp;
+		return istr;
+	}
+	std::istream & operator>>(unsigned char & value)
+	{
+		int tmp = 0;
+		istr >> tmp;
+		value = tmp;
+		return istr;
+	}
+	std::istream & operator>>(signed char & value)
+	{
+		int tmp = 0;
+		istr >> tmp;
+		value = tmp;
+		return istr;
+	}
+	std::istream & operator>>(short & value)
+	{
+		return istr >> value;
+	}
+	std::istream & operator>>(unsigned short & value)
+	{
+		return istr >> value;
+	}
+	std::istream & operator>>(int & value)
+	{
+		return istr >> value;
+	}
+	std::istream & operator>>(unsigned int & value)
+	{
+		return istr >> value;
+	}
+	std::istream & operator>>(long & value)
+	{
+		return istr >> value;
+	}
+	std::istream & operator>>(unsigned long & value)
+	{
+		return istr >> value;
+	}
+	std::istream & operator>>(float & value)
+	{
+		return istr >> value;
+	}
+	std::istream & operator>>(double & value)
+	{
+		return istr >> value;
+	}
+	std::istream & operator>>(long long & value)
+	{
+		return istr >> value;
+	}
+	std::istream & operator>>(unsigned long long & value)
+	{
+		return istr >> value;
+	}
 
-	std::istream & operator>> (std::string & value)
+	std::istream & operator>>(std::string & value)
 	{
 		value.clear();
 
@@ -353,23 +504,23 @@ struct UnEscapeManipResult
 
 			switch (c)
 			{
-				case '\\':
-					parseEscapeSequence(istr, value);
-					break;
+			case '\\':
+				parseEscapeSequence(istr, value);
+				break;
 
-				case '\t':
-					istr.unget();
-					return istr;
-					break;
+			case '\t':
+				istr.unget();
+				return istr;
+				break;
 
-				case '\n':
-					istr.unget();
-					return istr;
-					break;
+			case '\n':
+				istr.unget();
+				return istr;
+				break;
 
-				default:
-					value.push_back(c);
-					break;
+			default:
+				value.push_back(c);
+				break;
 			}
 		}
 		return istr;
@@ -377,7 +528,7 @@ struct UnEscapeManipResult
 
 	/// Чтение NULL-able типа.
 	template <typename T>
-	std::istream & operator>> (Null<T> & value)
+	std::istream & operator>>(Null<T> & value)
 	{
 		char c;
 		istr.get(c);
@@ -395,7 +546,7 @@ struct UnEscapeManipResult
 		return istr;
 	}
 
-	std::istream & operator>> (LocalDate & value)
+	std::istream & operator>>(LocalDate & value)
 	{
 		std::string s;
 		(*this) >> s;
@@ -403,7 +554,7 @@ struct UnEscapeManipResult
 		return istr;
 	}
 
-	std::istream & operator>> (LocalDateTime & value)
+	std::istream & operator>>(LocalDateTime & value)
 	{
 		std::string s;
 		(*this) >> s;
@@ -412,13 +563,13 @@ struct UnEscapeManipResult
 	}
 
 	template <typename T>
-	std::istream & operator>> (std::vector<T> & value)
+	std::istream & operator>>(std::vector<T> & value)
 	{
 		throw Poco::Exception(std::string(__PRETTY_FUNCTION__) + " is not implemented");
 	}
 };
 
-inline UnEscapeManipResult operator>> (std::istream & istr, unescape_enum manip)
+inline UnEscapeManipResult operator>>(std::istream & istr, unescape_enum manip)
 {
 	return UnEscapeManipResult(istr);
 }
@@ -429,24 +580,80 @@ struct UnQuoteManipResult
 public:
 	std::istream & istr;
 
-	UnQuoteManipResult(std::istream & istr_) : istr(istr_) {}
+	UnQuoteManipResult(std::istream & istr_) : istr(istr_)
+	{
+	}
 
-	std::istream & operator>> (bool 				& value) { int tmp = 0; istr >> tmp; value = tmp; return istr; }
-	std::istream & operator>> (char 				& value) { int tmp = 0; istr >> tmp; value = tmp; return istr; }
-	std::istream & operator>> (unsigned char 		& value) { int tmp = 0; istr >> tmp; value = tmp; return istr; }
-	std::istream & operator>> (signed char 			& value) { int tmp = 0; istr >> tmp; value = tmp; return istr; }
-	std::istream & operator>> (short 				& value) { return istr >> value; }
-	std::istream & operator>> (unsigned short 		& value) { return istr >> value; }
-	std::istream & operator>> (int 					& value) { return istr >> value; }
-	std::istream & operator>> (unsigned int 		& value) { return istr >> value; }
-	std::istream & operator>> (long 				& value) { return istr >> value; }
-	std::istream & operator>> (unsigned long 		& value) { return istr >> value; }
-	std::istream & operator>> (float 				& value) { return istr >> value; }
-	std::istream & operator>> (double 				& value) { return istr >> value; }
-	std::istream & operator>> (long long 			& value) { return istr >> value; }
-	std::istream & operator>> (unsigned long long 	& value) { return istr >> value; }
+	std::istream & operator>>(bool & value)
+	{
+		int tmp = 0;
+		istr >> tmp;
+		value = tmp;
+		return istr;
+	}
+	std::istream & operator>>(char & value)
+	{
+		int tmp = 0;
+		istr >> tmp;
+		value = tmp;
+		return istr;
+	}
+	std::istream & operator>>(unsigned char & value)
+	{
+		int tmp = 0;
+		istr >> tmp;
+		value = tmp;
+		return istr;
+	}
+	std::istream & operator>>(signed char & value)
+	{
+		int tmp = 0;
+		istr >> tmp;
+		value = tmp;
+		return istr;
+	}
+	std::istream & operator>>(short & value)
+	{
+		return istr >> value;
+	}
+	std::istream & operator>>(unsigned short & value)
+	{
+		return istr >> value;
+	}
+	std::istream & operator>>(int & value)
+	{
+		return istr >> value;
+	}
+	std::istream & operator>>(unsigned int & value)
+	{
+		return istr >> value;
+	}
+	std::istream & operator>>(long & value)
+	{
+		return istr >> value;
+	}
+	std::istream & operator>>(unsigned long & value)
+	{
+		return istr >> value;
+	}
+	std::istream & operator>>(float & value)
+	{
+		return istr >> value;
+	}
+	std::istream & operator>>(double & value)
+	{
+		return istr >> value;
+	}
+	std::istream & operator>>(long long & value)
+	{
+		return istr >> value;
+	}
+	std::istream & operator>>(unsigned long long & value)
+	{
+		return istr >> value;
+	}
 
-	std::istream & operator>> (std::string & value)
+	std::istream & operator>>(std::string & value)
 	{
 		value.clear();
 		readQuote();
@@ -460,30 +667,29 @@ public:
 
 			switch (c)
 			{
-				case '\\':
-					parseEscapeSequence(istr, value);
-					break;
+			case '\\':
+				parseEscapeSequence(istr, value);
+				break;
 
-				case '\'':
-					return istr;
-					break;
+			case '\'':
+				return istr;
+				break;
 
-				default:
-					value.push_back(c);
-					break;
+			default:
+				value.push_back(c);
+				break;
 			}
 		}
 		throw Poco::Exception("Cannot parse string: unexpected end of input.");
 	}
 
 	template <typename T>
-	std::istream & operator>> (std::vector<T> & value)
+	std::istream & operator>>(std::vector<T> & value)
 	{
 		throw Poco::Exception(std::string(__PRETTY_FUNCTION__) + " is not implemented");
 	}
 
 private:
-
 	void readQuote()
 	{
 		char c = istr.get();
@@ -494,10 +700,8 @@ private:
 	}
 };
 
-inline UnQuoteManipResult operator>> (std::istream & istr, unquote_enum manip)
+inline UnQuoteManipResult operator>>(std::istream & istr, unquote_enum manip)
 {
 	return UnQuoteManipResult(istr);
 }
-
-
 }

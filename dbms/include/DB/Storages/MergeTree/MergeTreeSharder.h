@@ -1,15 +1,14 @@
 #pragma once
 
-#include <DB/IO/WriteBufferFromFile.h>
-#include <DB/IO/CompressedWriteBuffer.h>
 #include <DB/Columns/ColumnsNumber.h>
+#include <DB/Core/Block.h>
+#include <DB/IO/CompressedWriteBuffer.h>
+#include <DB/IO/WriteBufferFromFile.h>
 #include <DB/Interpreters/sortBlock.h>
 #include <DB/Storages/MergeTree/MergeTreeData.h>
-#include <DB/Core/Block.h>
 
 namespace DB
 {
-
 struct ShardedBlockWithDateInterval final
 {
 	ShardedBlockWithDateInterval(const Block & block_, size_t shard_no_, UInt16 min_date_, UInt16 max_date_);
@@ -53,5 +52,4 @@ private:
 	ExpressionActionsPtr sharding_key_expr;
 	std::string sharding_key_column_name;
 };
-
 }

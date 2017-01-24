@@ -15,7 +15,6 @@
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int PARAMETER_OUT_OF_BOUND;
@@ -68,35 +67,38 @@ private:
 
 public:
 	/// Create a new column that has another column as a source.
-	ColumnAggregateFunction(const ColumnAggregateFunction & other)
-		: arenas(other.arenas), func(other.func), src(other.shared_from_this())
+	ColumnAggregateFunction(const ColumnAggregateFunction & other) : arenas(other.arenas), func(other.func), src(other.shared_from_this())
 	{
 	}
 
-	ColumnAggregateFunction(const AggregateFunctionPtr & func_)
-		: func(func_)
+	ColumnAggregateFunction(const AggregateFunctionPtr & func_) : func(func_)
 	{
 	}
 
-	ColumnAggregateFunction(const AggregateFunctionPtr & func_, const Arenas & arenas_)
-		: arenas(arenas_), func(func_)
+	ColumnAggregateFunction(const AggregateFunctionPtr & func_, const Arenas & arenas_) : arenas(arenas_), func(func_)
 	{
 	}
 
-    ~ColumnAggregateFunction()
+	~ColumnAggregateFunction()
 	{
 		if (!func->hasTrivialDestructor() && !src)
 			for (auto val : data)
 				func->destroy(val);
 	}
 
-    void set(const AggregateFunctionPtr & func_)
+	void set(const AggregateFunctionPtr & func_)
 	{
 		func = func_;
 	}
 
-	AggregateFunctionPtr getAggregateFunction() { return func; }
-	AggregateFunctionPtr getAggregateFunction() const { return func; }
+	AggregateFunctionPtr getAggregateFunction()
+	{
+		return func;
+	}
+	AggregateFunctionPtr getAggregateFunction() const
+	{
+		return func;
+	}
 
 	/// Take shared ownership of Arena, that holds memory for states of aggregate functions.
 	void addArena(ArenaPtr arena_)
@@ -108,9 +110,15 @@ public:
 	  */
 	ColumnPtr convertToValues() const;
 
-	std::string getName() const override { return "ColumnAggregateFunction"; }
+	std::string getName() const override
+	{
+		return "ColumnAggregateFunction";
+	}
 
-	size_t sizeOfField() const override { return sizeof(getData()[0]); }
+	size_t sizeOfField() const override
+	{
+		return sizeof(getData()[0]);
+	}
 
 	size_t size() const override
 	{
@@ -283,6 +291,4 @@ public:
 		throw Exception("Method getExtremes is not supported for ColumnAggregateFunction.", ErrorCodes::NOT_IMPLEMENTED);
 	}
 };
-
-
 }

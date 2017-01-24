@@ -1,12 +1,11 @@
 #pragma once
 
-#include <boost/noncopyable.hpp>
 #include <memory>
+#include <boost/noncopyable.hpp>
 
 
 namespace DB
 {
-
 class Block;
 
 /** Интерфейс потока для чтения данных по строкам.
@@ -20,13 +19,14 @@ public:
 	virtual bool read(Block & block) = 0;
 
 	/// Прочитать разделитель
-	virtual void readRowBetweenDelimiter() {};	/// разделитель между строками
-	virtual void readPrefix() {};				/// разделитель перед началом результата
-	virtual void readSuffix() {};				/// разделитель после конца результата
+	virtual void readRowBetweenDelimiter(){}; /// разделитель между строками
+	virtual void readPrefix(){}; /// разделитель перед началом результата
+	virtual void readSuffix(){}; /// разделитель после конца результата
 
-	virtual ~IRowInputStream() {}
+	virtual ~IRowInputStream()
+	{
+	}
 };
 
 using RowInputStreamPtr = std::shared_ptr<IRowInputStream>;
-
 }

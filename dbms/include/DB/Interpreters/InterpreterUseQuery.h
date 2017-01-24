@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 class Context;
 
 
@@ -14,8 +13,9 @@ class Context;
 class InterpreterUseQuery : public IInterpreter
 {
 public:
-	InterpreterUseQuery(ASTPtr query_ptr_, Context & context_)
-		: query_ptr(query_ptr_), context(context_) {}
+	InterpreterUseQuery(ASTPtr query_ptr_, Context & context_) : query_ptr(query_ptr_), context(context_)
+	{
+	}
 
 	BlockIO execute() override;
 
@@ -23,6 +23,4 @@ private:
 	ASTPtr query_ptr;
 	Context & context;
 };
-
-
 }

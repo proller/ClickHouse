@@ -1,10 +1,10 @@
 #pragma once
 
-#include <cstring>
 #include <cmath>
+#include <cstring>
 
-#include <DB/Common/Exception.h>
 #include <DB/Common/Arena.h>
+#include <DB/Common/Exception.h>
 #include <DB/Common/SipHash.h>
 
 #include <DB/IO/WriteBuffer.h>
@@ -13,13 +13,12 @@
 #include <DB/Columns/IColumn.h>
 
 #if defined(__x86_64__)
-	#include <emmintrin.h>
+#include <emmintrin.h>
 #endif
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int PARAMETER_OUT_OF_BOUND;
@@ -35,8 +34,14 @@ namespace ErrorCodes
 template <typename T>
 struct CompareHelper
 {
-	static bool less(T a, T b) { return a < b; }
-	static bool greater(T a, T b) { return a > b; }
+	static bool less(T a, T b)
+	{
+		return a < b;
+	}
+	static bool greater(T a, T b)
+	{
+		return a > b;
+	}
 
 	/** Сравнивает два числа. Выдаёт число меньше нуля, равное нулю, или больше нуля, если a < b, a == b, a > b, соответственно.
 	  * Если одно из значений является NaN, то:
@@ -76,28 +81,35 @@ struct FloatCompareHelper
 			if (isnan_a && isnan_b)
 				return 0;
 
-			return isnan_a
-				? nan_direction_hint
-				: -nan_direction_hint;
+			return isnan_a ? nan_direction_hint : -nan_direction_hint;
 		}
 
 		return (T(0) < (a - b)) - ((a - b) < T(0));
 	}
 };
 
-template <> struct CompareHelper<Float32> : public FloatCompareHelper<Float32> {};
-template <> struct CompareHelper<Float64> : public FloatCompareHelper<Float64> {};
+template <>
+struct CompareHelper<Float32> : public FloatCompareHelper<Float32>
+{
+};
+template <>
+struct CompareHelper<Float64> : public FloatCompareHelper<Float64>
+{
+};
 
 
 /** Для реализации функции get64.
   */
 template <typename T>
-inline UInt64 unionCastToUInt64(T x) { return x; }
-
-template <> inline UInt64 unionCastToUInt64(Float64 x)
+inline UInt64 unionCastToUInt64(T x)
 {
-	union
-	{
+	return x;
+}
+
+template <>
+inline UInt64 unionCastToUInt64(Float64 x)
+{
+	union {
 		Float64 src;
 		UInt64 res;
 	};
@@ -106,10 +118,10 @@ template <> inline UInt64 unionCastToUInt64(Float64 x)
 	return res;
 }
 
-template <> inline UInt64 unionCastToUInt64(Float32 x)
+template <>
+inline UInt64 unionCastToUInt64(Float32 x)
 {
-	union
-	{
+	union {
 		Float32 src;
 		UInt64 res;
 	};
@@ -148,18 +160,34 @@ class ColumnVector final : public IColumn
 {
 private:
 	using Self = ColumnVector<T>;
+
 public:
 	using value_type = T;
 	using Container_t = PaddedPODArray<value_type>;
 
-	ColumnVector() {}
-	ColumnVector(const size_t n) : data{n} {}
-	ColumnVector(const size_t n, const value_type x) : data{n, x} {}
+	ColumnVector()
+	{
+	}
+	ColumnVector(const size_t n) : data{ n }
+	{
+	}
+	ColumnVector(const size_t n, const value_type x) : data{ n, x }
+	{
+	}
 
-	bool isNumeric() const override { return IsNumber<T>::value; }
-	bool isFixed() const override { return IsNumber<T>::value; }
+	bool isNumeric() const override
+	{
+		return IsNumber<T>::value;
+	}
+	bool isFixed() const override
+	{
+		return IsNumber<T>::value;
+	}
 
-	size_t sizeOfField() const override { return sizeof(T); }
+	size_t sizeOfField() const override
+	{
+		return sizeof(T);
+	}
 
 	size_t size() const override
 	{
@@ -232,15 +260,25 @@ public:
 	struct less
 	{
 		const Self & parent;
-		less(const Self & parent_) : parent(parent_) {}
-		bool operator()(size_t lhs, size_t rhs) const { return CompareHelper<T>::less(parent.data[lhs], parent.data[rhs]); }
+		less(const Self & parent_) : parent(parent_)
+		{
+		}
+		bool operator()(size_t lhs, size_t rhs) const
+		{
+			return CompareHelper<T>::less(parent.data[lhs], parent.data[rhs]);
+		}
 	};
 
 	struct greater
 	{
 		const Self & parent;
-		greater(const Self & parent_) : parent(parent_) {}
-		bool operator()(size_t lhs, size_t rhs) const { return CompareHelper<T>::greater(parent.data[lhs], parent.data[rhs]); }
+		greater(const Self & parent_) : parent(parent_)
+		{
+		}
+		bool operator()(size_t lhs, size_t rhs) const
+		{
+			return CompareHelper<T>::greater(parent.data[lhs], parent.data[rhs]);
+		}
 	};
 
 	void getPermutation(bool reverse, size_t limit, Permutation & res) const override
@@ -274,7 +312,10 @@ public:
 		data.reserve(n);
 	}
 
-	std::string getName() const override { return "ColumnVector<" + TypeName<T>::get() + ">"; }
+	std::string getName() const override
+	{
+		return "ColumnVector<" + TypeName<T>::get() + ">";
+	}
 
 	ColumnPtr cloneResized(size_t size) const override
 	{
@@ -330,10 +371,11 @@ public:
 		const ColumnVector & src_vec = static_cast<const ColumnVector &>(src);
 
 		if (start + length > src_vec.data.size())
-			throw Exception("Parameters start = "
-				+ toString(start) + ", length = "
-				+ toString(length) + " are out of bound in ColumnVector::insertRangeFrom method"
-				" (data.size() = " + toString(src_vec.data.size()) + ").",
+			throw Exception("Parameters start = " + toString(start) + ", length = " + toString(length)
+					+ " are out of bound in ColumnVector::insertRangeFrom method"
+					  " (data.size() = "
+					+ toString(src_vec.data.size())
+					+ ").",
 				ErrorCodes::PARAMETER_OUT_OF_BOUND);
 
 		size_t old_size = data.size();
@@ -511,6 +553,4 @@ public:
 protected:
 	Container_t data;
 };
-
-
 }

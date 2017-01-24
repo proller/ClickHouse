@@ -2,13 +2,12 @@
 
 #include <Poco/Net/Socket.h>
 
-#include <DB/IO/ReadBuffer.h>
 #include <DB/IO/BufferWithOwnMemory.h>
+#include <DB/IO/ReadBuffer.h>
 
 
 namespace DB
 {
-
 /** Работает с готовым Poco::Net::Socket. Операции блокирующие.
   */
 class ReadBufferFromPocoSocket : public BufferWithOwnMemory<ReadBuffer>
@@ -29,5 +28,4 @@ public:
 
 	bool poll(size_t timeout_microseconds);
 };
-
 }

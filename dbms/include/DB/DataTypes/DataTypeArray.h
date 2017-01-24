@@ -6,8 +6,6 @@
 
 namespace DB
 {
-
-
 class DataTypeArray final : public IDataType
 {
 private:
@@ -83,12 +81,20 @@ public:
 		return Array();
 	}
 
-	const DataTypePtr & getNestedType() const { return nested; }
-	const DataTypeTraits::EnrichedDataTypePtr & getEnrichedNestedType() const { return enriched_nested; }
-	const DataTypePtr & getOffsetsType() const { return offsets; }
+	const DataTypePtr & getNestedType() const
+	{
+		return nested;
+	}
+	const DataTypeTraits::EnrichedDataTypePtr & getEnrichedNestedType() const
+	{
+		return enriched_nested;
+	}
+	const DataTypePtr & getOffsetsType() const
+	{
+		return offsets;
+	}
 
 	/// Returns the data type found at the most nested level.
 	const DataTypePtr & getMostNestedType() const;
 };
-
 }

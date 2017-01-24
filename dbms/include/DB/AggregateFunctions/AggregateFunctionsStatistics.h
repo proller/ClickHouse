@@ -1,36 +1,33 @@
 #pragma once
 
-#include <DB/IO/WriteHelpers.h>
-#include <DB/IO/ReadHelpers.h>
-#include <DB/DataTypes/DataTypesNumberFixed.h>
-#include <DB/AggregateFunctions/IUnaryAggregateFunction.h>
 #include <DB/AggregateFunctions/IBinaryAggregateFunction.h>
+#include <DB/AggregateFunctions/IUnaryAggregateFunction.h>
 #include <DB/Columns/ColumnVector.h>
+#include <DB/DataTypes/DataTypesNumberFixed.h>
+#include <DB/IO/ReadHelpers.h>
+#include <DB/IO/WriteHelpers.h>
 
 #include <cmath>
 
 namespace DB
 {
-
 namespace
 {
+	/// Эта функция возвращает true если оба значения велики и сравнимы.
+	/// Она употребляется для вычисления среднего значения путём слияния двух источников.
+	/// Ибо если размеры обоих источников велики и сравнимы, то надо применить особенную
+	///	формулу гарантирующую больше стабильности.
+	bool areComparable(UInt64 a, UInt64 b)
+	{
+		const Float64 sensitivity = 0.001;
+		const UInt64 threshold = 10000;
 
-/// Эта функция возвращает true если оба значения велики и сравнимы.
-/// Она употребляется для вычисления среднего значения путём слияния двух источников.
-/// Ибо если размеры обоих источников велики и сравнимы, то надо применить особенную
-///	формулу гарантирующую больше стабильности.
-bool areComparable(UInt64 a, UInt64 b)
-{
-	const Float64 sensitivity = 0.001;
-	const UInt64 threshold = 10000;
+		if ((a == 0) || (b == 0))
+			return false;
 
-	if ((a == 0) || (b == 0))
-		return false;
-
-	auto res = std::minmax(a, b);
-	return (((1 - static_cast<Float64>(res.first) / res.second) < sensitivity) && (res.first > threshold));
-}
-
+		auto res = std::minmax(a, b);
+		return (((1 - static_cast<Float64>(res.first) / res.second) < sensitivity) && (res.first > threshold));
+	}
 }
 
 /** Статистические аггрегатные функции:
@@ -47,7 +44,7 @@ bool areComparable(UInt64 a, UInt64 b)
   * Источник: "Updating formulae and a pairwise algorithm for computing sample variances"
   * (Chan et al., Stanford University, 12.1979)
   */
-template<typename T, typename Op>
+template <typename T, typename Op>
 class AggregateFunctionVarianceData
 {
 public:
@@ -109,13 +106,15 @@ private:
 
 /** Основной код для реализации функций varSamp, stddevSamp, varPop, stddevPop.
   */
-template<typename T, typename Op>
+template <typename T, typename Op>
 class AggregateFunctionVariance final
-	: public IUnaryAggregateFunction<AggregateFunctionVarianceData<T, Op>,
-		AggregateFunctionVariance<T, Op> >
+	: public IUnaryAggregateFunction<AggregateFunctionVarianceData<T, Op>, AggregateFunctionVariance<T, Op>>
 {
 public:
-	String getName() const override { return Op::name; }
+	String getName() const override
+	{
+		return Op::name;
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -157,79 +156,85 @@ public:
 
 namespace
 {
-
-/** Реализации функции varSamp.
+	/** Реализации функции varSamp.
   */
-struct VarSampImpl
-{
-	static constexpr auto name = "varSamp";
-
-	static inline Float64 apply(Float64 m2, UInt64 count)
+	struct VarSampImpl
 	{
-		if (count < 2)
-			return std::numeric_limits<Float64>::infinity();
-		else
-			return m2 / (count - 1);
-	}
-};
+		static constexpr auto name = "varSamp";
 
-/** Реализация функции stddevSamp.
+		static inline Float64 apply(Float64 m2, UInt64 count)
+		{
+			if (count < 2)
+				return std::numeric_limits<Float64>::infinity();
+			else
+				return m2 / (count - 1);
+		}
+	};
+
+	/** Реализация функции stddevSamp.
   */
-struct StdDevSampImpl
-{
-	static constexpr auto name = "stddevSamp";
-
-	static inline Float64 apply(Float64 m2, UInt64 count)
+	struct StdDevSampImpl
 	{
-		return sqrt(VarSampImpl::apply(m2, count));
-	}
-};
+		static constexpr auto name = "stddevSamp";
 
-/** Реализация функции varPop.
+		static inline Float64 apply(Float64 m2, UInt64 count)
+		{
+			return sqrt(VarSampImpl::apply(m2, count));
+		}
+	};
+
+	/** Реализация функции varPop.
   */
-struct VarPopImpl
-{
-	static constexpr auto name = "varPop";
-
-	static inline Float64 apply(Float64 m2, UInt64 count)
+	struct VarPopImpl
 	{
-		if (count == 0)
-			return std::numeric_limits<Float64>::infinity();
-		else if (count == 1)
-			return 0.0;
-		else
-			return m2 / count;
-	}
-};
+		static constexpr auto name = "varPop";
 
-/** Реализация функции stddevPop.
+		static inline Float64 apply(Float64 m2, UInt64 count)
+		{
+			if (count == 0)
+				return std::numeric_limits<Float64>::infinity();
+			else if (count == 1)
+				return 0.0;
+			else
+				return m2 / count;
+		}
+	};
+
+	/** Реализация функции stddevPop.
   */
-struct StdDevPopImpl
-{
-	static constexpr auto name = "stddevPop";
-
-	static inline Float64 apply(Float64 m2, UInt64 count)
+	struct StdDevPopImpl
 	{
-		return sqrt(VarPopImpl::apply(m2, count));
-	}
-};
+		static constexpr auto name = "stddevPop";
 
+		static inline Float64 apply(Float64 m2, UInt64 count)
+		{
+			return sqrt(VarPopImpl::apply(m2, count));
+		}
+	};
 }
 
 /** Если флаг compute_marginal_moments установлен, этот класс предоставялет наследнику
   * CovarianceData поддержку маргинальных моментов для вычисления корреляции.
   */
-template<bool compute_marginal_moments>
+template <bool compute_marginal_moments>
 class BaseCovarianceData
 {
 protected:
-	void incrementMarginalMoments(Float64 left_incr, Float64 right_incr) {}
-	void mergeWith(const BaseCovarianceData & source) {}
-	void serialize(WriteBuffer & buf) const {}
-	void deserialize(const ReadBuffer & buf) {}
+	void incrementMarginalMoments(Float64 left_incr, Float64 right_incr)
+	{
+	}
+	void mergeWith(const BaseCovarianceData & source)
+	{
+	}
+	void serialize(WriteBuffer & buf) const
+	{
+	}
+	void deserialize(const ReadBuffer & buf)
+	{
+	}
 };
 
-template<>
+template <>
 class BaseCovarianceData<true>
 {
 protected:
@@ -267,7 +272,7 @@ protected:
   * (J. Bennett et al., Sandia National Laboratories,
   *  2009 IEEE International Conference on Cluster Computing)
   */
-template<typename T, typename U, typename Op, bool compute_marginal_moments>
+template <typename T, typename U, typename Op, bool compute_marginal_moments>
 class CovarianceData : public BaseCovarianceData<compute_marginal_moments>
 {
 private:
@@ -288,7 +293,7 @@ public:
 
 		++count;
 
-		left_mean +=  left_delta / count;
+		left_mean += left_delta / count;
 		right_mean += right_delta / count;
 		co_moment += (left_val - left_mean) * (right_val - old_right_mean);
 
@@ -353,13 +358,13 @@ public:
 		Base::deserialize(buf);
 	}
 
-	template<bool compute = compute_marginal_moments>
+	template <bool compute = compute_marginal_moments>
 	void publish(IColumn & to, typename std::enable_if<compute>::type * = nullptr) const
 	{
 		static_cast<ColumnFloat64 &>(to).getData().push_back(Op::apply(co_moment, Base::left_m2, Base::right_m2, count));
 	}
 
-	template<bool compute = compute_marginal_moments>
+	template <bool compute = compute_marginal_moments>
 	void publish(IColumn & to, typename std::enable_if<!compute>::type * = nullptr) const
 	{
 		static_cast<ColumnFloat64 &>(to).getData().push_back(Op::apply(co_moment, count));
@@ -372,14 +377,15 @@ private:
 	Float64 co_moment = 0.0;
 };
 
-template<typename T, typename U, typename Op, bool compute_marginal_moments = false>
-class AggregateFunctionCovariance final
-	: public IBinaryAggregateFunction<
-		CovarianceData<T, U, Op, compute_marginal_moments>,
-		AggregateFunctionCovariance<T, U, Op, compute_marginal_moments> >
+template <typename T, typename U, typename Op, bool compute_marginal_moments = false>
+class AggregateFunctionCovariance final : public IBinaryAggregateFunction<CovarianceData<T, U, Op, compute_marginal_moments>,
+											  AggregateFunctionCovariance<T, U, Op, compute_marginal_moments>>
 {
 public:
-	String getName() const override { return Op::name; }
+	String getName() const override
+	{
+		return Op::name;
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -425,75 +431,72 @@ public:
 
 namespace
 {
-
-/** Реализация функции covarSamp.
+	/** Реализация функции covarSamp.
   */
-struct CovarSampImpl
-{
-	static constexpr auto name = "covarSamp";
-
-	static inline Float64 apply(Float64 co_moment, UInt64 count)
+	struct CovarSampImpl
 	{
-		if (count < 2)
-			return std::numeric_limits<Float64>::infinity();
-		else
-			return co_moment / (count - 1);
-	}
-};
+		static constexpr auto name = "covarSamp";
 
-/** Реализация функции covarPop.
+		static inline Float64 apply(Float64 co_moment, UInt64 count)
+		{
+			if (count < 2)
+				return std::numeric_limits<Float64>::infinity();
+			else
+				return co_moment / (count - 1);
+		}
+	};
+
+	/** Реализация функции covarPop.
   */
-struct CovarPopImpl
-{
-	static constexpr auto name = "covarPop";
-
-	static inline Float64 apply(Float64 co_moment, UInt64 count)
+	struct CovarPopImpl
 	{
-		if (count == 0)
-			return std::numeric_limits<Float64>::infinity();
-		else if (count == 1)
-			return 0.0;
-		else
-			return co_moment / count;
-	}
-};
+		static constexpr auto name = "covarPop";
 
-/** Реализация функции corr.
+		static inline Float64 apply(Float64 co_moment, UInt64 count)
+		{
+			if (count == 0)
+				return std::numeric_limits<Float64>::infinity();
+			else if (count == 1)
+				return 0.0;
+			else
+				return co_moment / count;
+		}
+	};
+
+	/** Реализация функции corr.
   */
-struct CorrImpl
-{
-	static constexpr auto name = "corr";
-
-	static inline Float64 apply(Float64 co_moment, Float64 left_m2, Float64 right_m2, UInt64 count)
+	struct CorrImpl
 	{
-		if (count < 2)
-			return std::numeric_limits<Float64>::infinity();
-		else
-			return co_moment / sqrt(left_m2 * right_m2);
-	}
-};
+		static constexpr auto name = "corr";
 
+		static inline Float64 apply(Float64 co_moment, Float64 left_m2, Float64 right_m2, UInt64 count)
+		{
+			if (count < 2)
+				return std::numeric_limits<Float64>::infinity();
+			else
+				return co_moment / sqrt(left_m2 * right_m2);
+		}
+	};
 }
 
-template<typename T>
+template <typename T>
 using AggregateFunctionVarSamp = AggregateFunctionVariance<T, VarSampImpl>;
 
-template<typename T>
+template <typename T>
 using AggregateFunctionStdDevSamp = AggregateFunctionVariance<T, StdDevSampImpl>;
 
-template<typename T>
+template <typename T>
 using AggregateFunctionVarPop = AggregateFunctionVariance<T, VarPopImpl>;
 
-template<typename T>
+template <typename T>
 using AggregateFunctionStdDevPop = AggregateFunctionVariance<T, StdDevPopImpl>;
 
-template<typename T, typename U>
+template <typename T, typename U>
 using AggregateFunctionCovarSamp = AggregateFunctionCovariance<T, U, CovarSampImpl>;
 
-template<typename T, typename U>
+template <typename T, typename U>
 using AggregateFunctionCovarPop = AggregateFunctionCovariance<T, U, CovarPopImpl>;
 
-template<typename T, typename U>
+template <typename T, typename U>
 using AggregateFunctionCorr = AggregateFunctionCovariance<T, U, CorrImpl, true>;
-
 }

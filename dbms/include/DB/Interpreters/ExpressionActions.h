@@ -1,17 +1,16 @@
 #pragma once
 
-#include <DB/Interpreters/Settings.h>
-#include <DB/Core/Names.h>
-#include <DB/Core/ColumnWithTypeAndName.h>
 #include <DB/Core/Block.h>
+#include <DB/Core/ColumnWithTypeAndName.h>
+#include <DB/Core/Names.h>
+#include <DB/Interpreters/Settings.h>
 
-#include <unordered_set>
 #include <unordered_map>
+#include <unordered_set>
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int LOGICAL_ERROR;
@@ -127,8 +126,7 @@ public:
 	}
 
 	/// Для константных столбцов в input_columns_ могут содержаться сами столбцы.
-	ExpressionActions(const ColumnsWithTypeAndName & input_columns_, const Settings & settings_)
-		: settings(settings_)
+	ExpressionActions(const ColumnsWithTypeAndName & input_columns_, const Settings & settings_) : settings(settings_)
 	{
 		for (const auto & input_elem : input_columns_)
 		{
@@ -177,7 +175,10 @@ public:
 		return names;
 	}
 
-	const NamesAndTypesList & getRequiredColumnsWithTypes() const { return input_columns; }
+	const NamesAndTypesList & getRequiredColumnsWithTypes() const
+	{
+		return input_columns;
+	}
 
 	/// Выполнить выражение над блоком. Блок должен содержать все столбцы , возвращаемые getRequiredColumns.
 	void execute(Block & block) const;
@@ -188,7 +189,10 @@ public:
 	void executeOnTotals(Block & block) const;
 
 	/// Получить блок-образец, содержащий имена и типы столбцов результата.
-	const Block & getSampleBlock() const { return sample_block; }
+	const Block & getSampleBlock() const
+	{
+		return sample_block;
+	}
 
 	std::string getID() const;
 
@@ -236,7 +240,9 @@ struct ExpressionActionsChain
 		Names required_output;
 
 		Step(ExpressionActionsPtr actions_ = nullptr, Names required_output_ = Names())
-			: actions(actions_), required_output(required_output_) {}
+			: actions(actions_), required_output(required_output_)
+		{
+		}
 	};
 
 	using Steps = std::vector<Step>;
@@ -271,5 +277,4 @@ struct ExpressionActionsChain
 
 	std::string dumpChain();
 };
-
 }

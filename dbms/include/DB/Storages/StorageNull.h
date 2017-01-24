@@ -3,24 +3,22 @@
 #include <ext/shared_ptr_helper.hpp>
 
 #include <DB/Core/NamesAndTypes.h>
-#include <DB/Storages/IStorage.h>
 #include <DB/DataStreams/NullBlockInputStream.h>
 #include <DB/DataStreams/NullBlockOutputStream.h>
+#include <DB/Storages/IStorage.h>
 
 
 namespace DB
 {
-
 /** При записи, ничего не делает.
   * При чтении, возвращает пустоту.
   */
 class StorageNull : private ext::shared_ptr_helper<StorageNull>, public IStorage
 {
-friend class ext::shared_ptr_helper<StorageNull>;
+	friend class ext::shared_ptr_helper<StorageNull>;
 
 public:
-	static StoragePtr create(
-		const std::string & name_,
+	static StoragePtr create(const std::string & name_,
 		NamesAndTypesListPtr columns_,
 		const NamesAndTypesList & materialized_columns_,
 		const NamesAndTypesList & alias_columns_,
@@ -29,13 +27,21 @@ public:
 		return make_shared(name_, columns_, materialized_columns_, alias_columns_, column_defaults_);
 	}
 
-	std::string getName() const override { return "Null"; }
-	std::string getTableName() const override { return name; }
+	std::string getName() const override
+	{
+		return "Null";
+	}
+	std::string getTableName() const override
+	{
+		return name;
+	}
 
-	const NamesAndTypesList & getColumnsListImpl() const override { return *columns; }
+	const NamesAndTypesList & getColumnsListImpl() const override
+	{
+		return *columns;
+	}
 
-	BlockInputStreams read(
-		const Names & column_names,
+	BlockInputStreams read(const Names & column_names,
 		ASTPtr query,
 		const Context & context,
 		const Settings & settings,
@@ -60,13 +66,13 @@ private:
 	String name;
 	NamesAndTypesListPtr columns;
 
-    StorageNull(
-		const std::string & name_,
+	StorageNull(const std::string & name_,
 		NamesAndTypesListPtr columns_,
 		const NamesAndTypesList & materialized_columns_,
 		const NamesAndTypesList & alias_columns_,
 		const ColumnDefaults & column_defaults_)
-		: IStorage{materialized_columns_, alias_columns_, column_defaults_}, name(name_), columns(columns_) {}
+		: IStorage{ materialized_columns_, alias_columns_, column_defaults_ }, name(name_), columns(columns_)
+	{
+	}
 };
-
 }

@@ -5,15 +5,11 @@
 
 namespace DB
 {
-
 /** Позволяет получить табличную функцию по ее имени.
   */
 class TableFunctionFactory
 {
 public:
-	TableFunctionPtr get(
-		const std::string & name,
-		const Context & context) const;
+	TableFunctionPtr get(const std::string & name, const Context & context) const;
 };
-
 }

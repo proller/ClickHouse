@@ -6,7 +6,6 @@
 
 namespace DB
 {
-
 class PKCondition;
 
 
@@ -20,15 +19,14 @@ public:
 	/** При чтении, выбирается набор кусков, покрывающий нужный диапазон индекса.
 	  * max_block_number_to_read - если не ноль - не читать все куски, у которых правая граница больше этого порога.
 	  */
-	BlockInputStreams read(
-		const Names & column_names,
+	BlockInputStreams read(const Names & column_names,
 		ASTPtr query,
 		const Context & context,
 		const Settings & settings,
 		QueryProcessingStage::Enum & processed_stage,
 		size_t max_block_size,
 		unsigned threads,
-		size_t * inout_part_index,	/// Если не nullptr, из этого счетчика берутся значения для виртуального столбца _part_index.
+		size_t * inout_part_index, /// Если не nullptr, из этого счетчика берутся значения для виртуального столбца _part_index.
 		Int64 max_block_number_to_read) const;
 
 private:
@@ -36,8 +34,7 @@ private:
 
 	Logger * log;
 
-	BlockInputStreams spreadMarkRangesAmongThreads(
-		RangesInDataParts parts,
+	BlockInputStreams spreadMarkRangesAmongThreads(RangesInDataParts parts,
 		size_t threads,
 		const Names & column_names,
 		size_t max_block_size,
@@ -47,8 +44,7 @@ private:
 		const Names & virt_columns,
 		const Settings & settings) const;
 
-	BlockInputStreams spreadMarkRangesAmongThreadsFinal(
-		RangesInDataParts parts,
+	BlockInputStreams spreadMarkRangesAmongThreadsFinal(RangesInDataParts parts,
 		size_t threads,
 		const Names & column_names,
 		size_t max_block_size,
@@ -61,20 +57,12 @@ private:
 
 	/// Получить приблизительное значение (оценку снизу - только по полным засечкам) количества строк, попадающего под индекс.
 	size_t getApproximateTotalRowsToRead(
-		const MergeTreeData::DataPartsVector & parts,
-		const PKCondition & key_condition,
-		const Settings & settings) const;
+		const MergeTreeData::DataPartsVector & parts, const PKCondition & key_condition, const Settings & settings) const;
 
 	/// Создать выражение "Sign == 1".
-	void createPositiveSignCondition(
-		ExpressionActionsPtr & out_expression,
-		String & out_column,
-		const Context & context) const;
+	void createPositiveSignCondition(ExpressionActionsPtr & out_expression, String & out_column, const Context & context) const;
 
 	MarkRanges markRangesFromPKRange(
-		const MergeTreeData::DataPart::Index & index,
-		const PKCondition & key_condition,
-		const Settings & settings) const;
+		const MergeTreeData::DataPart::Index & index, const PKCondition & key_condition, const Settings & settings) const;
 };
-
 }

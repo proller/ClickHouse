@@ -1,15 +1,14 @@
 #pragma once
 
 #include <city.h>
-#include <DB/Core/Defines.h>
+#include <DB/Columns/ColumnTuple.h>
 #include <DB/Common/SipHash.h>
 #include <DB/Common/UInt128.h>
-#include <DB/Columns/ColumnTuple.h>
+#include <DB/Core/Defines.h>
 
 
 namespace DB
 {
-
 /** Хэширует набор аргументов агрегатной функции
   *  для вычисления количества уникальных значений
   *  и добавляет их в множество.
@@ -128,5 +127,4 @@ struct UniqVariadicHash<true, true>
 		return key;
 	}
 };
-
 }

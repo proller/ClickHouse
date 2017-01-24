@@ -2,13 +2,12 @@
 
 #include <ext/shared_ptr_helper.hpp>
 
-#include <DB/Storages/StorageSet.h>
 #include <DB/Parsers/ASTTablesInSelectQuery.h>
+#include <DB/Storages/StorageSet.h>
 
 
 namespace DB
 {
-
 class Join;
 using JoinPtr = std::shared_ptr<Join>;
 
@@ -22,45 +21,49 @@ using JoinPtr = std::shared_ptr<Join>;
   */
 class StorageJoin : private ext::shared_ptr_helper<StorageJoin>, public StorageSetOrJoinBase
 {
-friend class ext::shared_ptr_helper<StorageJoin>;
+	friend class ext::shared_ptr_helper<StorageJoin>;
 
 public:
-	static StoragePtr create(
-		const String & path_,
+	static StoragePtr create(const String & path_,
 		const String & name_,
 		const Names & key_names_,
-		ASTTableJoin::Kind kind_, ASTTableJoin::Strictness strictness_,
+		ASTTableJoin::Kind kind_,
+		ASTTableJoin::Strictness strictness_,
 		NamesAndTypesListPtr columns_,
 		const NamesAndTypesList & materialized_columns_,
 		const NamesAndTypesList & alias_columns_,
 		const ColumnDefaults & column_defaults_)
 	{
 		return ext::shared_ptr_helper<StorageJoin>::make_shared(
-			path_, name_, key_names_, kind_, strictness_,
-			columns_, materialized_columns_, alias_columns_, column_defaults_
-		);
+			path_, name_, key_names_, kind_, strictness_, columns_, materialized_columns_, alias_columns_, column_defaults_);
 	}
 
-	String getName() const override { return "Join"; }
+	String getName() const override
+	{
+		return "Join";
+	}
 
 	/// Получить доступ к внутренностям.
-	JoinPtr & getJoin() { return join; }
+	JoinPtr & getJoin()
+	{
+		return join;
+	}
 
 	/// Убедиться, что структура данных подходит для осуществления JOIN такого типа.
 	void assertCompatible(ASTTableJoin::Kind kind_, ASTTableJoin::Strictness strictness_) const;
 
 private:
 	const Names & key_names;
-	ASTTableJoin::Kind kind;					/// LEFT | INNER ...
-	ASTTableJoin::Strictness strictness;		/// ANY | ALL
+	ASTTableJoin::Kind kind; /// LEFT | INNER ...
+	ASTTableJoin::Strictness strictness; /// ANY | ALL
 
 	JoinPtr join;
 
-	StorageJoin(
-		const String & path_,
+	StorageJoin(const String & path_,
 		const String & name_,
 		const Names & key_names_,
-		ASTTableJoin::Kind kind_, ASTTableJoin::Strictness strictness_,
+		ASTTableJoin::Kind kind_,
+		ASTTableJoin::Strictness strictness_,
 		NamesAndTypesListPtr columns_,
 		const NamesAndTypesList & materialized_columns_,
 		const NamesAndTypesList & alias_columns_,
@@ -69,5 +72,4 @@ private:
 	void insertBlock(const Block & block) override;
 	size_t getSize() const override;
 };
-
 }

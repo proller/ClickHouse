@@ -8,7 +8,6 @@
 
 namespace DB
 {
-
 /** Пишет данные в строку.
   * Замечение: перед использованием полученной строки, уничтожте этот объект.
   */
@@ -31,8 +30,7 @@ private:
 	}
 
 public:
-	WriteBufferFromString(std::string & s_)
-		: WriteBuffer(reinterpret_cast<Position>(&s_[0]), s_.size()), s(s_)
+	WriteBufferFromString(std::string & s_) : WriteBuffer(reinterpret_cast<Position>(&s_[0]), s_.size()), s(s_)
 	{
 		if (s.empty())
 		{
@@ -41,10 +39,9 @@ public:
 		}
 	}
 
-    ~WriteBufferFromString() override
+	~WriteBufferFromString() override
 	{
 		finish();
 	}
 };
-
 }

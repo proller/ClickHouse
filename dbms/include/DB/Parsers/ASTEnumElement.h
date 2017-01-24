@@ -1,23 +1,25 @@
 #pragma once
 
-#include <DB/Parsers/IAST.h>
 #include <DB/Parsers/ASTLiteral.h>
+#include <DB/Parsers/IAST.h>
 
 
 namespace DB
 {
-
-
 class ASTEnumElement : public IAST
 {
 public:
 	String name;
 	Field value;
 
-	ASTEnumElement(const StringRange range, const String & name, const Field & value)
-		: IAST{range}, name{name}, value {value} {}
+	ASTEnumElement(const StringRange range, const String & name, const Field & value) : IAST{ range }, name{ name }, value{ value }
+	{
+	}
 
-	String getID() const override { return "EnumElement"; }
+	String getID() const override
+	{
+		return "EnumElement";
+	}
 
 	ASTPtr clone() const override
 	{
@@ -33,6 +35,4 @@ protected:
 		settings.ostr << settings.nl_or_ws << indent_str << '\'' << name << "' = " << applyVisitor(FieldVisitorToString{}, value);
 	}
 };
-
-
 }

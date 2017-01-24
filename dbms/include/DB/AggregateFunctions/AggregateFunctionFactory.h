@@ -6,7 +6,6 @@
 
 namespace DB
 {
-
 class IDataType;
 using DataTypePtr = std::shared_ptr<IDataType>;
 using DataTypes = std::vector<DataTypePtr>;
@@ -20,7 +19,7 @@ class AggregateFunctionFactory final
 
 private:
 	/// No std::function, for smaller object size and less indirection.
-	using Creator = AggregateFunctionPtr(*)(const String & name, const DataTypes & argument_types);
+	using Creator = AggregateFunctionPtr (*)(const String & name, const DataTypes & argument_types);
 	using AggregateFunctions = std::unordered_map<String, Creator>;
 
 public:
@@ -51,5 +50,4 @@ private:
 	/// Case insensitive aggregate functions will be additionally added here with lowercased name.
 	AggregateFunctions case_insensitive_aggregate_functions;
 };
-
 }

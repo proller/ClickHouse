@@ -7,14 +7,13 @@
 #include <Poco/File.h>
 #include <Poco/RWLock.h>
 
-#include <DB/Storages/IStorage.h>
 #include <DB/Common/FileChecker.h>
 #include <DB/Common/escapeForFileName.h>
+#include <DB/Storages/IStorage.h>
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int NO_SUCH_COLUMN_IN_TABLE;
@@ -27,8 +26,8 @@ namespace ErrorCodes
   */
 struct Mark
 {
-	size_t rows;	/// Сколько строк содержится в этой пачке и всех предыдущих.
-	size_t offset;	/// Смещение до пачки в сжатом файле.
+	size_t rows; /// Сколько строк содержится в этой пачке и всех предыдущих.
+	size_t offset; /// Смещение до пачки в сжатом файле.
 };
 
 using Marks = std::vector<Mark>;
@@ -40,17 +39,16 @@ using Marks = std::vector<Mark>;
   */
 class StorageLog : private ext::shared_ptr_helper<StorageLog>, public IStorage
 {
-friend class ext::shared_ptr_helper<StorageLog>;
-friend class LogBlockInputStream;
-friend class LogBlockOutputStream;
+	friend class ext::shared_ptr_helper<StorageLog>;
+	friend class LogBlockInputStream;
+	friend class LogBlockOutputStream;
 
 public:
 	/** Подцепить таблицу с соответствующим именем, по соответствующему пути (с / на конце),
 	  *  (корректность имён и путей не проверяется)
 	  *  состоящую из указанных столбцов; создать файлы, если их нет.
 	  */
-	static StoragePtr create(
-		const std::string & path_,
+	static StoragePtr create(const std::string & path_,
 		const std::string & name_,
 		NamesAndTypesListPtr columns_,
 		const NamesAndTypesList & materialized_columns_,
@@ -58,19 +56,26 @@ public:
 		const ColumnDefaults & column_defaults_,
 		size_t max_compress_block_size_ = DEFAULT_MAX_COMPRESS_BLOCK_SIZE);
 
-	static StoragePtr create(
-		const std::string & path_,
+	static StoragePtr create(const std::string & path_,
 		const std::string & name_,
 		NamesAndTypesListPtr columns_,
 		size_t max_compress_block_size_ = DEFAULT_MAX_COMPRESS_BLOCK_SIZE);
 
-	std::string getName() const override { return "Log"; }
-	std::string getTableName() const override { return name; }
+	std::string getName() const override
+	{
+		return "Log";
+	}
+	std::string getTableName() const override
+	{
+		return name;
+	}
 
-	const NamesAndTypesList & getColumnsListImpl() const override { return *columns; }
+	const NamesAndTypesList & getColumnsListImpl() const override
+	{
+		return *columns;
+	}
 
-	virtual BlockInputStreams read(
-		const Names & column_names,
+	virtual BlockInputStreams read(const Names & column_names,
 		ASTPtr query,
 		const Context & context,
 		const Settings & settings,
@@ -103,8 +108,7 @@ protected:
 
 	Poco::RWLock rwlock;
 
-	StorageLog(
-		const std::string & path_,
+	StorageLog(const std::string & path_,
 		const std::string & name_,
 		NamesAndTypesListPtr columns_,
 		const NamesAndTypesList & materialized_columns_,
@@ -120,8 +124,7 @@ protected:
 	/// Можно вызывать при любом состоянии rwlock.
 	size_t marksCount();
 
-	BlockInputStreams read(
-		size_t from_mark,
+	BlockInputStreams read(size_t from_mark,
 		size_t to_mark,
 		size_t from_null_mark,
 		const Names & column_names,
@@ -166,7 +169,9 @@ private:
 	  */
 	const Marks & getMarksWithRealRowCount() const;
 
-	std::string getFullPath() const { return path + escapeForFileName(name) + '/';}
+	std::string getFullPath() const
+	{
+		return path + escapeForFileName(name) + '/';
+	}
 };
-
 }

@@ -1,19 +1,21 @@
 #pragma once
 
-#include <DB/Common/Exception.h>
-#include <string>
 #include <cstring>
+#include <string>
+#include <DB/Common/Exception.h>
 
-namespace DB { namespace ErrorCodes {
-
-extern const int LOGICAL_ERROR;
-
-}}
+namespace DB
+{
+namespace ErrorCodes
+{
+	extern const int LOGICAL_ERROR;
+}
+}
 
 namespace detail
 {
-	bool startsWith(const std::string & s, const char * prefix, size_t prefix_size);
-	bool endsWith(const std::string & s, const char * suffix, size_t suffix_size);
+bool startsWith(const std::string & s, const char * prefix, size_t prefix_size);
+bool endsWith(const std::string & s, const char * suffix, size_t suffix_size);
 }
 
 
@@ -45,8 +47,7 @@ inline bool endsWith(const std::string & s, const char * suffix)
 template <typename T>
 std::string getOrdinalSuffix(T n)
 {
-	static_assert(std::is_integral<T>::value && std::is_unsigned<T>::value,
-		"Unsigned integer value required");
+	static_assert(std::is_integral<T>::value && std::is_unsigned<T>::value, "Unsigned integer value required");
 
 	const auto val = n % 10;
 
@@ -62,11 +63,14 @@ std::string getOrdinalSuffix(T n)
 	{
 		switch (val)
 		{
-			case 1: return "st";
-			case 2: return "nd";
-			case 3: return "rd";
-			default: throw DB::Exception{"getOrdinalSuffix: internal error",
-				DB::ErrorCodes::LOGICAL_ERROR};
+		case 1:
+			return "st";
+		case 2:
+			return "nd";
+		case 3:
+			return "rd";
+		default:
+			throw DB::Exception{ "getOrdinalSuffix: internal error", DB::ErrorCodes::LOGICAL_ERROR };
 		};
 	}
 }
@@ -80,8 +84,7 @@ inline bool isASCII(char c)
 
 inline bool isAlphaASCII(char c)
 {
-	return (c >= 'a' && c <= 'z')
-		|| (c >= 'A' && c <= 'Z');
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
 
 inline bool isNumericASCII(char c)
@@ -91,14 +94,12 @@ inline bool isNumericASCII(char c)
 
 inline bool isAlphaNumericASCII(char c)
 {
-	return isAlphaASCII(c)
-		|| isNumericASCII(c);
+	return isAlphaASCII(c) || isNumericASCII(c);
 }
 
 inline bool isWordCharASCII(char c)
 {
-	return isAlphaNumericASCII(c)
-		|| c == '_';
+	return isAlphaNumericASCII(c) || c == '_';
 }
 
 inline bool isWhitespaceASCII(char c)
@@ -126,4 +127,3 @@ inline bool equalsCaseInsensitive(char a, char b)
 {
 	return a == b || (isAlphaASCII(a) && alternateCaseIfAlphaASCII(a) == b);
 }
-

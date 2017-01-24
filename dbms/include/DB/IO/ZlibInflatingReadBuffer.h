@@ -1,7 +1,7 @@
 #pragma once
 
-#include <DB/IO/ReadBuffer.h>
 #include <DB/IO/BufferWithOwnMemory.h>
+#include <DB/IO/ReadBuffer.h>
 #include <DB/IO/ZlibCompressionMethod.h>
 
 #include <zlib.h>
@@ -9,7 +9,6 @@
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int ZLIB_INFLATE_FAILED;
@@ -20,12 +19,11 @@ namespace ErrorCodes
 class ZlibInflatingReadBuffer : public BufferWithOwnMemory<ReadBuffer>
 {
 public:
-	ZlibInflatingReadBuffer(
-			ReadBuffer & in_,
-			ZlibCompressionMethod compression_method,
-			size_t buf_size = DBMS_DEFAULT_BUFFER_SIZE,
-			char * existing_memory = nullptr,
-			size_t alignment = 0);
+	ZlibInflatingReadBuffer(ReadBuffer & in_,
+		ZlibCompressionMethod compression_method,
+		size_t buf_size = DBMS_DEFAULT_BUFFER_SIZE,
+		char * existing_memory = nullptr,
+		size_t alignment = 0);
 
 	~ZlibInflatingReadBuffer() override;
 
@@ -36,5 +34,4 @@ private:
 	z_stream zstr;
 	bool eof;
 };
-
 }

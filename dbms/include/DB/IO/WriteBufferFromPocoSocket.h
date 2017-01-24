@@ -2,13 +2,12 @@
 
 #include <Poco/Net/Socket.h>
 
-#include <DB/IO/WriteBuffer.h>
 #include <DB/IO/BufferWithOwnMemory.h>
+#include <DB/IO/WriteBuffer.h>
 
 
 namespace DB
 {
-
 /** Работает с готовым Poco::Net::Socket. Операции блокирующие.
   */
 class WriteBufferFromPocoSocket : public BufferWithOwnMemory<WriteBuffer>
@@ -28,7 +27,6 @@ protected:
 public:
 	WriteBufferFromPocoSocket(Poco::Net::Socket & socket_, size_t buf_size = DBMS_DEFAULT_BUFFER_SIZE);
 
-    ~WriteBufferFromPocoSocket();
+	~WriteBufferFromPocoSocket();
 };
-
 }

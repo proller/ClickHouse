@@ -2,30 +2,33 @@
 
 #include <vector>
 
-#include <DB/Core/Types.h>
-#include <DB/Core/Block.h>
-#include <DB/Columns/IColumn.h>
 #include <DB/Columns/ColumnString.h>
+#include <DB/Columns/IColumn.h>
+#include <DB/Core/Block.h>
+#include <DB/Core/Types.h>
 
 
 class Collator;
 
 namespace DB
 {
-
 /// Описание правила сортировки по одному столбцу.
 struct SortColumnDescription
 {
-	String column_name;						/// Имя столбца.
-	size_t column_number;					/// Номер столбца (используется, если не задано имя).
-	int direction;							/// 1 - по возрастанию, -1 - по убыванию.
-	std::shared_ptr<Collator> collator;	/// Collator для locale-specific сортировки строк
+	String column_name; /// Имя столбца.
+	size_t column_number; /// Номер столбца (используется, если не задано имя).
+	int direction; /// 1 - по возрастанию, -1 - по убыванию.
+	std::shared_ptr<Collator> collator; /// Collator для locale-specific сортировки строк
 
 	SortColumnDescription(size_t column_number_, int direction_, const std::shared_ptr<Collator> & collator_ = nullptr)
-		: column_number(column_number_), direction(direction_), collator(collator_) {}
+		: column_number(column_number_), direction(direction_), collator(collator_)
+	{
+	}
 
 	SortColumnDescription(String column_name_, int direction_, const std::shared_ptr<Collator> & collator_ = nullptr)
-		: column_name(column_name_), column_number(0), direction(direction_), collator(collator_) {}
+		: column_name(column_name_), column_number(0), direction(direction_), collator(collator_)
+	{
+	}
 
 	/// Для IBlockInputStream.
 	String getID() const;
@@ -64,7 +67,9 @@ struct SortCursorImpl
 	/** Есть ли хотя бы один столбец с Collator. */
 	bool has_collation = false;
 
-	SortCursorImpl() {}
+	SortCursorImpl()
+	{
+	}
 
 	SortCursorImpl(const Block & block, const SortDescription & desc_, size_t order_ = 0)
 		: desc(desc_), sort_columns_size(desc.size()), order(order_), need_collation(desc.size())
@@ -72,7 +77,10 @@ struct SortCursorImpl
 		reset(block);
 	}
 
-	bool empty() const { return rows == 0; }
+	bool empty() const
+	{
+		return rows == 0;
+	}
 
 	/// Установить курсор в начало нового блока.
 	void reset(const Block & block)
@@ -87,9 +95,7 @@ struct SortCursorImpl
 
 		for (size_t j = 0, size = desc.size(); j < size; ++j)
 		{
-			size_t column_number = !desc[j].column_name.empty()
-				? block.getPositionByName(desc[j].column_name)
-				: desc[j].column_number;
+			size_t column_number = !desc[j].column_name.empty() ? block.getPositionByName(desc[j].column_name) : desc[j].column_number;
 
 			sort_columns.push_back(block.safeGetByPosition(column_number).column.get());
 
@@ -101,9 +107,18 @@ struct SortCursorImpl
 		rows = all_columns[0]->size();
 	}
 
-	bool isFirst() const { return pos == 0; }
-	bool isLast() const { return pos + 1 >= rows; }
-	void next() { ++pos; }
+	bool isFirst() const
+	{
+		return pos == 0;
+	}
+	bool isLast() const
+	{
+		return pos + 1 >= rows;
+	}
+	void next()
+	{
+		++pos;
+	}
 };
 
 
@@ -112,9 +127,17 @@ struct SortCursor
 {
 	SortCursorImpl * impl;
 
-	SortCursor(SortCursorImpl * impl_) : impl(impl_) {}
-	SortCursorImpl * operator-> () { return impl; }
-	const SortCursorImpl * operator-> () const { return impl; }
+	SortCursor(SortCursorImpl * impl_) : impl(impl_)
+	{
+	}
+	SortCursorImpl * operator->()
+	{
+		return impl;
+	}
+	const SortCursorImpl * operator->() const
+	{
+		return impl;
+	}
 
 	/// Указанная строка данного курсора больше указанной строки другого курсора.
 	bool greaterAt(const SortCursor & rhs, size_t lhs_pos, size_t rhs_pos) const
@@ -147,7 +170,7 @@ struct SortCursor
 	}
 
 	/// Инвертировано, чтобы из priority queue элементы вынимались в порядке по возрастанию.
-	bool operator< (const SortCursor & rhs) const
+	bool operator<(const SortCursor & rhs) const
 	{
 		return greater(rhs);
 	}
@@ -159,9 +182,17 @@ struct SortCursorWithCollation
 {
 	SortCursorImpl * impl;
 
-	SortCursorWithCollation(SortCursorImpl * impl_) : impl(impl_) {}
-	SortCursorImpl * operator-> () { return impl; }
-	const SortCursorImpl * operator-> () const { return impl; }
+	SortCursorWithCollation(SortCursorImpl * impl_) : impl(impl_)
+	{
+	}
+	SortCursorImpl * operator->()
+	{
+		return impl;
+	}
+	const SortCursorImpl * operator->() const
+	{
+		return impl;
+	}
 
 	bool greaterAt(const SortCursorWithCollation & rhs, size_t lhs_pos, size_t rhs_pos) const
 	{
@@ -200,11 +231,9 @@ struct SortCursorWithCollation
 		return greaterAt(rhs, impl->pos, rhs.impl->pos);
 	}
 
-	bool operator< (const SortCursorWithCollation & rhs) const
+	bool operator<(const SortCursorWithCollation & rhs) const
 	{
 		return greater(rhs);
 	}
 };
-
 }
-

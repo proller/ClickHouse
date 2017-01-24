@@ -8,8 +8,6 @@
 
 namespace DB
 {
-
-
 /** Параметры разных функций quantilesSomething.
   * - список уровней квантилей.
   * Также необходимо вычислить массив индексов уровней, идущих по возрастанию.
@@ -18,16 +16,19 @@ namespace DB
   * levels: 0.5, 0.99, 0.95
   * levels_permutation: 0, 2, 1
   */
-template <typename T>	/// float или double
+template <typename T> /// float или double
 struct QuantileLevels
 {
 	using Levels = std::vector<T>;
 	using Permutation = std::vector<size_t>;
 
 	Levels levels;
-	Permutation permutation;	/// Индекс i-го по величине уровня в массиве levels.
+	Permutation permutation; /// Индекс i-го по величине уровня в массиве levels.
 
-	size_t size() const { return levels.size(); }
+	size_t size() const
+	{
+		return levels.size();
+	}
 
 	void set(const Array & params)
 	{
@@ -44,9 +45,7 @@ struct QuantileLevels
 			permutation[i] = i;
 		}
 
-		std::sort(permutation.begin(), permutation.end(), [this] (size_t a, size_t b) { return levels[a] < levels[b]; });
+		std::sort(permutation.begin(), permutation.end(), [this](size_t a, size_t b) { return levels[a] < levels[b]; });
 	}
 };
-
-
 }

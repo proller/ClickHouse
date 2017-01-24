@@ -7,8 +7,6 @@
 
 namespace DB
 {
-
-
 /** Advanced settings of MergeTree.
   * Could be loaded from config.
   */
@@ -107,11 +105,11 @@ struct MergeTreeSettings
 
 	void loadFromConfig(const String & config_elem, Poco::Util::AbstractConfiguration & config)
 	{
-	#define SET_DOUBLE(NAME) \
-		NAME = config.getDouble(config_elem + "." #NAME, NAME);
+#define SET_DOUBLE(NAME) NAME = config.getDouble(config_elem + "." #NAME, NAME);
 
-	#define SET_SIZE_T(NAME) \
-		if (config.has(config_elem + "." #NAME)) NAME = parse<size_t>(config.getString(config_elem + "." #NAME));
+#define SET_SIZE_T(NAME)                                                                                                                   \
+	if (config.has(config_elem + "." #NAME))                                                                                               \
+		NAME = parse<size_t>(config.getString(config_elem + "." #NAME));
 
 		SET_SIZE_T(max_bytes_to_merge_at_max_space_in_pool);
 		SET_SIZE_T(max_bytes_to_merge_at_min_space_in_pool);
@@ -142,9 +140,8 @@ struct MergeTreeSettings
 		SET_SIZE_T(vertical_merge_algorithm_min_rows_to_activate);
 		SET_SIZE_T(vertical_merge_algorithm_min_columns_to_activate);
 
-	#undef SET_SIZE_T
-	#undef SET_DOUBLE
+#undef SET_SIZE_T
+#undef SET_DOUBLE
 	}
 };
-
 }

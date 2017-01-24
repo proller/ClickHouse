@@ -1,22 +1,20 @@
 #pragma once
 
+#include <DB/Common/Stopwatch.h>
 #include <DB/Core/Block.h>
 #include <DB/Core/Progress.h>
-#include <DB/IO/WriteBuffer.h>
-#include <DB/Common/Stopwatch.h>
 #include <DB/DataStreams/IRowOutputStream.h>
+#include <DB/IO/WriteBuffer.h>
 
 
 namespace DB
 {
-
 /** Stream for output data in JSON format.
   */
 class JSONRowOutputStream : public IRowOutputStream
 {
 public:
-	JSONRowOutputStream(WriteBuffer & ostr_, const Block & sample_,
-		bool write_statistics_, bool force_quoting_64bit_integers_ = true);
+	JSONRowOutputStream(WriteBuffer & ostr_, const Block & sample_, bool write_statistics_, bool force_quoting_64bit_integers_ = true);
 
 	void writeField(const IColumn & column, const IDataType & type, size_t row_num) override;
 	void writeFieldDelimiter() override;
@@ -39,22 +37,30 @@ public:
 		rows_before_limit = rows_before_limit_;
 	}
 
-	void setTotals(const Block & totals_) override { totals = totals_; }
-	void setExtremes(const Block & extremes_) override { extremes = extremes_; }
+	void setTotals(const Block & totals_) override
+	{
+		totals = totals_;
+	}
+	void setExtremes(const Block & extremes_) override
+	{
+		extremes = extremes_;
+	}
 
 	void onProgress(const Progress & value) override;
 
-	String getContentType() const override { return "application/json; charset=UTF-8"; }
+	String getContentType() const override
+	{
+		return "application/json; charset=UTF-8";
+	}
 
 protected:
-
 	void writeRowsBeforeLimitAtLeast();
 	virtual void writeTotals();
 	virtual void writeExtremes();
 	void writeStatistics();
 
 	WriteBuffer & dst_ostr;
-	std::unique_ptr<WriteBuffer> validating_ostr;	/// Validates UTF-8 sequences, replaces bad sequences with replacement character.
+	std::unique_ptr<WriteBuffer> validating_ostr; /// Validates UTF-8 sequences, replaces bad sequences with replacement character.
 	WriteBuffer * ostr;
 
 	size_t field_number = 0;
@@ -70,6 +76,4 @@ protected:
 	bool write_statistics;
 	bool force_quoting_64bit_integers;
 };
-
 }
-

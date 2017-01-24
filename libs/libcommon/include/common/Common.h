@@ -1,7 +1,7 @@
 #pragma once
 
-#include <string>
 #include <functional>
+#include <string>
 
 #include <Poco/Types.h>
 
@@ -21,11 +21,11 @@ using UInt64 = Poco::UInt64;
 
 /// Обход проблемы с тем, что KDevelop не видит time_t и size_t (для подсветки синтаксиса).
 #ifdef IN_KDEVELOP_PARSER
-	using time_t = Int64;
-	using size_t = UInt64;
+using time_t = Int64;
+using size_t = UInt64;
 #endif
 
-		
+
 /** Тип данных для хранения идентификатора пользователя. */
 using UserID_t = UInt64;
 

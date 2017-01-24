@@ -7,7 +7,6 @@
 
 namespace DB
 {
-
 class DataTypeString final : public IDataType
 {
 public:
@@ -55,5 +54,4 @@ public:
 		return String();
 	}
 };
-
 }

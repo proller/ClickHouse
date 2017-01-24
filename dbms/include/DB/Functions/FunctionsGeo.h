@@ -1,16 +1,15 @@
 #pragma once
 
+#include <array>
+#include <math.h>
+#include <ext/range.hpp>
 #include <DB/DataTypes/DataTypesNumberFixed.h>
 #include <DB/Functions/IFunction.h>
-#include <ext/range.hpp>
-#include <math.h>
-#include <array>
 
 #define DEGREES_IN_RADIANS (M_PI / 180.0)
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int ARGUMENT_OUT_OF_BOUND;
@@ -18,8 +17,14 @@ namespace ErrorCodes
 
 const Float64 EARTH_RADIUS_IN_METERS = 6372797.560856;
 
-static inline Float64 degToRad(Float64 angle) { return angle * DEGREES_IN_RADIANS; }
-static inline Float64 radToDeg(Float64 angle) { return angle / DEGREES_IN_RADIANS; }
+static inline Float64 degToRad(Float64 angle)
+{
+	return angle * DEGREES_IN_RADIANS;
+}
+static inline Float64 radToDeg(Float64 angle)
+{
+	return angle / DEGREES_IN_RADIANS;
+}
 
 /**
  *  The function calculates distance in meters between two points on Earth specified by longitude and latitude in degrees.
@@ -31,12 +36,13 @@ static inline Float64 radToDeg(Float64 angle) { return angle / DEGREES_IN_RADIAN
 class FunctionGreatCircleDistance : public IFunction
 {
 public:
-
 	static constexpr auto name = "greatCircleDistance";
-	static FunctionPtr create(const Context &) { return std::make_shared<FunctionGreatCircleDistance>(); }
+	static FunctionPtr create(const Context &)
+	{
+		return std::make_shared<FunctionGreatCircleDistance>();
+	}
 
 private:
-
 	enum class instr_type : uint8_t
 	{
 		get_float_64,
@@ -46,9 +52,15 @@ private:
 	using instr_t = std::pair<instr_type, const IColumn *>;
 	using instrs_t = std::array<instr_t, 4>;
 
-	String getName() const override { return name; }
+	String getName() const override
+	{
+		return name;
+	}
 
-	size_t getNumberOfArguments() const override { return 4; }
+	size_t getNumberOfArguments() const override
+	{
+		return 4;
+	}
 
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
@@ -56,8 +68,9 @@ private:
 		{
 			const auto arg = arguments[arg_idx].get();
 			if (!typeid_cast<const DataTypeFloat64 *>(arg))
-				throw Exception(
-					"Illegal type " + arg->getName() + " of argument " + std::to_string(arg_idx + 1) + " of function " + getName() + ". Must be Float64",
+				throw Exception("Illegal type " + arg->getName() + " of argument " + std::to_string(arg_idx + 1) + " of function "
+						+ getName()
+						+ ". Must be Float64",
 					ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 		}
 
@@ -76,15 +89,15 @@ private:
 			if (const auto col = typeid_cast<const ColumnVector<Float64> *>(column))
 			{
 				out_const = false;
-				result[arg_idx] = instr_t{instr_type::get_float_64, col};
+				result[arg_idx] = instr_t{ instr_type::get_float_64, col };
 			}
 			else if (const auto col = typeid_cast<const ColumnConst<Float64> *>(column))
 			{
-				result[arg_idx] = instr_t{instr_type::get_const_float_64, col};
+				result[arg_idx] = instr_t{ instr_type::get_const_float_64, col };
 			}
 			else
-				throw Exception("Illegal column " + column->getName() + " of argument of function " + getName(),
-					ErrorCodes::ILLEGAL_COLUMN);
+				throw Exception(
+					"Illegal column " + column->getName() + " of argument of function " + getName(), ErrorCodes::ILLEGAL_COLUMN);
 		}
 
 		return result;
@@ -93,10 +106,8 @@ private:
 	/// https://en.wikipedia.org/wiki/Great-circle_distance
 	Float64 greatCircleDistance(Float64 lon1Deg, Float64 lat1Deg, Float64 lon2Deg, Float64 lat2Deg)
 	{
-		if (lon1Deg < -180 || lon1Deg > 180 ||
-			lon2Deg < -180 || lon2Deg > 180 ||
-			lat1Deg < -90 || lat1Deg > 90 ||
-			lat2Deg < -90 || lat2Deg > 90)
+		if (lon1Deg < -180 || lon1Deg > 180 || lon2Deg < -180 || lon2Deg > 180 || lat1Deg < -90 || lat1Deg > 90 || lat2Deg < -90
+			|| lat2Deg > 90)
 		{
 			throw Exception("Arguments values out of bounds for function " + getName(), ErrorCodes::ARGUMENT_OUT_OF_BOUND);
 		}
@@ -144,7 +155,7 @@ private:
 					else if (instr_type::get_const_float_64 == instrs[idx].first)
 						vals[idx] = static_cast<const ColumnConst<Float64> *>(instrs[idx].second)->getData();
 					else
-						throw std::logic_error{"unknown instr_type"};
+						throw std::logic_error{ "unknown instr_type" };
 				}
 				dst_data[row] = greatCircleDistance(vals[0], vals[1], vals[2], vals[3]);
 			}

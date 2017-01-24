@@ -11,7 +11,9 @@
   */
 
 
-struct NoInitTag {};
+struct NoInitTag
+{
+};
 
 /// Пара, которая не инициализирует элементы, если не нужно.
 template <typename First, typename Second>
@@ -20,15 +22,19 @@ struct PairNoInit
 	First first;
 	Second second;
 
-	PairNoInit() {}
+	PairNoInit()
+	{
+	}
 
 	template <typename First_>
-	PairNoInit(First_ && first_, NoInitTag)
-		: first(std::forward<First_>(first_)) {}
+	PairNoInit(First_ && first_, NoInitTag) : first(std::forward<First_>(first_))
+	{
+	}
 
 	template <typename First_, typename Second_>
-	PairNoInit(First_ && first_, Second_ && second_)
-		: first(std::forward<First_>(first_)), second(std::forward<Second_>(second_)) {}
+	PairNoInit(First_ && first_, Second_ && second_) : first(std::forward<First_>(first_)), second(std::forward<Second_>(second_))
+	{
+	}
 };
 
 
@@ -41,35 +47,79 @@ struct HashMapCell
 	using value_type = PairNoInit<Key, Mapped>;
 	value_type value;
 
-	HashMapCell() {}
-	HashMapCell(const Key & key_, const State & state) : value(key_, NoInitTag()) {}
-	HashMapCell(const value_type & value_, const State & state) : value(value_) {}
+	HashMapCell()
+	{
+	}
+	HashMapCell(const Key & key_, const State & state) : value(key_, NoInitTag())
+	{
+	}
+	HashMapCell(const value_type & value_, const State & state) : value(value_)
+	{
+	}
 
-	value_type & getValue()				{ return value; }
-	const value_type & getValue() const { return value; }
+	value_type & getValue()
+	{
+		return value;
+	}
+	const value_type & getValue() const
+	{
+		return value;
+	}
 
-	static Key & getKey(value_type & value)	{ return value.first; }
-	static const Key & getKey(const value_type & value) { return value.first; }
+	static Key & getKey(value_type & value)
+	{
+		return value.first;
+	}
+	static const Key & getKey(const value_type & value)
+	{
+		return value.first;
+	}
 
-	bool keyEquals(const Key & key_) const { return value.first == key_; }
-	bool keyEquals(const Key & key_, size_t hash_) const { return value.first == key_; }
+	bool keyEquals(const Key & key_) const
+	{
+		return value.first == key_;
+	}
+	bool keyEquals(const Key & key_, size_t hash_) const
+	{
+		return value.first == key_;
+	}
 
-	void setHash(size_t hash_value) {}
-	size_t getHash(const Hash & hash) const { return hash(value.first); }
+	void setHash(size_t hash_value)
+	{
+	}
+	size_t getHash(const Hash & hash) const
+	{
+		return hash(value.first);
+	}
 
-	bool isZero(const State & state) const { return isZero(value.first, state); }
-	static bool isZero(const Key & key, const State & state) { return ZeroTraits::check(key); }
+	bool isZero(const State & state) const
+	{
+		return isZero(value.first, state);
+	}
+	static bool isZero(const Key & key, const State & state)
+	{
+		return ZeroTraits::check(key);
+	}
 
 	/// Установить значение ключа в ноль.
-	void setZero() { ZeroTraits::set(value.first); }
+	void setZero()
+	{
+		ZeroTraits::set(value.first);
+	}
 
 	/// Нужно ли хранить нулевой ключ отдельно (то есть, могут ли в хэш-таблицу вставить нулевой ключ).
 	static constexpr bool need_zero_value_storage = true;
 
 	/// Является ли ячейка удалённой.
-	bool isDeleted() const { return false; }
+	bool isDeleted() const
+	{
+		return false;
+	}
 
-	void setMapped(const value_type & value_) { value.second = value_.second; }
+	void setMapped(const value_type & value_)
+	{
+		value.second = value_.second;
+	}
 
 	/// Сериализация, в бинарном и текстовом виде.
 	void write(DB::WriteBuffer & wb) const
@@ -110,22 +160,31 @@ struct HashMapCellWithSavedHash : public HashMapCell<Key, TMapped, Hash, TState>
 
 	using Base::Base;
 
-	bool keyEquals(const Key & key_) const { return this->value.first == key_; }
-	bool keyEquals(const Key & key_, size_t hash_) const { return saved_hash == hash_ && this->value.first == key_; }
+	bool keyEquals(const Key & key_) const
+	{
+		return this->value.first == key_;
+	}
+	bool keyEquals(const Key & key_, size_t hash_) const
+	{
+		return saved_hash == hash_ && this->value.first == key_;
+	}
 
-	void setHash(size_t hash_value) { saved_hash = hash_value; }
-	size_t getHash(const Hash & hash) const { return saved_hash; }
+	void setHash(size_t hash_value)
+	{
+		saved_hash = hash_value;
+	}
+	size_t getHash(const Hash & hash) const
+	{
+		return saved_hash;
+	}
 };
 
 
-template
-<
-	typename Key,
+template <typename Key,
 	typename Cell,
 	typename Hash = DefaultHash<Key>,
 	typename Grower = HashTableGrower<>,
-	typename Allocator = HashTableAllocator
->
+	typename Allocator = HashTableAllocator>
 class HashMapTable : public HashTable<Key, Cell, Hash, Grower, Allocator>
 {
 public:
@@ -156,30 +215,24 @@ public:
 		  *  компилятор не может об этом догадаться, и генерирует код load, increment, store.
 		  */
 		if (inserted)
-			new(&it->second) mapped_type();
+			new (&it->second) mapped_type();
 
 		return it->second;
 	}
 };
 
 
-template
-<
-	typename Key,
+template <typename Key,
 	typename Mapped,
 	typename Hash = DefaultHash<Key>,
 	typename Grower = HashTableGrower<>,
-	typename Allocator = HashTableAllocator
->
+	typename Allocator = HashTableAllocator>
 using HashMap = HashMapTable<Key, HashMapCell<Key, Mapped, Hash>, Hash, Grower, Allocator>;
 
 
-template
-<
-	typename Key,
+template <typename Key,
 	typename Mapped,
 	typename Hash = DefaultHash<Key>,
 	typename Grower = HashTableGrower<>,
-	typename Allocator = HashTableAllocator
->
+	typename Allocator = HashTableAllocator>
 using HashMapWithSavedHash = HashMapTable<Key, HashMapCellWithSavedHash<Key, Mapped, Hash>, Hash, Grower, Allocator>;

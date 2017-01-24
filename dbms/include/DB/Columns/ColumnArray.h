@@ -2,18 +2,17 @@
 
 #include <string.h> // memcpy
 
-#include <DB/Common/Exception.h>
 #include <DB/Common/Arena.h>
+#include <DB/Common/Exception.h>
 #include <DB/Common/SipHash.h>
 
-#include <DB/Columns/IColumn.h>
-#include <DB/Columns/ColumnsNumber.h>
 #include <DB/Columns/ColumnString.h>
+#include <DB/Columns/ColumnsNumber.h>
+#include <DB/Columns/IColumn.h>
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int ILLEGAL_COLUMN;
@@ -32,8 +31,7 @@ public:
 	using ColumnOffsets_t = ColumnVector<Offset_t>;
 
 	/** Создать пустой столбец массивов, с типом значений, как в столбце nested_column */
-	explicit ColumnArray(ColumnPtr nested_column, ColumnPtr offsets_column = nullptr)
-		: data(nested_column), offsets(offsets_column)
+	explicit ColumnArray(ColumnPtr nested_column, ColumnPtr offsets_column = nullptr) : data(nested_column), offsets(offsets_column)
 	{
 		if (!offsets_column)
 		{
@@ -46,7 +44,10 @@ public:
 		}
 	}
 
-	std::string getName() const override { return "ColumnArray(" + getData().getName() + ")"; }
+	std::string getName() const override
+	{
+		return "ColumnArray(" + getData().getName() + ")";
+	}
 
 	ColumnPtr cloneResized(size_t size) const override
 	{
@@ -234,11 +235,7 @@ public:
 			if (int res = getData().compareAt(offsetAt(n) + i, rhs.offsetAt(m) + i, *rhs.data.get(), nan_direction_hint))
 				return res;
 
-		return lhs_size < rhs_size
-			? -1
-			: (lhs_size == rhs_size
-				? 0
-				: 1);
+		return lhs_size < rhs_size ? -1 : (lhs_size == rhs_size ? 0 : 1);
 	}
 
 	template <bool positive>
@@ -246,7 +243,9 @@ public:
 	{
 		const ColumnArray & parent;
 
-		less(const ColumnArray & parent_) : parent(parent_) {}
+		less(const ColumnArray & parent_) : parent(parent_)
+		{
+		}
 
 		bool operator()(size_t lhs, size_t rhs) const
 		{
@@ -262,7 +261,7 @@ public:
 	void reserve(size_t n) override
 	{
 		getOffsets().reserve(n);
-		getData().reserve(n);		/// Средний размер массивов тут никак не учитывается. Или считается, что он не больше единицы.
+		getData().reserve(n); /// Средний размер массивов тут никак не учитывается. Или считается, что он не больше единицы.
 	}
 
 	size_t byteSize() const override
@@ -286,11 +285,23 @@ public:
 	}
 
 	/** Более эффективные методы манипуляции */
-	IColumn & getData() { return *data.get(); }
-	const IColumn & getData() const { return *data.get(); }
+	IColumn & getData()
+	{
+		return *data.get();
+	}
+	const IColumn & getData() const
+	{
+		return *data.get();
+	}
 
-	ColumnPtr & getDataPtr() { return data; }
-	const ColumnPtr & getDataPtr() const { return data; }
+	ColumnPtr & getDataPtr()
+	{
+		return data;
+	}
+	const ColumnPtr & getDataPtr() const
+	{
+		return data;
+	}
 
 	Offsets_t & ALWAYS_INLINE getOffsets()
 	{
@@ -302,8 +313,14 @@ public:
 		return static_cast<const ColumnOffsets_t &>(*offsets.get()).getData();
 	}
 
-	ColumnPtr & getOffsetsColumn() { return offsets; }
-	const ColumnPtr & getOffsetsColumn() const { return offsets; }
+	ColumnPtr & getOffsetsColumn()
+	{
+		return offsets;
+	}
+	const ColumnPtr & getOffsetsColumn() const
+	{
+		return offsets;
+	}
 
 
 	ColumnPtr replicate(const Offsets_t & replicate_offsets) const override;
@@ -335,10 +352,16 @@ public:
 
 private:
 	ColumnPtr data;
-	ColumnPtr offsets;	/// Смещения могут быть разделяемыми для нескольких столбцов - для реализации вложенных структур данных.
+	ColumnPtr offsets; /// Смещения могут быть разделяемыми для нескольких столбцов - для реализации вложенных структур данных.
 
-	size_t ALWAYS_INLINE offsetAt(size_t i) const	{ return i == 0 ? 0 : getOffsets()[i - 1]; }
-	size_t ALWAYS_INLINE sizeAt(size_t i) const		{ return i == 0 ? getOffsets()[0] : (getOffsets()[i] - getOffsets()[i - 1]); }
+	size_t ALWAYS_INLINE offsetAt(size_t i) const
+	{
+		return i == 0 ? 0 : getOffsets()[i - 1];
+	}
+	size_t ALWAYS_INLINE sizeAt(size_t i) const
+	{
+		return i == 0 ? getOffsets()[0] : (getOffsets()[i] - getOffsets()[i - 1]);
+	}
 
 
 	/// Размножить значения, если вложенный столбец - ColumnVector<T>.
@@ -363,6 +386,4 @@ private:
 	ColumnPtr filterString(const Filter & filt, ssize_t result_size_hint) const;
 	ColumnPtr filterGeneric(const Filter & filt, ssize_t result_size_hint) const;
 };
-
-
 }

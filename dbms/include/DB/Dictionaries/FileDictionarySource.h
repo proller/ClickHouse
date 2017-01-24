@@ -1,12 +1,11 @@
 #pragma once
 
-#include <DB/Dictionaries/IDictionarySource.h>
 #include <Poco/Timestamp.h>
+#include <DB/Dictionaries/IDictionarySource.h>
 
 
 namespace DB
 {
-
 class Context;
 
 
@@ -14,8 +13,7 @@ class Context;
 class FileDictionarySource final : public IDictionarySource
 {
 public:
-	FileDictionarySource(const std::string & filename, const std::string & format, Block & sample_block,
-		const Context & context);
+	FileDictionarySource(const std::string & filename, const std::string & format, Block & sample_block, const Context & context);
 
 	FileDictionarySource(const FileDictionarySource & other);
 
@@ -23,19 +21,27 @@ public:
 
 	BlockInputStreamPtr loadIds(const std::vector<UInt64> & ids) override
 	{
-		throw Exception{"Method loadIds is unsupported for FileDictionarySource", ErrorCodes::NOT_IMPLEMENTED};
+		throw Exception{ "Method loadIds is unsupported for FileDictionarySource", ErrorCodes::NOT_IMPLEMENTED };
 	}
 
-	BlockInputStreamPtr loadKeys(
-		const ConstColumnPlainPtrs & key_columns, const std::vector<std::size_t> & requested_rows) override
+	BlockInputStreamPtr loadKeys(const ConstColumnPlainPtrs & key_columns, const std::vector<std::size_t> & requested_rows) override
 	{
-		throw Exception{"Method loadKeys is unsupported for FileDictionarySource", ErrorCodes::NOT_IMPLEMENTED};
+		throw Exception{ "Method loadKeys is unsupported for FileDictionarySource", ErrorCodes::NOT_IMPLEMENTED };
 	}
 
-	bool isModified() const override { return getLastModification() > last_modification; }
-	bool supportsSelectiveLoad() const override { return false; }
+	bool isModified() const override
+	{
+		return getLastModification() > last_modification;
+	}
+	bool supportsSelectiveLoad() const override
+	{
+		return false;
+	}
 
-	DictionarySourcePtr clone() const override { return std::make_unique<FileDictionarySource>(*this); }
+	DictionarySourcePtr clone() const override
+	{
+		return std::make_unique<FileDictionarySource>(*this);
+	}
 
 	std::string toString() const override;
 
@@ -48,5 +54,4 @@ private:
 	const Context & context;
 	Poco::Timestamp last_modification;
 };
-
 }

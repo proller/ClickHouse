@@ -1,14 +1,12 @@
-#include <DB/Storages/MergeTree/ReplicatedMergeTreeLogEntry.h>
 #include <DB/Storages/MergeTree/ActiveDataPartSet.h>
 #include <DB/Storages/MergeTree/MergeTreeData.h>
+#include <DB/Storages/MergeTree/ReplicatedMergeTreeLogEntry.h>
 
 #include <zkutil/ZooKeeper.h>
 
 
 namespace DB
 {
-
-
 class MergeTreeDataMerger;
 
 
@@ -28,8 +26,7 @@ private:
 	{
 		bool operator()(const LogEntryPtr & lhs, const LogEntryPtr & rhs) const
 		{
-			return std::forward_as_tuple(lhs.get()->create_time, lhs.get())
-				 < std::forward_as_tuple(rhs.get()->create_time, rhs.get());
+			return std::forward_as_tuple(lhs.get()->create_time, lhs.get()) < std::forward_as_tuple(rhs.get()->create_time, rhs.get());
 		}
 	};
 
@@ -90,10 +87,12 @@ private:
 
 	/// После удаления элемента очереди, обновить времена insert-ов в оперативке. Выполняется под queue_mutex.
 	/// Возвращает информацию, какие времена изменились - эту информацию можно передать в updateTimesInZooKeeper.
-	void updateTimesOnRemoval(const LogEntryPtr & entry, bool & min_unprocessed_insert_time_changed, bool & max_processed_insert_time_changed);
+	void updateTimesOnRemoval(
+		const LogEntryPtr & entry, bool & min_unprocessed_insert_time_changed, bool & max_processed_insert_time_changed);
 
 	/// Обновить времена insert-ов в ZooKeeper.
-	void updateTimesInZooKeeper(zkutil::ZooKeeperPtr zookeeper, bool min_unprocessed_insert_time_changed, bool max_processed_insert_time_changed);
+	void updateTimesInZooKeeper(
+		zkutil::ZooKeeperPtr zookeeper, bool min_unprocessed_insert_time_changed, bool max_processed_insert_time_changed);
 
 
 	/// Помечает элемент очереди как выполняющийся.
@@ -107,15 +106,21 @@ private:
 
 		/// Создаётся только в функции selectEntryToProcess. Вызывается под mutex-ом.
 		CurrentlyExecuting(ReplicatedMergeTreeQueue::LogEntryPtr & entry, ReplicatedMergeTreeQueue & queue);
+
 	public:
 		~CurrentlyExecuting();
 	};
 
 public:
-	ReplicatedMergeTreeQueue() {}
+	ReplicatedMergeTreeQueue()
+	{
+	}
 
-	void initialize(const String & zookeeper_path_, const String & replica_path_, const String & logger_name_,
-		const MergeTreeData::DataParts & parts, zkutil::ZooKeeperPtr zookeeper);
+	void initialize(const String & zookeeper_path_,
+		const String & replica_path_,
+		const String & logger_name_,
+		const MergeTreeData::DataParts & parts,
+		zkutil::ZooKeeperPtr zookeeper);
 
 	/** Вставить действие в конец очереди.
 	  * Для восстановления битых кусков во время работы.
@@ -157,7 +162,8 @@ public:
 	  * Если в процессе обработки было исключение - сохраняет его в entry.
 	  * Возвращает true, если в процессе обработки не было исключений.
 	  */
-	bool processEntry(std::function<zkutil::ZooKeeperPtr()> get_zookeeper, LogEntryPtr & entry, const std::function<bool(LogEntryPtr &)> func);
+	bool processEntry(
+		std::function<zkutil::ZooKeeperPtr()> get_zookeeper, LogEntryPtr & entry, const std::function<bool(LogEntryPtr &)> func);
 
 	/// Будет ли кусок в будущем слит в более крупный (или мерджи кусков в данном диапазоне запрещены)?
 	bool partWillBeMergedOrMergesDisabled(const String & part_name) const;
@@ -199,5 +205,4 @@ public:
   *  и не соответствует никакой автоинкрементной ноде в ZK.
   */
 String padIndex(Int64 index);
-
 }

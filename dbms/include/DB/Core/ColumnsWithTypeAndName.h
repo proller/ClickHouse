@@ -7,7 +7,5 @@
 
 namespace DB
 {
-
 using ColumnsWithTypeAndName = std::vector<ColumnWithTypeAndName>;
-
 }

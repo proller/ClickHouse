@@ -1,11 +1,11 @@
 #pragma once
 
-#include <DB/Core/Types.h>
-#include <DB/Core/NamesAndTypes.h>
-#include <DB/Storages/ColumnDefault.h>
 #include <ctime>
-#include <memory>
 #include <functional>
+#include <memory>
+#include <DB/Core/NamesAndTypes.h>
+#include <DB/Core/Types.h>
+#include <DB/Storages/ColumnDefault.h>
 
 
 class ThreadPool;
@@ -13,7 +13,6 @@ class ThreadPool;
 
 namespace DB
 {
-
 class Context;
 
 class IStorage;
@@ -36,7 +35,9 @@ public:
 	virtual const String & name() const = 0;
 	virtual StoragePtr & table() const = 0;
 
-	virtual ~IDatabaseIterator() {}
+	virtual ~IDatabaseIterator()
+	{
+	}
 };
 
 using DatabaseIteratorPtr = std::unique_ptr<IDatabaseIterator>;
@@ -76,7 +77,8 @@ public:
 
 	/// Добавить таблицу в базу данных. Прописать её наличие в метаданных.
 	virtual void createTable(
-		const String & name, const StoragePtr & table, const ASTPtr & query, const String & engine, const Settings & settings) = 0;
+		const String & name, const StoragePtr & table, const ASTPtr & query, const String & engine, const Settings & settings)
+		= 0;
 
 	/// Удалить таблицу из базы данных и вернуть её. Удалить метаданные.
 	virtual void removeTable(const String & name) = 0;
@@ -89,7 +91,8 @@ public:
 
 	/// Переименовать таблицу и, возможно, переместить таблицу в другую БД.
 	virtual void renameTable(
-		const Context & context, const String & name, IDatabase & to_database, const String & to_name, const Settings & settings) = 0;
+		const Context & context, const String & name, IDatabase & to_database, const String & to_name, const Settings & settings)
+		= 0;
 
 	/// Returns time of table's metadata change, 0 if there is no corresponding metadata file.
 	virtual time_t getTableMetadataModificationTime(const String & name) = 0;
@@ -98,14 +101,14 @@ public:
 
 	/// Изменить структуру таблицы в метаданных.
 	/// Нужно вызывать под TableStructureLock соответствующей таблицы. Если engine_modifier пустой, то engine не изменяется.
-	virtual void alterTable(
-		const Context & context,
+	virtual void alterTable(const Context & context,
 		const String & name,
 		const NamesAndTypesList & columns,
 		const NamesAndTypesList & materialized_columns,
 		const NamesAndTypesList & alias_columns,
 		const ColumnDefaults & column_defaults,
-		const ASTModifier & engine_modifier) = 0;
+		const ASTModifier & engine_modifier)
+		= 0;
 
 	/// Получить запрос CREATE TABLE для таблицы. Может выдавать информацию и для detached таблиц, для которых есть метаданные.
 	virtual ASTPtr getCreateQuery(const String & name) const = 0;
@@ -116,11 +119,11 @@ public:
 	/// Удалить метаданные, удаление которых отличается от рекурсивного удаления директории, если такие есть.
 	virtual void drop() = 0;
 
-	virtual ~IDatabase() {}
+	virtual ~IDatabase()
+	{
+	}
 };
 
 using DatabasePtr = std::shared_ptr<IDatabase>;
 using Databases = std::map<String, DatabasePtr>;
-
 }
-

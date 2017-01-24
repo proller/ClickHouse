@@ -1,15 +1,14 @@
 #pragma once
 
-#include <thread>
-#include <mutex>
 #include <condition_variable>
-#include <unordered_map>
+#include <mutex>
 #include <string>
+#include <thread>
+#include <unordered_map>
 
 
 namespace DB
 {
-
 class Context;
 
 
@@ -20,8 +19,7 @@ class Context;
 class AsynchronousMetrics
 {
 public:
-	AsynchronousMetrics(Context & context_)
-		: context(context_), thread([this] { run(); })
+	AsynchronousMetrics(Context & context_) : context(context_), thread([this] { run(); })
 	{
 	}
 
@@ -36,7 +34,7 @@ public:
 private:
 	Context & context;
 
-	bool quit {false};
+	bool quit{ false };
 	std::mutex wait_mutex;
 	std::condition_variable wait_cond;
 
@@ -50,5 +48,4 @@ private:
 
 	void set(const std::string & name, Value value);
 };
-
 }

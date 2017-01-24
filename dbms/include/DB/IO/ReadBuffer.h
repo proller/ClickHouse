@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cstring>
 #include <algorithm>
+#include <cstring>
 
 #include <DB/Common/Exception.h>
 #include <DB/IO/BufferBase.h>
@@ -9,7 +9,6 @@
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int ATTEMPT_TO_READ_AFTER_EOF;
@@ -33,14 +32,23 @@ public:
 	/** Создаёт буфер и устанавливает кусок доступных данных для чтения нулевого размера,
 	  *  чтобы при первой попытке чтения вызвалась функция next() для загрузки в буфер новой порции данных.
 	  */
-	ReadBuffer(Position ptr, size_t size) : BufferBase(ptr, size, 0) { working_buffer.resize(0); }
+	ReadBuffer(Position ptr, size_t size) : BufferBase(ptr, size, 0)
+	{
+		working_buffer.resize(0);
+	}
 
 	/** Используется, если буфер уже заполнен данными, которые можно читать.
 	  *  (в этом случае, передайте 0 в качестве offset)
 	  */
-	ReadBuffer(Position ptr, size_t size, size_t offset) : BufferBase(ptr, size, offset) {}
+	ReadBuffer(Position ptr, size_t size, size_t offset) : BufferBase(ptr, size, offset)
+	{
+	}
 
-	void set(Position ptr, size_t size) { BufferBase::set(ptr, size, 0); working_buffer.resize(0); }
+	void set(Position ptr, size_t size)
+	{
+		BufferBase::set(ptr, size, 0);
+		working_buffer.resize(0);
+	}
 
 	/** прочитать следующие данные и заполнить ими буфер; переместить позицию в начало;
 	  * вернуть false в случае конца, true иначе; кинуть исключение, если что-то не так
@@ -64,7 +72,9 @@ public:
 			next();
 	}
 
-	virtual ~ReadBuffer() {}
+	virtual ~ReadBuffer()
+	{
+	}
 
 
 	/** В отличие от std::istream, возвращает true, если все данные были прочитаны
@@ -158,8 +168,9 @@ private:
 	  * Вернуть false в случае конца, true иначе.
 	  * Кинуть исключение, если что-то не так.
 	  */
-	virtual bool nextImpl() { return false; };
+	virtual bool nextImpl()
+	{
+		return false;
+	};
 };
-
-
 }

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <string.h>
 #include <sql.h>
+#include <string.h>
 
 #include "Log.h"
 
@@ -77,8 +77,8 @@ std::string stringFromSQLChar(SQLCHAR * data, SIZE_TYPE size)
 
 
 template <typename PTR, typename LENGTH>
-RETCODE fillOutputString(const char * value, size_t size_without_zero,
-	PTR out_value, LENGTH out_value_max_length, LENGTH * out_value_length)
+RETCODE fillOutputString(
+	const char * value, size_t size_without_zero, PTR out_value, LENGTH out_value_max_length, LENGTH * out_value_length)
 {
 	if (out_value_length)
 		*out_value_length = size_without_zero;
@@ -101,7 +101,7 @@ RETCODE fillOutputString(const char * value, size_t size_without_zero,
 				memcpy(out_value, value, out_value_max_length - 1);
 				reinterpret_cast<char *>(out_value)[out_value_max_length - 1] = 0;
 
-				LOG((char*)(out_value));
+				LOG((char *)(out_value));
 			}
 			res = SQL_SUCCESS_WITH_INFO;
 		}
@@ -111,23 +111,20 @@ RETCODE fillOutputString(const char * value, size_t size_without_zero,
 }
 
 template <typename PTR, typename LENGTH>
-RETCODE fillOutputString(const char * value,
-	PTR out_value, LENGTH out_value_max_length, LENGTH * out_value_length)
+RETCODE fillOutputString(const char * value, PTR out_value, LENGTH out_value_max_length, LENGTH * out_value_length)
 {
 	return fillOutputString(value, strlen(value), out_value, out_value_max_length, out_value_length);
 }
 
 template <typename PTR, typename LENGTH>
-RETCODE fillOutputString(const std::string & value,
-	PTR out_value, LENGTH out_value_max_length, LENGTH * out_value_length)
+RETCODE fillOutputString(const std::string & value, PTR out_value, LENGTH out_value_max_length, LENGTH * out_value_length)
 {
 	return fillOutputString(value.data(), value.size(), out_value, out_value_max_length, out_value_length);
 }
 
 
 template <typename NUM, typename PTR, typename LENGTH>
-RETCODE fillOutputNumber(NUM num,
-	PTR out_value, LENGTH out_value_max_length, LENGTH * out_value_length)
+RETCODE fillOutputNumber(NUM num, PTR out_value, LENGTH out_value_max_length, LENGTH * out_value_length)
 {
 	if (out_value_length)
 		*out_value_length = sizeof(num);
@@ -156,18 +153,21 @@ RETCODE fillOutputNumber(NUM num,
 
 /// См. для примера info.cpp
 
-#define CASE_FALLTHROUGH(NAME) \
-	case NAME: \
-		if (!name) name = #NAME;
+#define CASE_FALLTHROUGH(NAME)                                                                                                             \
+	case NAME:                                                                                                                             \
+		if (!name)                                                                                                                         \
+			name = #NAME;
 
-#define CASE_STRING(NAME, VALUE) \
-	case NAME: \
-		if (!name) name = #NAME; \
-		LOG("GetInfo " << name << ", type: String, value: " << (VALUE)); \
+#define CASE_STRING(NAME, VALUE)                                                                                                           \
+	case NAME:                                                                                                                             \
+		if (!name)                                                                                                                         \
+			name = #NAME;                                                                                                                  \
+		LOG("GetInfo " << name << ", type: String, value: " << (VALUE));                                                                   \
 		return fillOutputString(VALUE, out_value, out_value_max_length, out_value_length);
 
-#define CASE_NUM(NAME, TYPE, VALUE) \
-	case NAME: \
-		if (!name) name = #NAME; \
-		LOG("GetInfo " << name << ", type: " << #TYPE << ", value: " << #VALUE << " = " << (VALUE)); \
+#define CASE_NUM(NAME, TYPE, VALUE)                                                                                                        \
+	case NAME:                                                                                                                             \
+		if (!name)                                                                                                                         \
+			name = #NAME;                                                                                                                  \
+		LOG("GetInfo " << name << ", type: " << #TYPE << ", value: " << #VALUE << " = " << (VALUE));                                       \
 		return fillOutputNumber<TYPE>(VALUE, out_value, out_value_max_length, out_value_length);

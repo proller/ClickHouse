@@ -1,7 +1,7 @@
 #pragma once
 
-#include <DB/IO/WriteBuffer.h>
 #include <DB/IO/BufferWithOwnMemory.h>
+#include <DB/IO/WriteBuffer.h>
 #include <DB/IO/ZlibCompressionMethod.h>
 
 #include <zlib.h>
@@ -9,7 +9,6 @@
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int ZLIB_DEFLATE_FAILED;
@@ -19,13 +18,12 @@ namespace ErrorCodes
 class ZlibDeflatingWriteBuffer : public BufferWithOwnMemory<WriteBuffer>
 {
 public:
-	ZlibDeflatingWriteBuffer(
-			WriteBuffer & out_,
-			ZlibCompressionMethod compression_method,
-			int compression_level,
-			size_t buf_size = DBMS_DEFAULT_BUFFER_SIZE,
-			char * existing_memory = nullptr,
-			size_t alignment = 0);
+	ZlibDeflatingWriteBuffer(WriteBuffer & out_,
+		ZlibCompressionMethod compression_method,
+		int compression_level,
+		size_t buf_size = DBMS_DEFAULT_BUFFER_SIZE,
+		char * existing_memory = nullptr,
+		size_t alignment = 0);
 
 	/// Flush all pending data and write zlib footer to the underlying buffer.
 	/// After the first call to this function, subsequent calls will have no effect and
@@ -41,5 +39,4 @@ private:
 	z_stream zstr;
 	bool finished = false;
 };
-
 }

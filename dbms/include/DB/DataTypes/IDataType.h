@@ -2,13 +2,12 @@
 
 #include <memory>
 
-#include <DB/Core/Field.h>
 #include <DB/Columns/IColumn.h>
+#include <DB/Core/Field.h>
 
 
 namespace DB
 {
-
 class ReadBuffer;
 class WriteBuffer;
 
@@ -28,20 +27,35 @@ public:
 	virtual std::string getName() const = 0;
 
 	/// Is this type the null type?
-	virtual bool isNull() const { return false; }
+	virtual bool isNull() const
+	{
+		return false;
+	}
 
 	/// Is this type nullable?
-	virtual bool isNullable() const { return false; }
+	virtual bool isNullable() const
+	{
+		return false;
+	}
 
 	/// Is this type numeric? Date and DateTime types are considered as such.
-	virtual bool isNumeric() const { return false; }
+	virtual bool isNumeric() const
+	{
+		return false;
+	}
 
 	/// Is this type numeric and not nullable?
-	virtual bool isNumericNotNullable() const { return isNumeric(); }
+	virtual bool isNumericNotNullable() const
+	{
+		return isNumeric();
+	}
 
 	/// If this type is numeric, are all the arithmetic operations and type casting
 	/// relevant for it? True for numbers. False for Date and DateTime types.
-	virtual bool behavesAsNumber() const { return false; }
+	virtual bool behavesAsNumber() const
+	{
+		return false;
+	}
 
 	/// Клонировать
 	virtual DataTypePtr clone() const = 0;
@@ -141,9 +155,8 @@ public:
 		throw Exception("getSizeOfField() method is not implemented for data type " + getName(), ErrorCodes::NOT_IMPLEMENTED);
 	}
 
-	virtual ~IDataType() {}
+	virtual ~IDataType()
+	{
+	}
 };
-
-
 }
-

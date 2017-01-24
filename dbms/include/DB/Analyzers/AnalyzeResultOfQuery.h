@@ -1,12 +1,11 @@
 #pragma once
 
-#include <DB/Parsers/IAST.h>
 #include <DB/Core/Block.h>
+#include <DB/Parsers/IAST.h>
 
 
 namespace DB
 {
-
 class WriteBuffer;
 class Context;
 
@@ -27,5 +26,4 @@ struct AnalyzeResultOfQuery
 	/// Debug output
 	void dump(WriteBuffer & out) const;
 };
-
 }

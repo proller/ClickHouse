@@ -1,13 +1,12 @@
 #pragma once
 #include <mutex>
+#include <set>
 #include <Poco/RegularExpression.h>
 #include <common/DateLUT.h>
 #include <DB/Core/Types.h>
-#include <set>
 
 namespace DB
 {
-
 /** Поддерживает множество названий активных кусков данных.
   * Повторяет часть функциональности MergeTreeData.
   * TODO: обобщить с MergeTreeData. Можно этот класс оставить примерно как есть и использовать его из MergeTreeData.
@@ -16,7 +15,9 @@ namespace DB
 class ActiveDataPartSet
 {
 public:
-	ActiveDataPartSet() {}
+	ActiveDataPartSet()
+	{
+	}
 	ActiveDataPartSet(const Strings & names);
 
 	struct Part
@@ -48,11 +49,8 @@ public:
 		/// Содержит другой кусок (получен после объединения другого куска с каким-то ещё)
 		bool contains(const Part & rhs) const
 		{
-			return month == rhs.month		/// Куски за разные месяцы не объединяются
-				&& left_date <= rhs.left_date
-				&& right_date >= rhs.right_date
-				&& left <= rhs.left
-				&& right >= rhs.right
+			return month == rhs.month /// Куски за разные месяцы не объединяются
+				&& left_date <= rhs.left_date && right_date >= rhs.right_date && left <= rhs.left && right >= rhs.right
 				&& level >= rhs.level;
 		}
 	};
@@ -86,5 +84,4 @@ private:
 	void addImpl(const String & name);
 	String getContainingPartImpl(const String & name) const;
 };
-
 }

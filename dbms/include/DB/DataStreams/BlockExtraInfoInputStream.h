@@ -4,15 +4,13 @@
 
 namespace DB
 {
-
 /** Прибавляет к одному потоку дополнительную информацию о блоках, которая задана
   * в качестве параметра конструктора.
   */
 class BlockExtraInfoInputStream : public IProfilingBlockInputStream
 {
 public:
-	BlockExtraInfoInputStream(BlockInputStreamPtr input_, const BlockExtraInfo & block_extra_info_)
-		: block_extra_info(block_extra_info_)
+	BlockExtraInfoInputStream(BlockInputStreamPtr input_, const BlockExtraInfo & block_extra_info_) : block_extra_info(block_extra_info_)
 	{
 		children.push_back(input_);
 	}
@@ -22,7 +20,10 @@ public:
 		return block_extra_info;
 	}
 
-	String getName() const override { return "BlockExtraInfoInput"; }
+	String getName() const override
+	{
+		return "BlockExtraInfoInput";
+	}
 
 	String getID() const override
 	{
@@ -40,5 +41,4 @@ protected:
 private:
 	BlockExtraInfo block_extra_info;
 };
-
 }

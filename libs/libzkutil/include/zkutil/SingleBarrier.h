@@ -1,12 +1,11 @@
 #pragma once
 
-#include <zkutil/Common.h>
-#include <string>
 #include <functional>
+#include <string>
+#include <zkutil/Common.h>
 
 namespace zkutil
 {
-
 /// Implementation of a distributed single barrier for ZooKeeper.
 /// Consider a barrier with N slots. A node that wants to enter this barrier
 /// creates a uniquely identified token and puts it in a free slot, then waits
@@ -53,5 +52,4 @@ private:
 	/// Number of available slots.
 	size_t counter;
 };
-
 }

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <DB/IO/WriteHelpers.h>
 #include <DB/IO/ReadHelpers.h>
+#include <DB/IO/WriteHelpers.h>
 
 #include <DB/DataTypes/DataTypesNumberFixed.h>
 
@@ -10,24 +10,28 @@
 
 namespace DB
 {
-
-
 template <typename T>
 struct AggregateFunctionAvgData
 {
 	T sum;
 	UInt64 count;
 
-	AggregateFunctionAvgData() : sum(0), count(0) {}
+	AggregateFunctionAvgData() : sum(0), count(0)
+	{
+	}
 };
 
 
 /// Считает арифметическое среднее значение чисел.
 template <typename T>
-class AggregateFunctionAvg final : public IUnaryAggregateFunction<AggregateFunctionAvgData<typename NearestFieldType<T>::Type>, AggregateFunctionAvg<T> >
+class AggregateFunctionAvg final
+	: public IUnaryAggregateFunction<AggregateFunctionAvgData<typename NearestFieldType<T>::Type>, AggregateFunctionAvg<T>>
 {
 public:
-	String getName() const override { return "avg"; }
+	String getName() const override
+	{
+		return "avg";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -68,10 +72,7 @@ public:
 
 	void insertResultInto(ConstAggregateDataPtr place, IColumn & to) const override
 	{
-		static_cast<ColumnFloat64 &>(to).getData().push_back(
-			static_cast<Float64>(this->data(place).sum) / this->data(place).count);
+		static_cast<ColumnFloat64 &>(to).getData().push_back(static_cast<Float64>(this->data(place).sum) / this->data(place).count);
 	}
 };
-
-
 }

@@ -3,14 +3,12 @@
 #include <DB/IO/CompressedReadBufferBase.h>
 #include <DB/IO/ReadBufferFromFileBase.h>
 
-#include <time.h>
 #include <memory>
+#include <time.h>
 
 
 namespace DB
 {
-
-
 /// В отличие от CompressedReadBuffer, умеет делать seek.
 class CompressedReadBufferFromFile : public CompressedReadBufferBase, public BufferWithOwnMemory<ReadBuffer>
 {
@@ -36,10 +34,10 @@ public:
 
 	size_t readBig(char * to, size_t n) override;
 
-	void setProfileCallback(const ReadBufferFromFileBase::ProfileCallback & profile_callback_, clockid_t clock_type_ = CLOCK_MONOTONIC_COARSE)
+	void setProfileCallback(
+		const ReadBufferFromFileBase::ProfileCallback & profile_callback_, clockid_t clock_type_ = CLOCK_MONOTONIC_COARSE)
 	{
 		file_in.setProfileCallback(profile_callback_, clock_type_);
 	}
 };
-
 }

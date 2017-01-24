@@ -1,22 +1,22 @@
 #pragma once
 
-#include <DB/Columns/ColumnsNumber.h>
 #include <DB/Columns/ColumnConst.h>
-#include <DB/Columns/ColumnString.h>
 #include <DB/Columns/ColumnFixedString.h>
+#include <DB/Columns/ColumnString.h>
 #include <DB/Columns/ColumnTuple.h>
+#include <DB/Columns/ColumnsNumber.h>
 
-#include <DB/DataTypes/DataTypesNumberFixed.h>
-#include <DB/DataTypes/DataTypeDateTime.h>
 #include <DB/DataTypes/DataTypeDate.h>
-#include <DB/DataTypes/DataTypeString.h>
-#include <DB/DataTypes/DataTypeFixedString.h>
-#include <DB/DataTypes/DataTypeTuple.h>
+#include <DB/DataTypes/DataTypeDateTime.h>
 #include <DB/DataTypes/DataTypeEnum.h>
+#include <DB/DataTypes/DataTypeFixedString.h>
+#include <DB/DataTypes/DataTypeString.h>
+#include <DB/DataTypes/DataTypeTuple.h>
+#include <DB/DataTypes/DataTypesNumberFixed.h>
 
+#include <DB/Functions/AccurateComparison.h>
 #include <DB/Functions/FunctionsLogical.h>
 #include <DB/Functions/IFunction.h>
-#include <DB/Functions/AccurateComparison.h>
 
 #include <DB/IO/ReadBufferFromString.h>
 #include <DB/IO/ReadHelpers.h>
@@ -27,7 +27,6 @@
 
 namespace DB
 {
-
 /** Функции сравнения: ==, !=, <, >, <=, >=.
   * Функции сравнения возвращают всегда 0 или 1 (UInt8).
   *
@@ -44,15 +43,57 @@ namespace DB
   * TODO Массивы.
   */
 
-template <typename A, typename B> struct EqualsOp 			{ static UInt8 apply(A a, B b) { return accurate::equalsOp(a, b); } };
-template <typename A, typename B> struct NotEqualsOp 		{ static UInt8 apply(A a, B b) { return accurate::notEqualsOp(a, b); } };
-template <typename A, typename B> struct LessOp 			{ static UInt8 apply(A a, B b) { return accurate::lessOp(a, b); } };
-template <typename A, typename B> struct GreaterOp 			{ static UInt8 apply(A a, B b) { return accurate::greaterOp(a, b); } };
-template <typename A, typename B> struct LessOrEqualsOp 	{ static UInt8 apply(A a, B b) { return accurate::lessOrEqualsOp(a, b); } };
-template <typename A, typename B> struct GreaterOrEqualsOp 	{ static UInt8 apply(A a, B b) { return accurate::greaterOrEqualsOp(a, b); } };
+template <typename A, typename B>
+struct EqualsOp
+{
+	static UInt8 apply(A a, B b)
+	{
+		return accurate::equalsOp(a, b);
+	}
+};
+template <typename A, typename B>
+struct NotEqualsOp
+{
+	static UInt8 apply(A a, B b)
+	{
+		return accurate::notEqualsOp(a, b);
+	}
+};
+template <typename A, typename B>
+struct LessOp
+{
+	static UInt8 apply(A a, B b)
+	{
+		return accurate::lessOp(a, b);
+	}
+};
+template <typename A, typename B>
+struct GreaterOp
+{
+	static UInt8 apply(A a, B b)
+	{
+		return accurate::greaterOp(a, b);
+	}
+};
+template <typename A, typename B>
+struct LessOrEqualsOp
+{
+	static UInt8 apply(A a, B b)
+	{
+		return accurate::lessOrEqualsOp(a, b);
+	}
+};
+template <typename A, typename B>
+struct GreaterOrEqualsOp
+{
+	static UInt8 apply(A a, B b)
+	{
+		return accurate::greaterOrEqualsOp(a, b);
+	}
+};
 
 
-template<typename A, typename B, typename Op>
+template <typename A, typename B, typename Op>
 struct NumComparisonImpl
 {
 	static void vector_vector(const PaddedPODArray<A> & a, const PaddedPODArray<B> & b, PaddedPODArray<UInt8> & c)
@@ -117,9 +158,10 @@ struct NumComparisonImpl
 template <typename Op>
 struct StringComparisonImpl
 {
-	static void string_vector_string_vector(
-		const ColumnString::Chars_t & a_data, const ColumnString::Offsets_t & a_offsets,
-		const ColumnString::Chars_t & b_data, const ColumnString::Offsets_t & b_offsets,
+	static void string_vector_string_vector(const ColumnString::Chars_t & a_data,
+		const ColumnString::Offsets_t & a_offsets,
+		const ColumnString::Chars_t & b_data,
+		const ColumnString::Offsets_t & b_offsets,
 		PaddedPODArray<UInt8> & c)
 	{
 		size_t size = a_offsets.size();
@@ -132,15 +174,18 @@ struct StringComparisonImpl
 			}
 			else
 			{
-				c[i] = Op::apply(memcmp(&a_data[a_offsets[i - 1]], &b_data[b_offsets[i - 1]],
-					std::min(a_offsets[i] - a_offsets[i - 1], b_offsets[i] - b_offsets[i - 1])), 0);
+				c[i] = Op::apply(memcmp(&a_data[a_offsets[i - 1]],
+									 &b_data[b_offsets[i - 1]],
+									 std::min(a_offsets[i] - a_offsets[i - 1], b_offsets[i] - b_offsets[i - 1])),
+					0);
 			}
 		}
 	}
 
-	static void string_vector_fixed_string_vector(
-		const ColumnString::Chars_t & a_data, const ColumnString::Offsets_t & a_offsets,
-		const ColumnString::Chars_t & b_data, ColumnString::Offset_t b_n,
+	static void string_vector_fixed_string_vector(const ColumnString::Chars_t & a_data,
+		const ColumnString::Offsets_t & a_offsets,
+		const ColumnString::Chars_t & b_data,
+		ColumnString::Offset_t b_n,
 		PaddedPODArray<UInt8> & c)
 	{
 		size_t size = a_offsets.size();
@@ -153,17 +198,14 @@ struct StringComparisonImpl
 			}
 			else
 			{
-				int res = memcmp(&a_data[a_offsets[i - 1]], &b_data[i * b_n],
-					std::min(a_offsets[i] - a_offsets[i - 1] - 1, b_n));
+				int res = memcmp(&a_data[a_offsets[i - 1]], &b_data[i * b_n], std::min(a_offsets[i] - a_offsets[i - 1] - 1, b_n));
 				c[i] = Op::apply(res, 0) || (res == 0 && Op::apply(a_offsets[i] - a_offsets[i - 1], b_n + 1));
 			}
 		}
 	}
 
 	static void string_vector_constant(
-		const ColumnString::Chars_t & a_data, const ColumnString::Offsets_t & a_offsets,
-		const std::string & b,
-		PaddedPODArray<UInt8> & c)
+		const ColumnString::Chars_t & a_data, const ColumnString::Offsets_t & a_offsets, const std::string & b, PaddedPODArray<UInt8> & c)
 	{
 		size_t size = a_offsets.size();
 		ColumnString::Offset_t b_n = b.size();
@@ -176,15 +218,15 @@ struct StringComparisonImpl
 			}
 			else
 			{
-				c[i] = Op::apply(memcmp(&a_data[a_offsets[i - 1]], b_data,
-					std::min(a_offsets[i] - a_offsets[i - 1], b_n + 1)), 0);
+				c[i] = Op::apply(memcmp(&a_data[a_offsets[i - 1]], b_data, std::min(a_offsets[i] - a_offsets[i - 1], b_n + 1)), 0);
 			}
 		}
 	}
 
-	static void fixed_string_vector_string_vector(
-		const ColumnString::Chars_t & a_data, ColumnString::Offset_t a_n,
-		const ColumnString::Chars_t & b_data, const ColumnString::Offsets_t & b_offsets,
+	static void fixed_string_vector_string_vector(const ColumnString::Chars_t & a_data,
+		ColumnString::Offset_t a_n,
+		const ColumnString::Chars_t & b_data,
+		const ColumnString::Offsets_t & b_offsets,
 		PaddedPODArray<UInt8> & c)
 	{
 		size_t size = b_offsets.size();
@@ -197,16 +239,16 @@ struct StringComparisonImpl
 			}
 			else
 			{
-				int res = memcmp(&a_data[i * a_n], &b_data[b_offsets[i - 1]],
-					std::min(b_offsets[i] - b_offsets[i - 1] - 1, a_n));
+				int res = memcmp(&a_data[i * a_n], &b_data[b_offsets[i - 1]], std::min(b_offsets[i] - b_offsets[i - 1] - 1, a_n));
 				c[i] = Op::apply(res, 0) || (res == 0 && Op::apply(a_n + 1, b_offsets[i] - b_offsets[i - 1]));
 			}
 		}
 	}
 
-	static void fixed_string_vector_fixed_string_vector(
-		const ColumnString::Chars_t & a_data, ColumnString::Offset_t a_n,
-		const ColumnString::Chars_t & b_data, ColumnString::Offset_t b_n,
+	static void fixed_string_vector_fixed_string_vector(const ColumnString::Chars_t & a_data,
+		ColumnString::Offset_t a_n,
+		const ColumnString::Chars_t & b_data,
+		ColumnString::Offset_t b_n,
 		PaddedPODArray<UInt8> & c)
 	{
 		size_t size = a_data.size();
@@ -218,9 +260,7 @@ struct StringComparisonImpl
 	}
 
 	static void fixed_string_vector_constant(
-		const ColumnString::Chars_t & a_data, ColumnString::Offset_t a_n,
-		const std::string & b,
-		PaddedPODArray<UInt8> & c)
+		const ColumnString::Chars_t & a_data, ColumnString::Offset_t a_n, const std::string & b, PaddedPODArray<UInt8> & c)
 	{
 		size_t size = a_data.size();
 		const UInt8 * b_data = reinterpret_cast<const UInt8 *>(b.data());
@@ -233,9 +273,7 @@ struct StringComparisonImpl
 	}
 
 	static void constant_string_vector(
-		const std::string & a,
-		const ColumnString::Chars_t & b_data, const ColumnString::Offsets_t & b_offsets,
-		PaddedPODArray<UInt8> & c)
+		const std::string & a, const ColumnString::Chars_t & b_data, const ColumnString::Offsets_t & b_offsets, PaddedPODArray<UInt8> & c)
 	{
 		size_t size = b_offsets.size();
 		ColumnString::Offset_t a_n = a.size();
@@ -248,16 +286,13 @@ struct StringComparisonImpl
 			}
 			else
 			{
-				c[i] = Op::apply(memcmp(a_data, &b_data[b_offsets[i - 1]],
-					std::min(b_offsets[i] - b_offsets[i - 1], a_n + 1)), 0);
+				c[i] = Op::apply(memcmp(a_data, &b_data[b_offsets[i - 1]], std::min(b_offsets[i] - b_offsets[i - 1], a_n + 1)), 0);
 			}
 		}
 	}
 
 	static void constant_fixed_string_vector(
-		const std::string & a,
-		const ColumnString::Chars_t & b_data, ColumnString::Offset_t b_n,
-		PaddedPODArray<UInt8> & c)
+		const std::string & a, const ColumnString::Chars_t & b_data, ColumnString::Offset_t b_n, PaddedPODArray<UInt8> & c)
 	{
 		size_t size = b_data.size();
 		const UInt8 * a_data = reinterpret_cast<const UInt8 *>(a.data());
@@ -269,10 +304,7 @@ struct StringComparisonImpl
 		}
 	}
 
-	static void constant_constant(
-		const std::string & a,
-		const std::string & b,
-		UInt8 & c)
+	static void constant_constant(const std::string & a, const std::string & b, UInt8 & c)
 	{
 		c = Op::apply(memcmp(a.data(), b.data(), std::min(a.size(), b.size()) + 1), 0);
 	}
@@ -283,50 +315,48 @@ struct StringComparisonImpl
 template <bool positive>
 struct StringEqualsImpl
 {
-	static void string_vector_string_vector(
-		const ColumnString::Chars_t & a_data, const ColumnString::Offsets_t & a_offsets,
-		const ColumnString::Chars_t & b_data, const ColumnString::Offsets_t & b_offsets,
+	static void string_vector_string_vector(const ColumnString::Chars_t & a_data,
+		const ColumnString::Offsets_t & a_offsets,
+		const ColumnString::Chars_t & b_data,
+		const ColumnString::Offsets_t & b_offsets,
 		PaddedPODArray<UInt8> & c)
 	{
 		size_t size = a_offsets.size();
 		for (size_t i = 0; i < size; ++i)
-			c[i] = positive == ((i == 0)
-				? (a_offsets[0] == b_offsets[0] && !memcmp(&a_data[0], &b_data[0], a_offsets[0] - 1))
-				: (a_offsets[i] - a_offsets[i - 1] == b_offsets[i] - b_offsets[i - 1]
-					&& !memcmp(&a_data[a_offsets[i - 1]], &b_data[b_offsets[i - 1]], a_offsets[i] - a_offsets[i - 1] - 1)));
+			c[i] = positive
+				== ((i == 0) ? (a_offsets[0] == b_offsets[0] && !memcmp(&a_data[0], &b_data[0], a_offsets[0] - 1))
+							 : (a_offsets[i] - a_offsets[i - 1] == b_offsets[i] - b_offsets[i - 1]
+								   && !memcmp(&a_data[a_offsets[i - 1]], &b_data[b_offsets[i - 1]], a_offsets[i] - a_offsets[i - 1] - 1)));
 	}
 
-	static void string_vector_fixed_string_vector(
-		const ColumnString::Chars_t & a_data, const ColumnString::Offsets_t & a_offsets,
-		const ColumnString::Chars_t & b_data, ColumnString::Offset_t b_n,
+	static void string_vector_fixed_string_vector(const ColumnString::Chars_t & a_data,
+		const ColumnString::Offsets_t & a_offsets,
+		const ColumnString::Chars_t & b_data,
+		ColumnString::Offset_t b_n,
 		PaddedPODArray<UInt8> & c)
 	{
 		size_t size = a_offsets.size();
 		for (size_t i = 0; i < size; ++i)
-			c[i] = positive == ((i == 0)
-				? (a_offsets[0] == b_n + 1 && !memcmp(&a_data[0], &b_data[0], b_n))
-				: (a_offsets[i] - a_offsets[i - 1] == b_n + 1
-					&& !memcmp(&a_data[a_offsets[i - 1]], &b_data[b_n * i], b_n)));
+			c[i] = positive
+				== ((i == 0) ? (a_offsets[0] == b_n + 1 && !memcmp(&a_data[0], &b_data[0], b_n))
+							 : (a_offsets[i] - a_offsets[i - 1] == b_n + 1 && !memcmp(&a_data[a_offsets[i - 1]], &b_data[b_n * i], b_n)));
 	}
 
 	static void string_vector_constant(
-		const ColumnString::Chars_t & a_data, const ColumnString::Offsets_t & a_offsets,
-		const std::string & b,
-		PaddedPODArray<UInt8> & c)
+		const ColumnString::Chars_t & a_data, const ColumnString::Offsets_t & a_offsets, const std::string & b, PaddedPODArray<UInt8> & c)
 	{
 		size_t size = a_offsets.size();
 		ColumnString::Offset_t b_n = b.size();
 		const UInt8 * b_data = reinterpret_cast<const UInt8 *>(b.data());
 		for (size_t i = 0; i < size; ++i)
-			c[i] = positive == ((i == 0)
-				? (a_offsets[0] == b_n + 1 && !memcmp(&a_data[0], b_data, b_n))
-				: (a_offsets[i] - a_offsets[i - 1] == b_n + 1
-					&& !memcmp(&a_data[a_offsets[i - 1]], b_data, b_n)));
+			c[i] = positive == ((i == 0) ? (a_offsets[0] == b_n + 1 && !memcmp(&a_data[0], b_data, b_n))
+										 : (a_offsets[i] - a_offsets[i - 1] == b_n + 1 && !memcmp(&a_data[a_offsets[i - 1]], b_data, b_n)));
 	}
 
-	static void fixed_string_vector_fixed_string_vector(
-		const ColumnString::Chars_t & a_data, ColumnString::Offset_t a_n,
-		const ColumnString::Chars_t & b_data, ColumnString::Offset_t b_n,
+	static void fixed_string_vector_fixed_string_vector(const ColumnString::Chars_t & a_data,
+		ColumnString::Offset_t a_n,
+		const ColumnString::Chars_t & b_data,
+		ColumnString::Offset_t b_n,
 		PaddedPODArray<UInt8> & c)
 	{
 		size_t size = a_data.size();
@@ -335,9 +365,7 @@ struct StringEqualsImpl
 	}
 
 	static void fixed_string_vector_constant(
-		const ColumnString::Chars_t & a_data, ColumnString::Offset_t a_n,
-		const std::string & b,
-		PaddedPODArray<UInt8> & c)
+		const ColumnString::Chars_t & a_data, ColumnString::Offset_t a_n, const std::string & b, PaddedPODArray<UInt8> & c)
 	{
 		size_t size = a_data.size();
 		const UInt8 * b_data = reinterpret_cast<const UInt8 *>(b.data());
@@ -346,34 +374,28 @@ struct StringEqualsImpl
 			c[j] = positive == (a_n == b_n && !memcmp(&a_data[i], b_data, a_n));
 	}
 
-	static void constant_constant(
-		const std::string & a,
-		const std::string & b,
-		UInt8 & c)
+	static void constant_constant(const std::string & a, const std::string & b, UInt8 & c)
 	{
 		c = positive == (a == b);
 	}
 
-	static void fixed_string_vector_string_vector(
-		const ColumnString::Chars_t & a_data, ColumnString::Offset_t a_n,
-		const ColumnString::Chars_t & b_data, const ColumnString::Offsets_t & b_offsets,
+	static void fixed_string_vector_string_vector(const ColumnString::Chars_t & a_data,
+		ColumnString::Offset_t a_n,
+		const ColumnString::Chars_t & b_data,
+		const ColumnString::Offsets_t & b_offsets,
 		PaddedPODArray<UInt8> & c)
 	{
 		string_vector_fixed_string_vector(b_data, b_offsets, a_data, a_n, c);
 	}
 
 	static void constant_string_vector(
-		const std::string & a,
-		const ColumnString::Chars_t & b_data, const ColumnString::Offsets_t & b_offsets,
-		PaddedPODArray<UInt8> & c)
+		const std::string & a, const ColumnString::Chars_t & b_data, const ColumnString::Offsets_t & b_offsets, PaddedPODArray<UInt8> & c)
 	{
 		string_vector_constant(b_data, b_offsets, a, c);
 	}
 
 	static void constant_fixed_string_vector(
-		const std::string & a,
-		const ColumnString::Chars_t & b_data, ColumnString::Offset_t b_n,
-		PaddedPODArray<UInt8> & c)
+		const std::string & a, const ColumnString::Chars_t & b_data, ColumnString::Offset_t b_n, PaddedPODArray<UInt8> & c)
 	{
 		fixed_string_vector_constant(b_data, b_n, a, c);
 	}
@@ -381,28 +403,51 @@ struct StringEqualsImpl
 
 
 template <typename A, typename B>
-struct StringComparisonImpl<EqualsOp<A, B>> : StringEqualsImpl<true> {};
+struct StringComparisonImpl<EqualsOp<A, B>> : StringEqualsImpl<true>
+{
+};
 
 template <typename A, typename B>
-struct StringComparisonImpl<NotEqualsOp<A, B>> : StringEqualsImpl<false> {};
+struct StringComparisonImpl<NotEqualsOp<A, B>> : StringEqualsImpl<false>
+{
+};
 
 
-struct NameEquals 			{ static constexpr auto name = "equals"; };
-struct NameNotEquals 		{ static constexpr auto name = "notEquals"; };
-struct NameLess 			{ static constexpr auto name = "less"; };
-struct NameGreater 			{ static constexpr auto name = "greater"; };
-struct NameLessOrEquals 	{ static constexpr auto name = "lessOrEquals"; };
-struct NameGreaterOrEquals 	{ static constexpr auto name = "greaterOrEquals"; };
+struct NameEquals
+{
+	static constexpr auto name = "equals";
+};
+struct NameNotEquals
+{
+	static constexpr auto name = "notEquals";
+};
+struct NameLess
+{
+	static constexpr auto name = "less";
+};
+struct NameGreater
+{
+	static constexpr auto name = "greater";
+};
+struct NameLessOrEquals
+{
+	static constexpr auto name = "lessOrEquals";
+};
+struct NameGreaterOrEquals
+{
+	static constexpr auto name = "greaterOrEquals";
+};
 
 
-template <
-	template <typename, typename> class Op,
-	typename Name>
+template <template <typename, typename> class Op, typename Name>
 class FunctionComparison : public IFunction
 {
 public:
 	static constexpr auto name = Name::name;
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionComparison>(); };
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionComparison>();
+	};
 
 private:
 	template <typename T0, typename T1>
@@ -467,38 +512,36 @@ private:
 	{
 		if (const ColumnVector<T0> * col_left = typeid_cast<const ColumnVector<T0> *>(col_left_untyped))
 		{
-			if (	executeNumRightType<T0, UInt8>(block, result, col_left, col_right_untyped)
-				||	executeNumRightType<T0, UInt16>(block, result, col_left, col_right_untyped)
-				||	executeNumRightType<T0, UInt32>(block, result, col_left, col_right_untyped)
-				||	executeNumRightType<T0, UInt64>(block, result, col_left, col_right_untyped)
-				||	executeNumRightType<T0, Int8>(block, result, col_left, col_right_untyped)
-				||	executeNumRightType<T0, Int16>(block, result, col_left, col_right_untyped)
-				||	executeNumRightType<T0, Int32>(block, result, col_left, col_right_untyped)
-				||	executeNumRightType<T0, Int64>(block, result, col_left, col_right_untyped)
-				||	executeNumRightType<T0, Float32>(block, result, col_left, col_right_untyped)
-				||	executeNumRightType<T0, Float64>(block, result, col_left, col_right_untyped))
+			if (executeNumRightType<T0, UInt8>(block, result, col_left, col_right_untyped)
+				|| executeNumRightType<T0, UInt16>(block, result, col_left, col_right_untyped)
+				|| executeNumRightType<T0, UInt32>(block, result, col_left, col_right_untyped)
+				|| executeNumRightType<T0, UInt64>(block, result, col_left, col_right_untyped)
+				|| executeNumRightType<T0, Int8>(block, result, col_left, col_right_untyped)
+				|| executeNumRightType<T0, Int16>(block, result, col_left, col_right_untyped)
+				|| executeNumRightType<T0, Int32>(block, result, col_left, col_right_untyped)
+				|| executeNumRightType<T0, Int64>(block, result, col_left, col_right_untyped)
+				|| executeNumRightType<T0, Float32>(block, result, col_left, col_right_untyped)
+				|| executeNumRightType<T0, Float64>(block, result, col_left, col_right_untyped))
 				return true;
 			else
-				throw Exception("Illegal column " + col_right_untyped->getName()
-					+ " of second argument of function " + getName(),
+				throw Exception("Illegal column " + col_right_untyped->getName() + " of second argument of function " + getName(),
 					ErrorCodes::ILLEGAL_COLUMN);
 		}
 		else if (const ColumnConst<T0> * col_left = typeid_cast<const ColumnConst<T0> *>(col_left_untyped))
 		{
-			if (	executeNumConstRightType<T0, UInt8>(block, result, col_left, col_right_untyped)
-				||	executeNumConstRightType<T0, UInt16>(block, result, col_left, col_right_untyped)
-				||	executeNumConstRightType<T0, UInt32>(block, result, col_left, col_right_untyped)
-				||	executeNumConstRightType<T0, UInt64>(block, result, col_left, col_right_untyped)
-				||	executeNumConstRightType<T0, Int8>(block, result, col_left, col_right_untyped)
-				||	executeNumConstRightType<T0, Int16>(block, result, col_left, col_right_untyped)
-				||	executeNumConstRightType<T0, Int32>(block, result, col_left, col_right_untyped)
-				||	executeNumConstRightType<T0, Int64>(block, result, col_left, col_right_untyped)
-				||	executeNumConstRightType<T0, Float32>(block, result, col_left, col_right_untyped)
-				||	executeNumConstRightType<T0, Float64>(block, result, col_left, col_right_untyped))
+			if (executeNumConstRightType<T0, UInt8>(block, result, col_left, col_right_untyped)
+				|| executeNumConstRightType<T0, UInt16>(block, result, col_left, col_right_untyped)
+				|| executeNumConstRightType<T0, UInt32>(block, result, col_left, col_right_untyped)
+				|| executeNumConstRightType<T0, UInt64>(block, result, col_left, col_right_untyped)
+				|| executeNumConstRightType<T0, Int8>(block, result, col_left, col_right_untyped)
+				|| executeNumConstRightType<T0, Int16>(block, result, col_left, col_right_untyped)
+				|| executeNumConstRightType<T0, Int32>(block, result, col_left, col_right_untyped)
+				|| executeNumConstRightType<T0, Int64>(block, result, col_left, col_right_untyped)
+				|| executeNumConstRightType<T0, Float32>(block, result, col_left, col_right_untyped)
+				|| executeNumConstRightType<T0, Float64>(block, result, col_left, col_right_untyped))
 				return true;
 			else
-				throw Exception("Illegal column " + col_right_untyped->getName()
-					+ " of second argument of function " + getName(),
+				throw Exception("Illegal column " + col_right_untyped->getName() + " of second argument of function " + getName(),
 					ErrorCodes::ILLEGAL_COLUMN);
 		}
 
@@ -531,55 +574,43 @@ private:
 
 			if (c0_string && c1_string)
 				StringImpl::string_vector_string_vector(
-					c0_string->getChars(), c0_string->getOffsets(),
-					c1_string->getChars(), c1_string->getOffsets(),
-					c_res->getData());
+					c0_string->getChars(), c0_string->getOffsets(), c1_string->getChars(), c1_string->getOffsets(), c_res->getData());
 			else if (c0_string && c1_fixed_string)
 				StringImpl::string_vector_fixed_string_vector(
-					c0_string->getChars(), c0_string->getOffsets(),
-					c1_fixed_string->getChars(), c1_fixed_string->getN(),
-					c_res->getData());
+					c0_string->getChars(), c0_string->getOffsets(), c1_fixed_string->getChars(), c1_fixed_string->getN(), c_res->getData());
 			else if (c0_string && c1_const)
-				StringImpl::string_vector_constant(
-					c0_string->getChars(), c0_string->getOffsets(),
-					c1_const->getData(),
-					c_res->getData());
+				StringImpl::string_vector_constant(c0_string->getChars(), c0_string->getOffsets(), c1_const->getData(), c_res->getData());
 			else if (c0_fixed_string && c1_string)
 				StringImpl::fixed_string_vector_string_vector(
-					c0_fixed_string->getChars(), c0_fixed_string->getN(),
-					c1_string->getChars(), c1_string->getOffsets(),
-					c_res->getData());
+					c0_fixed_string->getChars(), c0_fixed_string->getN(), c1_string->getChars(), c1_string->getOffsets(), c_res->getData());
 			else if (c0_fixed_string && c1_fixed_string)
-				StringImpl::fixed_string_vector_fixed_string_vector(
-					c0_fixed_string->getChars(), c0_fixed_string->getN(),
-					c1_fixed_string->getChars(), c1_fixed_string->getN(),
+				StringImpl::fixed_string_vector_fixed_string_vector(c0_fixed_string->getChars(),
+					c0_fixed_string->getN(),
+					c1_fixed_string->getChars(),
+					c1_fixed_string->getN(),
 					c_res->getData());
 			else if (c0_fixed_string && c1_const)
 				StringImpl::fixed_string_vector_constant(
-					c0_fixed_string->getChars(), c0_fixed_string->getN(),
-					c1_const->getData(),
-					c_res->getData());
+					c0_fixed_string->getChars(), c0_fixed_string->getN(), c1_const->getData(), c_res->getData());
 			else if (c0_const && c1_string)
-				StringImpl::constant_string_vector(
-					c0_const->getData(),
-					c1_string->getChars(), c1_string->getOffsets(),
-					c_res->getData());
+				StringImpl::constant_string_vector(c0_const->getData(), c1_string->getChars(), c1_string->getOffsets(), c_res->getData());
 			else if (c0_const && c1_fixed_string)
 				StringImpl::constant_fixed_string_vector(
-					c0_const->getData(),
-					c1_fixed_string->getChars(), c1_fixed_string->getN(),
-					c_res->getData());
+					c0_const->getData(), c1_fixed_string->getChars(), c1_fixed_string->getN(), c_res->getData());
 			else
-				throw Exception("Illegal columns "
-					+ c0->getName() + " and " + c1->getName()
-					+ " of arguments of function " + getName(),
+				throw Exception("Illegal columns " + c0->getName() + " and " + c1->getName() + " of arguments of function " + getName(),
 					ErrorCodes::ILLEGAL_COLUMN);
 		}
 	}
 
-	void executeDateOrDateTimeOrEnumWithConstString(
-		Block & block, size_t result, const IColumn * col_left_untyped, const IColumn * col_right_untyped,
-		const DataTypePtr & left_type, const DataTypePtr & right_type, bool left_is_num, bool right_is_num)
+	void executeDateOrDateTimeOrEnumWithConstString(Block & block,
+		size_t result,
+		const IColumn * col_left_untyped,
+		const IColumn * col_right_untyped,
+		const DataTypePtr & left_type,
+		const DataTypePtr & right_type,
+		bool left_is_num,
+		bool right_is_num)
 	{
 		/// Уже не такой и особый случай - сравнение дат, дат-с-временем и перечислений со строковой константой.
 		const IColumn * column_string_untyped = !left_is_num ? col_left_untyped : col_right_untyped;
@@ -598,11 +629,10 @@ private:
 
 		const auto column_string = typeid_cast<const ColumnConstString *>(column_string_untyped);
 		if (!column_string || !legal_types)
-			throw Exception{
-				"Illegal columns " + col_left_untyped->getName() + " and " + col_right_untyped->getName()
-					+ " of arguments of function " + getName(),
-				ErrorCodes::ILLEGAL_COLUMN
-			};
+			throw Exception{ "Illegal columns " + col_left_untyped->getName() + " and " + col_right_untyped->getName()
+					+ " of arguments of function "
+					+ getName(),
+				ErrorCodes::ILLEGAL_COLUMN };
 
 		if (is_date)
 		{
@@ -613,9 +643,8 @@ private:
 				throw Exception("String is too long for Date: " + column_string->getData());
 
 			ColumnConst<DataTypeDate::FieldType> parsed_const_date(block.rows(), date);
-			executeNumLeftType<DataTypeDate::FieldType>(block, result,
-				left_is_num ? col_left_untyped : &parsed_const_date,
-				left_is_num ? &parsed_const_date : col_right_untyped);
+			executeNumLeftType<DataTypeDate::FieldType>(
+				block, result, left_is_num ? col_left_untyped : &parsed_const_date, left_is_num ? &parsed_const_date : col_right_untyped);
 		}
 		else if (is_date_time)
 		{
@@ -626,32 +655,33 @@ private:
 				throw Exception("String is too long for DateTime: " + column_string->getData());
 
 			ColumnConst<DataTypeDateTime::FieldType> parsed_const_date_time(block.rows(), date_time);
-			executeNumLeftType<DataTypeDateTime::FieldType>(block, result,
+			executeNumLeftType<DataTypeDateTime::FieldType>(block,
+				result,
 				left_is_num ? col_left_untyped : &parsed_const_date_time,
 				left_is_num ? &parsed_const_date_time : col_right_untyped);
 		}
 		else if (is_enum8)
-			executeEnumWithConstString<DataTypeEnum8>(block, result, column_number, column_string,
-				number_type, left_is_num);
+			executeEnumWithConstString<DataTypeEnum8>(block, result, column_number, column_string, number_type, left_is_num);
 		else if (is_enum16)
-			executeEnumWithConstString<DataTypeEnum16>(block, result, column_number, column_string,
-				number_type, left_is_num);
+			executeEnumWithConstString<DataTypeEnum16>(block, result, column_number, column_string, number_type, left_is_num);
 	}
 
 	/// Comparison between DataTypeEnum<T> and string constant containing the name of an enum element
 	template <typename EnumType>
-	void executeEnumWithConstString(
-		Block & block, const size_t result, const IColumn * column_number, const ColumnConstString * column_string,
-		const IDataType * type_untyped, const bool left_is_num)
+	void executeEnumWithConstString(Block & block,
+		const size_t result,
+		const IColumn * column_number,
+		const ColumnConstString * column_string,
+		const IDataType * type_untyped,
+		const bool left_is_num)
 	{
 		const auto type = static_cast<const EnumType *>(type_untyped);
 
 		const Field x = nearestFieldType(type->getValue(column_string->getData()));
 		const auto enum_col = type->createConstColumn(block.rows(), x);
 
-		executeNumLeftType<typename EnumType::FieldType>(block, result,
-			left_is_num ? column_number : enum_col.get(),
-			left_is_num ? enum_col.get() : column_number);
+		executeNumLeftType<typename EnumType::FieldType>(
+			block, result, left_is_num ? column_number : enum_col.get(), left_is_num ? enum_col.get() : column_number);
 	}
 
 	void executeTuple(Block & block, size_t result, const IColumn * c0, const IColumn * c1)
@@ -715,7 +745,7 @@ private:
 
 			/// Сравнение элементов.
 			tmp_block.insert({ nullptr, std::make_shared<DataTypeUInt8>(), "" });
-			func_compare.execute(tmp_block, {i * 3, i * 3 + 1}, i * 3 + 2);
+			func_compare.execute(tmp_block, { i * 3, i * 3 + 1 }, i * 3 + 2);
 		}
 
 		/// Логическая свёртка.
@@ -750,14 +780,13 @@ private:
 
 			if (i + 1 != tuple_size)
 			{
-				func_compare_head.execute(tmp_block, {i * 4, i * 4 + 1}, i * 4 + 2);
+				func_compare_head.execute(tmp_block, { i * 4, i * 4 + 1 }, i * 4 + 2);
 
 				tmp_block.insert({ nullptr, std::make_shared<DataTypeUInt8>(), "" });
-				func_equals.execute(tmp_block, {i * 4, i * 4 + 1}, i * 4 + 3);
-
+				func_equals.execute(tmp_block, { i * 4, i * 4 + 1 }, i * 4 + 3);
 			}
 			else
-				func_compare_tail.execute(tmp_block, {i * 4, i * 4 + 1}, i * 4 + 2);
+				func_compare_tail.execute(tmp_block, { i * 4, i * 4 + 1 }, i * 4 + 2);
 		}
 
 		/// Комбинирование. Сложный код - сделайте рисунок. Можно заменить на рекурсивное сравнение кортежей.
@@ -765,9 +794,9 @@ private:
 		while (i > 0)
 		{
 			tmp_block.insert({ nullptr, std::make_shared<DataTypeUInt8>(), "" });
-			func_and.execute(tmp_block, { tmp_block.columns() - 2, (i - 1) * 4 + 3 },  tmp_block.columns() - 1);
+			func_and.execute(tmp_block, { tmp_block.columns() - 2, (i - 1) * 4 + 3 }, tmp_block.columns() - 1);
 			tmp_block.insert({ nullptr, std::make_shared<DataTypeUInt8>(), "" });
-			func_or.execute(tmp_block, { tmp_block.columns() - 2, (i - 1) * 4 + 2 },  tmp_block.columns() - 1);
+			func_or.execute(tmp_block, { tmp_block.columns() - 2, (i - 1) * 4 + 2 }, tmp_block.columns() - 1);
 			--i;
 		}
 
@@ -782,7 +811,10 @@ public:
 		return name;
 	}
 
-	size_t getNumberOfArguments() const override { return 2; }
+	size_t getNumberOfArguments() const override
+	{
+		return 2;
+	}
 
 	/// Получить типы результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
@@ -795,14 +827,13 @@ public:
 		bool left_is_fixed_string = false;
 		const DataTypeTuple * left_tuple = nullptr;
 
-		false
-			|| (left_is_date 		= typeid_cast<const DataTypeDate *>(arguments[0].get()))
-			|| (left_is_date_time 	= typeid_cast<const DataTypeDateTime *>(arguments[0].get()))
-			|| (left_is_enum8 		= typeid_cast<const DataTypeEnum8 *>(arguments[0].get()))
-			|| (left_is_enum16 		= typeid_cast<const DataTypeEnum16 *>(arguments[0].get()))
-			|| (left_is_string 		= typeid_cast<const DataTypeString *>(arguments[0].get()))
+		false || (left_is_date = typeid_cast<const DataTypeDate *>(arguments[0].get()))
+			|| (left_is_date_time = typeid_cast<const DataTypeDateTime *>(arguments[0].get()))
+			|| (left_is_enum8 = typeid_cast<const DataTypeEnum8 *>(arguments[0].get()))
+			|| (left_is_enum16 = typeid_cast<const DataTypeEnum16 *>(arguments[0].get()))
+			|| (left_is_string = typeid_cast<const DataTypeString *>(arguments[0].get()))
 			|| (left_is_fixed_string = typeid_cast<const DataTypeFixedString *>(arguments[0].get()))
-			|| (left_tuple 			= typeid_cast<const DataTypeTuple *>(arguments[0].get()));
+			|| (left_tuple = typeid_cast<const DataTypeTuple *>(arguments[0].get()));
 
 		const bool left_is_enum = left_is_enum8 || left_is_enum16;
 
@@ -814,34 +845,36 @@ public:
 		bool right_is_fixed_string = false;
 		const DataTypeTuple * right_tuple = nullptr;
 
-		false
-			|| (right_is_date 		= typeid_cast<const DataTypeDate *>(arguments[1].get()))
-			|| (right_is_date_time 	= typeid_cast<const DataTypeDateTime *>(arguments[1].get()))
-			|| (right_is_enum8 		= typeid_cast<const DataTypeEnum8 *>(arguments[1].get()))
-			|| (right_is_enum16 	= typeid_cast<const DataTypeEnum16 *>(arguments[1].get()))
-			|| (right_is_string 	= typeid_cast<const DataTypeString *>(arguments[1].get()))
+		false || (right_is_date = typeid_cast<const DataTypeDate *>(arguments[1].get()))
+			|| (right_is_date_time = typeid_cast<const DataTypeDateTime *>(arguments[1].get()))
+			|| (right_is_enum8 = typeid_cast<const DataTypeEnum8 *>(arguments[1].get()))
+			|| (right_is_enum16 = typeid_cast<const DataTypeEnum16 *>(arguments[1].get()))
+			|| (right_is_string = typeid_cast<const DataTypeString *>(arguments[1].get()))
 			|| (right_is_fixed_string = typeid_cast<const DataTypeFixedString *>(arguments[1].get()))
-			|| (right_tuple 		= typeid_cast<const DataTypeTuple *>(arguments[1].get()));
+			|| (right_tuple = typeid_cast<const DataTypeTuple *>(arguments[1].get()));
 
 		const bool right_is_enum = right_is_enum8 || right_is_enum16;
 
-		if (!(	(arguments[0]->behavesAsNumber() && arguments[1]->behavesAsNumber() && !(left_is_enum ^ right_is_enum))
-			||	((left_is_string || left_is_fixed_string) && (right_is_string || right_is_fixed_string))
-			||	(left_is_date && right_is_date)
-			||	(left_is_date && right_is_string)	/// Можно сравнивать дату, дату-с-временем и перечисление с константной строкой.
-			||	(left_is_string && right_is_date)
-			||	(left_is_date_time && right_is_date_time)
-			||	(left_is_date_time && right_is_string)
-			||	(left_is_string && right_is_date_time)
-			||	(left_is_date_time && right_is_date_time)
-			||	(left_is_date_time && right_is_string)
-			||	(left_is_string && right_is_date_time)
-			||	(left_is_enum && right_is_enum && arguments[0]->getName() == arguments[1]->getName()) /// only equivalent enum type values can be compared against
-			||	(left_is_enum && right_is_string)
-			||	(left_is_string && right_is_enum)
-			||	(left_tuple && right_tuple && left_tuple->getElements().size() == right_tuple->getElements().size())))
+		if (!((arguments[0]->behavesAsNumber() && arguments[1]->behavesAsNumber() && !(left_is_enum ^ right_is_enum))
+				|| ((left_is_string || left_is_fixed_string) && (right_is_string || right_is_fixed_string))
+				|| (left_is_date && right_is_date)
+				|| (left_is_date && right_is_string) /// Можно сравнивать дату, дату-с-временем и перечисление с константной строкой.
+				|| (left_is_string && right_is_date)
+				|| (left_is_date_time && right_is_date_time)
+				|| (left_is_date_time && right_is_string)
+				|| (left_is_string && right_is_date_time)
+				|| (left_is_date_time && right_is_date_time)
+				|| (left_is_date_time && right_is_string)
+				|| (left_is_string && right_is_date_time)
+				|| (left_is_enum && right_is_enum
+					   && arguments[0]->getName() == arguments[1]->getName()) /// only equivalent enum type values can be compared against
+				|| (left_is_enum && right_is_string)
+				|| (left_is_string && right_is_enum)
+				|| (left_tuple && right_tuple && left_tuple->getElements().size() == right_tuple->getElements().size())))
 			throw Exception("Illegal types of arguments (" + arguments[0]->getName() + ", " + arguments[1]->getName() + ")"
-				" of function " + getName(), ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+																														" of function "
+					+ getName(),
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 		if (left_tuple && right_tuple)
 		{
@@ -866,18 +899,17 @@ public:
 
 		if (left_is_num && right_is_num)
 		{
-			if (!(	executeNumLeftType<UInt8>(block, result, col_left_untyped, col_right_untyped)
-				||	executeNumLeftType<UInt16>(block, result, col_left_untyped, col_right_untyped)
-				||	executeNumLeftType<UInt32>(block, result, col_left_untyped, col_right_untyped)
-				||	executeNumLeftType<UInt64>(block, result, col_left_untyped, col_right_untyped)
-				||	executeNumLeftType<Int8>(block, result, col_left_untyped, col_right_untyped)
-				||	executeNumLeftType<Int16>(block, result, col_left_untyped, col_right_untyped)
-				||	executeNumLeftType<Int32>(block, result, col_left_untyped, col_right_untyped)
-				||	executeNumLeftType<Int64>(block, result, col_left_untyped, col_right_untyped)
-				||	executeNumLeftType<Float32>(block, result, col_left_untyped, col_right_untyped)
-				||	executeNumLeftType<Float64>(block, result, col_left_untyped, col_right_untyped)))
-				throw Exception("Illegal column " + col_left_untyped->getName()
-					+ " of first argument of function " + getName(),
+			if (!(executeNumLeftType<UInt8>(block, result, col_left_untyped, col_right_untyped)
+					|| executeNumLeftType<UInt16>(block, result, col_left_untyped, col_right_untyped)
+					|| executeNumLeftType<UInt32>(block, result, col_left_untyped, col_right_untyped)
+					|| executeNumLeftType<UInt64>(block, result, col_left_untyped, col_right_untyped)
+					|| executeNumLeftType<Int8>(block, result, col_left_untyped, col_right_untyped)
+					|| executeNumLeftType<Int16>(block, result, col_left_untyped, col_right_untyped)
+					|| executeNumLeftType<Int32>(block, result, col_left_untyped, col_right_untyped)
+					|| executeNumLeftType<Int64>(block, result, col_left_untyped, col_right_untyped)
+					|| executeNumLeftType<Float32>(block, result, col_left_untyped, col_right_untyped)
+					|| executeNumLeftType<Float64>(block, result, col_left_untyped, col_right_untyped)))
+				throw Exception("Illegal column " + col_left_untyped->getName() + " of first argument of function " + getName(),
 					ErrorCodes::ILLEGAL_COLUMN);
 		}
 		else if (typeid_cast<const DataTypeTuple *>(col_with_type_and_name_left.type.get()))
@@ -885,19 +917,22 @@ public:
 		else if (!left_is_num && !right_is_num)
 			executeString(block, result, col_left_untyped, col_right_untyped);
 		else
-			executeDateOrDateTimeOrEnumWithConstString(
-				block, result, col_left_untyped, col_right_untyped,
-				col_with_type_and_name_left.type, col_with_type_and_name_right.type,
-				left_is_num, right_is_num);
-}
+			executeDateOrDateTimeOrEnumWithConstString(block,
+				result,
+				col_left_untyped,
+				col_right_untyped,
+				col_with_type_and_name_left.type,
+				col_with_type_and_name_right.type,
+				left_is_num,
+				right_is_num);
+	}
 };
 
 
-using FunctionEquals = FunctionComparison<EqualsOp, 			NameEquals>			;
-using FunctionNotEquals = FunctionComparison<NotEqualsOp, 		NameNotEquals>		;
-using FunctionLess = FunctionComparison<LessOp, 				NameLess>			;
-using FunctionGreater = FunctionComparison<GreaterOp, 			NameGreater>		;
-using FunctionLessOrEquals = FunctionComparison<LessOrEqualsOp, 		NameLessOrEquals>	;
-using FunctionGreaterOrEquals = FunctionComparison<GreaterOrEqualsOp,	NameGreaterOrEquals>;
-
+using FunctionEquals = FunctionComparison<EqualsOp, NameEquals>;
+using FunctionNotEquals = FunctionComparison<NotEqualsOp, NameNotEquals>;
+using FunctionLess = FunctionComparison<LessOp, NameLess>;
+using FunctionGreater = FunctionComparison<GreaterOp, NameGreater>;
+using FunctionLessOrEquals = FunctionComparison<LessOrEqualsOp, NameLessOrEquals>;
+using FunctionGreaterOrEquals = FunctionComparison<GreaterOrEqualsOp, NameGreaterOrEquals>;
 }

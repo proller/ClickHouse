@@ -1,32 +1,31 @@
 #pragma once
 
-#include <zkutil/Types.h>
-#include <zkutil/KeeperException.h>
-#include <Poco/Util/LayeredConfiguration.h>
-#include <unordered_set>
 #include <future>
 #include <memory>
 #include <mutex>
 #include <string>
+#include <unordered_set>
+#include <zkutil/KeeperException.h>
+#include <zkutil/Types.h>
+#include <Poco/Util/LayeredConfiguration.h>
 #include <common/logger_useful.h>
-#include <DB/Common/ProfileEvents.h>
 #include <DB/Common/CurrentMetrics.h>
+#include <DB/Common/ProfileEvents.h>
 
 
 namespace ProfileEvents
 {
-	extern const Event CannotRemoveEphemeralNode;
+extern const Event CannotRemoveEphemeralNode;
 }
 
 namespace CurrentMetrics
 {
-	extern const Metric EphemeralNode;
+extern const Metric EphemeralNode;
 }
 
 
 namespace zkutil
 {
-
 const UInt32 DEFAULT_SESSION_TIMEOUT = 30000;
 const UInt32 MEDIUM_SESSION_TIMEOUT = 120000;
 const UInt32 BIG_SESSION_TIMEOUT = 600000;
@@ -95,8 +94,8 @@ public:
 	  */
 	int32_t tryCreate(const std::string & path, const std::string & data, int32_t mode, std::string & path_created);
 	int32_t tryCreate(const std::string & path, const std::string & data, int32_t mode);
-	int32_t tryCreateWithRetries(const std::string & path, const std::string & data, int32_t mode,
-								 std::string & path_created, size_t * attempt = nullptr);
+	int32_t tryCreateWithRetries(
+		const std::string & path, const std::string & data, int32_t mode, std::string & path_created, size_t * attempt = nullptr);
 
 	/** создает Persistent ноду.
 	 *  Игнорирует, если нода уже создана.
@@ -160,8 +159,7 @@ public:
 	  */
 	bool tryGet(const std::string & path, std::string & res, Stat * stat = nullptr, EventPtr watch = nullptr, int * code = nullptr);
 
-	void set(const std::string & path, const std::string & data,
-			int32_t version = -1, Stat * stat = nullptr);
+	void set(const std::string & path, const std::string & data, int32_t version = -1, Stat * stat = nullptr);
 
 	/** Создает ноду, если ее не существует. Иначе обновляет */
 	void createOrUpdate(const std::string & path, const std::string & data, int32_t mode);
@@ -170,19 +168,14 @@ public:
 	  *  - Такой ноды нет.
 	  *  - У ноды другая версия.
 	  */
-	int32_t trySet(const std::string & path, const std::string & data,
-							int32_t version = -1, Stat * stat = nullptr);
+	int32_t trySet(const std::string & path, const std::string & data, int32_t version = -1, Stat * stat = nullptr);
 
-	Strings getChildren(const std::string & path,
-						Stat * stat = nullptr,
-						EventPtr watch = nullptr);
+	Strings getChildren(const std::string & path, Stat * stat = nullptr, EventPtr watch = nullptr);
 
 	/** Не бросает исключение при следующих ошибках:
 	  *  - Такой ноды нет.
 	  */
-	int32_t tryGetChildren(const std::string & path, Strings & res,
-						Stat * stat = nullptr,
-						EventPtr watch = nullptr);
+	int32_t tryGetChildren(const std::string & path, Strings & res, Stat * stat = nullptr, EventPtr watch = nullptr);
 
 	/** Транзакционно выполняет несколько операций. При любой ошибке бросает исключение.
 	  */
@@ -229,9 +222,10 @@ public:
 	template <typename Result, typename... TaskParams>
 	class Future
 	{
-	friend class ZooKeeper;
+		friend class ZooKeeper;
+
 	private:
-		using Task = std::packaged_task<Result (TaskParams...)>;
+		using Task = std::packaged_task<Result(TaskParams...)>;
 		using TaskPtr = std::unique_ptr<Task>;
 		using TaskPtrPtr = std::unique_ptr<TaskPtr>;
 
@@ -256,7 +250,9 @@ public:
 		std::future<Result> future;
 
 		template <typename... Args>
-		Future(Args &&... args) : task(new TaskPtr(new Task(std::forward<Args>(args)...))), future((*task)->get_future()) {}
+		Future(Args &&... args) : task(new TaskPtr(new Task(std::forward<Args>(args)...))), future((*task)->get_future())
+		{
+		}
 
 	public:
 		Result get()
@@ -265,7 +261,7 @@ public:
 		}
 
 		Future(Future &&) = default;
-		Future & operator= (Future &&) = default;
+		Future & operator=(Future &&) = default;
 
 		~Future()
 		{
@@ -328,7 +324,10 @@ public:
 	static const size_t SEQUENTIAL_SUFFIX_SIZE = 64;
 
 
-	zhandle_t * getHandle() { return impl; }
+	zhandle_t * getHandle()
+	{
+		return impl;
+	}
 
 private:
 	friend struct WatchWithEvent;
@@ -357,7 +356,7 @@ private:
 			if (code == ZCONNECTIONLOSS)
 				usleep(std::min(session_timeout_ms * 1000 / 3, MAX_SLEEP_TIME * 1000 * 1000));
 
-			LOG_WARNING(log, "Error on attempt " << i << ": " << error2string(code)  << ". Retry");
+			LOG_WARNING(log, "Error on attempt " << i << ": " << error2string(code) << ". Retry");
 			code = operation();
 		}
 
@@ -368,11 +367,8 @@ private:
 	int32_t createImpl(const std::string & path, const std::string & data, int32_t mode, std::string & path_created);
 	int32_t removeImpl(const std::string & path, int32_t version = -1);
 	int32_t getImpl(const std::string & path, std::string & res, Stat * stat = nullptr, EventPtr watch = nullptr);
-	int32_t setImpl(const std::string & path, const std::string & data,
-							int32_t version = -1, Stat * stat = nullptr);
-	int32_t getChildrenImpl(const std::string & path, Strings & res,
-						Stat * stat = nullptr,
-						EventPtr watch = nullptr);
+	int32_t setImpl(const std::string & path, const std::string & data, int32_t version = -1, Stat * stat = nullptr);
+	int32_t getChildrenImpl(const std::string & path, Strings & res, Stat * stat = nullptr, EventPtr watch = nullptr);
 	int32_t multiImpl(const Ops & ops, OpResultsPtr * out_results = nullptr);
 	int32_t existsImpl(const std::string & path, Stat * stat_, EventPtr watch = nullptr);
 
@@ -453,9 +449,8 @@ public:
 private:
 	std::string path;
 	ZooKeeper & zookeeper;
-	CurrentMetrics::Increment metric_increment{CurrentMetrics::EphemeralNode};
+	CurrentMetrics::Increment metric_increment{ CurrentMetrics::EphemeralNode };
 };
 
 using EphemeralNodeHolderPtr = EphemeralNodeHolder::Ptr;
-
 }

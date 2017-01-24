@@ -2,14 +2,13 @@
 
 #include <DB/DataStreams/IBlockOutputStream.h>
 
-#include <DB/Client/Connection.h>
 #include <common/logger_useful.h>
+#include <DB/Client/Connection.h>
 
 #include <DB/Common/NetException.h>
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int UNEXPECTED_PACKET_FROM_SERVER;
@@ -58,8 +57,9 @@ public:
 			return;
 		}
 		else
-			throw NetException("Unexpected packet from server (expected Data or Exception, got "
-				+ String(Protocol::Server::toString(packet.type)) + ")", ErrorCodes::UNEXPECTED_PACKET_FROM_SERVER);
+			throw NetException(
+				"Unexpected packet from server (expected Data or Exception, got " + String(Protocol::Server::toString(packet.type)) + ")",
+				ErrorCodes::UNEXPECTED_PACKET_FROM_SERVER);
 	}
 
 
@@ -72,7 +72,8 @@ public:
 		{
 			std::stringstream message;
 			message << "Block structure is different from table structure.\n"
-				<< "\nTable structure:\n(" << sample_block.dumpStructure() << ")\nBlock structure:\n(" << block.dumpStructure() << ")\n";
+					<< "\nTable structure:\n(" << sample_block.dumpStructure() << ")\nBlock structure:\n(" << block.dumpStructure()
+					<< ")\n";
 
 			LOG_ERROR(&Logger::get("RemoteBlockOutputStream"), message.str());
 			throw DB::Exception(message.str());
@@ -106,7 +107,9 @@ public:
 			packet.exception->rethrow();
 		else
 			throw NetException("Unexpected packet from server (expected EndOfStream or Exception, got "
-				+ String(Protocol::Server::toString(packet.type)) + ")", ErrorCodes::UNEXPECTED_PACKET_FROM_SERVER);
+					+ String(Protocol::Server::toString(packet.type))
+					+ ")",
+				ErrorCodes::UNEXPECTED_PACKET_FROM_SERVER);
 	}
 
 private:
@@ -115,5 +118,4 @@ private:
 	const Settings * settings;
 	Block sample_block;
 };
-
 }

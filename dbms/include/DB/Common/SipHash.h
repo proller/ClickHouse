@@ -11,20 +11,30 @@
   * (~ 700 МБ/сек., 15 млн. строк в секунду)
   */
 
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 #include <DB/Core/Types.h>
 
-#define ROTL(x,b) static_cast<u64>( ((x) << (b)) | ( (x) >> (64 - (b))) )
+#define ROTL(x, b) static_cast<u64>(((x) << (b)) | ((x) >> (64 - (b))))
 
-#define SIPROUND											\
-	do 														\
-	{														\
-		v0 += v1; v1=ROTL(v1,13); v1 ^= v0; v0=ROTL(v0,32); \
-		v2 += v3; v3=ROTL(v3,16); v3 ^= v2;					\
-		v0 += v3; v3=ROTL(v3,21); v3 ^= v0;					\
-		v2 += v1; v1=ROTL(v1,17); v1 ^= v2; v2=ROTL(v2,32); \
-	} while(0)
+#define SIPROUND                                                                                                                           \
+	do                                                                                                                                     \
+	{                                                                                                                                      \
+		v0 += v1;                                                                                                                          \
+		v1 = ROTL(v1, 13);                                                                                                                 \
+		v1 ^= v0;                                                                                                                          \
+		v0 = ROTL(v0, 32);                                                                                                                 \
+		v2 += v3;                                                                                                                          \
+		v3 = ROTL(v3, 16);                                                                                                                 \
+		v3 ^= v2;                                                                                                                          \
+		v0 += v3;                                                                                                                          \
+		v3 = ROTL(v3, 21);                                                                                                                 \
+		v3 ^= v0;                                                                                                                          \
+		v2 += v1;                                                                                                                          \
+		v1 = ROTL(v1, 17);                                                                                                                 \
+		v1 ^= v2;                                                                                                                          \
+		v2 = ROTL(v2, 32);                                                                                                                 \
+	} while (0)
 
 
 class SipHash
@@ -43,8 +53,7 @@ private:
 	u64 cnt;
 
 	/// Текущие 8 байт входных данных.
-	union
-	{
+	union {
 		u64 current_word;
 		u8 current_bytes[8];
 	};
@@ -122,14 +131,22 @@ public:
 		current_word = 0;
 		switch (end - data)
 		{
-			case 7: current_bytes[6] = data[6];
-			case 6: current_bytes[5] = data[5];
-			case 5: current_bytes[4] = data[4];
-			case 4: current_bytes[3] = data[3];
-			case 3: current_bytes[2] = data[2];
-			case 2: current_bytes[1] = data[1];
-			case 1: current_bytes[0] = data[0];
-			case 0: break;
+		case 7:
+			current_bytes[6] = data[6];
+		case 6:
+			current_bytes[5] = data[5];
+		case 5:
+			current_bytes[4] = data[4];
+		case 4:
+			current_bytes[3] = data[3];
+		case 3:
+			current_bytes[2] = data[2];
+		case 2:
+			current_bytes[1] = data[1];
+		case 1:
+			current_bytes[0] = data[0];
+		case 0:
+			break;
 		}
 	}
 

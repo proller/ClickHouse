@@ -2,18 +2,17 @@
 
 #include <random>
 
-#include <Poco/Net/NetException.h>
 #include <Poco/Net/DNS.h>
+#include <Poco/Net/NetException.h>
 
 #include <DB/Common/PoolWithFailoverBase.h>
 
-#include <DB/Common/getFQDNOrHostName.h>
 #include <DB/Client/ConnectionPool.h>
+#include <DB/Common/getFQDNOrHostName.h>
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int NETWORK_ERROR;
@@ -41,8 +40,8 @@ public:
 		LoadBalancing load_balancing,
 		size_t max_tries_ = DBMS_CONNECTION_POOL_WITH_FAILOVER_DEFAULT_MAX_TRIES,
 		time_t decrease_error_period_ = DBMS_CONNECTION_POOL_WITH_FAILOVER_DEFAULT_DECREASE_ERROR_PERIOD)
-	   : Base(nested_pools_, max_tries_, decrease_error_period_,
-			&Logger::get("ConnectionPoolWithFailover")), default_load_balancing(load_balancing)
+		: Base(nested_pools_, max_tries_, decrease_error_period_, &Logger::get("ConnectionPoolWithFailover")),
+		  default_load_balancing(load_balancing)
 	{
 		const std::string & local_hostname = getFQDNOrHostName();
 
@@ -120,6 +119,4 @@ private:
 	std::vector<size_t> hostname_differences; /// Расстояния от имени этого хоста до имен хостов пулов.
 	LoadBalancing default_load_balancing;
 };
-
-
 }

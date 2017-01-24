@@ -8,7 +8,6 @@
 
 namespace DB
 {
-
 /** Берёт синтаксическое дерево и превращает его обратно в текст.
   * В случае запроса INSERT, данные будут отсутствовать.
   */
@@ -21,7 +20,12 @@ inline void formatAST(const IAST & ast, std::ostream & s, size_t indent = 0, boo
 
 String formatColumnsForCreateQuery(NamesAndTypesList & columns);
 
-inline std::ostream & operator<<(std::ostream & os, const IAST & ast) { return formatAST(ast, os, 0, false, true), os; }
-inline std::ostream & operator<<(std::ostream & os, const ASTPtr & ast) { return formatAST(*ast, os, 0, false, true), os; }
-
+inline std::ostream & operator<<(std::ostream & os, const IAST & ast)
+{
+	return formatAST(ast, os, 0, false, true), os;
+}
+inline std::ostream & operator<<(std::ostream & os, const ASTPtr & ast)
+{
+	return formatAST(*ast, os, 0, false, true), os;
+}
 }

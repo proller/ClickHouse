@@ -1,11 +1,11 @@
 #pragma once
 
-#include <string>
 #include <ctime>
+#include <string>
 #include <fcntl.h>
 
-#include <DB/IO/ReadBuffer.h>
 #include <DB/IO/BufferWithOwnMemory.h>
+#include <DB/IO/ReadBuffer.h>
 
 #ifdef __APPLE__
 #include <common/apple_rt.h>
@@ -13,7 +13,6 @@
 
 namespace DB
 {
-
 class ReadBufferFromFileBase : public BufferWithOwnMemory<ReadBuffer>
 {
 public:
@@ -47,5 +46,4 @@ protected:
 
 	virtual off_t doSeek(off_t off, int whence) = 0;
 };
-
 }

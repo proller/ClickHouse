@@ -1,11 +1,11 @@
 #pragma once
 
-#include <cstdint>
-#include <thread>
-#include <mutex>
 #include <condition_variable>
+#include <cstdint>
 #include <functional>
+#include <mutex>
 #include <queue>
+#include <thread>
 #include <vector>
 
 
@@ -37,7 +37,10 @@ public:
 	/// You should not destroy object while calling schedule or wait methods from another threads.
 	~ThreadPool();
 
-	size_t size() const { return m_size; }
+	size_t size() const
+	{
+		return m_size;
+	}
 
 	/// Returns number of active jobs.
 	size_t active() const;
@@ -58,4 +61,3 @@ private:
 
 	void worker();
 };
-

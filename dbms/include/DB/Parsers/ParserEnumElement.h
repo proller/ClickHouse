@@ -6,15 +6,16 @@
 
 namespace DB
 {
-
-
 class ParserEnumElement : public IParserBase
 {
 	ParserStringLiteral name_parser;
 	ParserNumber value_parser;
 
 protected:
-	const char * getName() const override { return "enum element"; }
+	const char * getName() const override
+	{
+		return "enum element";
+	}
 	bool parseImpl(Pos & pos, Pos end, ASTPtr & node, Pos & max_parsed_pos, Expected & expected) override
 	{
 		ParserString equality_sign_parser("=");
@@ -36,14 +37,11 @@ protected:
 		if (!value_parser.parse(pos, end, value, max_parsed_pos, expected))
 			return false;
 
-		node = std::make_shared<ASTEnumElement>(
-			StringRange{ begin, pos },
+		node = std::make_shared<ASTEnumElement>(StringRange{ begin, pos },
 			static_cast<const ASTLiteral &>(*name).value.get<String>(),
 			static_cast<const ASTLiteral &>(*value).value);
 
 		return true;
 	}
 };
-
-
 }

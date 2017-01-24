@@ -1,15 +1,14 @@
 #pragma once
 
-#include <DB/IO/WriteBuffer.h>
 #include <DB/IO/BufferWithOwnMemory.h>
 #include <DB/IO/ReadHelpers.h>
+#include <DB/IO/WriteBuffer.h>
 
 #define DBMS_DEFAULT_HASHING_BLOCK_SIZE 2048ULL
 
 
 namespace DB
 {
-
 template <class Buffer>
 class IHashingBuffer : public BufferWithOwnMemory<Buffer>
 {
@@ -63,9 +62,7 @@ private:
 	}
 
 public:
-	HashingWriteBuffer(
-		WriteBuffer & out_,
-		size_t block_size_ = DBMS_DEFAULT_HASHING_BLOCK_SIZE)
+	HashingWriteBuffer(WriteBuffer & out_, size_t block_size_ = DBMS_DEFAULT_HASHING_BLOCK_SIZE)
 		: IHashingBuffer<DB::WriteBuffer>(block_size_), out(out_)
 	{
 		out.next(); /// Если до нас в out что-то уже писали, не дадим остаткам этих данных повлиять на хеш.

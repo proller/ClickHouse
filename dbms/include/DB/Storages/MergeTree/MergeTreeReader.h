@@ -1,14 +1,13 @@
 #pragma once
 
+#include <DB/Core/NamesAndTypes.h>
 #include <DB/Storages/MarkCache.h>
 #include <DB/Storages/MergeTree/MarkRange.h>
 #include <DB/Storages/MergeTree/MergeTreeData.h>
-#include <DB/Core/NamesAndTypes.h>
 
 
 namespace DB
 {
-
 class IDataType;
 class CachedCompressedReadBuffer;
 class CompressedReadBufferFromFile;
@@ -24,12 +23,15 @@ public:
 	using ValueSizeMap = std::map<std::string, double>;
 
 	MergeTreeReader(const String & path, /// Путь к куску
-		const MergeTreeData::DataPartPtr & data_part, const NamesAndTypesList & columns,
+		const MergeTreeData::DataPartPtr & data_part,
+		const NamesAndTypesList & columns,
 		UncompressedCache * uncompressed_cache,
 		MarkCache * mark_cache,
 		bool save_marks_in_cache,
-		MergeTreeData & storage, const MarkRanges & all_mark_ranges,
-		size_t aio_threshold, size_t max_read_buffer_size,
+		MergeTreeData & storage,
+		const MarkRanges & all_mark_ranges,
+		size_t aio_threshold,
+		size_t max_read_buffer_size,
 		const ValueSizeMap & avg_value_size_hints = ValueSizeMap{},
 		const ReadBufferFromFileBase::ProfileCallback & profile_callback = ReadBufferFromFileBase::ProfileCallback{},
 		clockid_t clock_type = CLOCK_MONOTONIC_COARSE);
@@ -59,12 +61,16 @@ private:
 	class Stream
 	{
 	public:
-		Stream(
-			const String & path_prefix_, const String & extension_,
+		Stream(const String & path_prefix_,
+			const String & extension_,
 			UncompressedCache * uncompressed_cache,
-			MarkCache * mark_cache, bool save_marks_in_cache,
-			const MarkRanges & all_mark_ranges, size_t aio_threshold, size_t max_read_buffer_size,
-			const ReadBufferFromFileBase::ProfileCallback & profile_callback, clockid_t clock_type);
+			MarkCache * mark_cache,
+			bool save_marks_in_cache,
+			const MarkRanges & all_mark_ranges,
+			size_t aio_threshold,
+			size_t max_read_buffer_size,
+			const ReadBufferFromFileBase::ProfileCallback & profile_callback,
+			clockid_t clock_type);
 
 		static std::unique_ptr<Stream> createEmptyPtr();
 
@@ -72,7 +78,10 @@ private:
 
 		void seekToMark(size_t index);
 
-		bool isEmpty() const { return is_empty; }
+		bool isEmpty() const
+		{
+			return is_empty;
+		}
 
 		ReadBuffer * data_buffer;
 
@@ -108,14 +117,21 @@ private:
 	size_t aio_threshold;
 	size_t max_read_buffer_size;
 
-	void addStream(const String & name, const IDataType & type, const MarkRanges & all_mark_ranges,
-		const ReadBufferFromFileBase::ProfileCallback & profile_callback, clockid_t clock_type,
+	void addStream(const String & name,
+		const IDataType & type,
+		const MarkRanges & all_mark_ranges,
+		const ReadBufferFromFileBase::ProfileCallback & profile_callback,
+		clockid_t clock_type,
 		size_t level = 0);
 
-	void readData(const String & name, const IDataType & type, IColumn & column, size_t from_mark, size_t max_rows_to_read,
-		size_t level = 0, bool read_offsets = true);
+	void readData(const String & name,
+		const IDataType & type,
+		IColumn & column,
+		size_t from_mark,
+		size_t max_rows_to_read,
+		size_t level = 0,
+		bool read_offsets = true);
 
 	void fillMissingColumnsImpl(Block & res, const Names & ordered_names, bool always_reorder);
 };
-
 }

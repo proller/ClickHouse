@@ -1,9 +1,9 @@
 #pragma once
 
-#include <string.h>
-#include <string>
-#include <sstream>
 #include <exception>
+#include <sstream>
+#include <string>
+#include <string.h>
 #include <common/DateLUT.h>
 
 
@@ -17,7 +17,7 @@
   *
   * packed - для memcmp (из-за того, что m_year - 2 байта, little endian, работает корректно только до 2047 года)
   */
-class __attribute__ ((__packed__)) LocalDate
+class __attribute__((__packed__)) LocalDate
 {
 private:
 	unsigned short m_year;
@@ -50,8 +50,8 @@ private:
 		}
 		else
 		{
-			m_month = (s[4] -'0') * 10 + (s[5] -'0');
-			m_day = (s[6] - '0')* 10 + (s[7] -'0');
+			m_month = (s[4] - '0') * 10 + (s[5] - '0');
+			m_day = (s[6] - '0') * 10 + (s[7] - '0');
 		}
 	}
 
@@ -64,13 +64,12 @@ public:
 	LocalDate(DayNum_t day_num)
 	{
 		const auto & values = DateLUT::instance().getValues(day_num);
-		m_year 	= values.year;
+		m_year = values.year;
 		m_month = values.month;
-		m_day 	= values.day_of_month;
+		m_day = values.day_of_month;
 	}
 
-	LocalDate(unsigned short year_, unsigned char month_, unsigned char day_)
-		: m_year(year_), m_month(month_), m_day(day_)
+	LocalDate(unsigned short year_, unsigned char month_, unsigned char day_) : m_year(year_), m_month(month_), m_day(day_)
 	{
 	}
 
@@ -93,7 +92,7 @@ public:
 		operator=(x);
 	}
 
-	LocalDate & operator= (const LocalDate & x)
+	LocalDate & operator=(const LocalDate & x)
 	{
 		m_year = x.m_year;
 		m_month = x.m_month;
@@ -102,7 +101,7 @@ public:
 		return *this;
 	}
 
-	LocalDate & operator= (time_t time)
+	LocalDate & operator=(time_t time)
 	{
 		init(time);
 		return *this;
@@ -123,40 +122,58 @@ public:
 		return getDayNum();
 	}
 
-	unsigned short year() const { return m_year; }
-	unsigned char month() const { return m_month; }
-	unsigned char day() const { return m_day; }
+	unsigned short year() const
+	{
+		return m_year;
+	}
+	unsigned char month() const
+	{
+		return m_month;
+	}
+	unsigned char day() const
+	{
+		return m_day;
+	}
 
-	void year(unsigned short x) { m_year = x; }
-	void month(unsigned char x) { m_month = x; }
-	void day(unsigned char x) { m_day = x; }
+	void year(unsigned short x)
+	{
+		m_year = x;
+	}
+	void month(unsigned char x)
+	{
+		m_month = x;
+	}
+	void day(unsigned char x)
+	{
+		m_day = x;
+	}
 
-	bool operator< (const LocalDate & other) const
+	bool operator<(const LocalDate & other) const
 	{
 		return 0 > memcmp(this, &other, sizeof(*this));
 	}
 
-	bool operator> (const LocalDate & other) const
+	bool operator>(const LocalDate & other) const
 	{
 		return 0 < memcmp(this, &other, sizeof(*this));
 	}
 
-	bool operator<= (const LocalDate & other) const
+	bool operator<=(const LocalDate & other) const
 	{
 		return 0 >= memcmp(this, &other, sizeof(*this));
 	}
 
-	bool operator>= (const LocalDate & other) const
+	bool operator>=(const LocalDate & other) const
 	{
 		return 0 <= memcmp(this, &other, sizeof(*this));
 	}
 
-	bool operator== (const LocalDate & other) const
+	bool operator==(const LocalDate & other) const
 	{
 		return 0 == memcmp(this, &other, sizeof(*this));
 	}
 
-	bool operator!= (const LocalDate & other) const
+	bool operator!=(const LocalDate & other) const
 	{
 		return !(*this == other);
 	}
@@ -166,20 +183,16 @@ public:
 	{
 		std::stringstream ss;
 		if (separator)
-			ss << year() << separator << (month() / 10) << (month() % 10)
-				<< separator << (day() / 10) << (day() % 10);
+			ss << year() << separator << (month() / 10) << (month() % 10) << separator << (day() / 10) << (day() % 10);
 		else
-			ss << year() << (month() / 10) << (month() % 10)
-				<< (day() / 10) << (day() % 10);
+			ss << year() << (month() / 10) << (month() % 10) << (day() / 10) << (day() % 10);
 		return ss.str();
 	}
 };
 
-inline std::ostream & operator<< (std::ostream & ostr, const LocalDate & date)
+inline std::ostream & operator<<(std::ostream & ostr, const LocalDate & date)
 {
-	return ostr << date.year()
-		<< '-' << (date.month() / 10) << (date.month() % 10)
-		<< '-' << (date.day() / 10) << (date.day() % 10);
+	return ostr << date.year() << '-' << (date.month() / 10) << (date.month() % 10) << '-' << (date.day() / 10) << (date.day() % 10);
 }
 
 

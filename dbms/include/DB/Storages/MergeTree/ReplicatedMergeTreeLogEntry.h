@@ -4,8 +4,8 @@
 #include <DB/Core/Types.h>
 #include <DB/IO/WriteHelpers.h>
 
-#include <mutex>
 #include <condition_variable>
+#include <mutex>
 
 
 struct Stat;
@@ -13,7 +13,6 @@ struct Stat;
 
 namespace DB
 {
-
 class ReadBuffer;
 class WriteBuffer;
 class ReplicatedMergeTreeQueue;
@@ -31,10 +30,10 @@ struct ReplicatedMergeTreeLogEntryData
 {
 	enum Type
 	{
-		EMPTY,		 /// Не используется.
-		GET_PART,    /// Получить кусок с другой реплики.
+		EMPTY, /// Не используется.
+		GET_PART, /// Получить кусок с другой реплики.
 		MERGE_PARTS, /// Слить куски.
-		DROP_RANGE,  /// Удалить куски в указанном месяце в указанном диапазоне номеров.
+		DROP_RANGE, /// Удалить куски в указанном месяце в указанном диапазоне номеров.
 		ATTACH_PART, /// Перенести кусок из директории detached или unreplicated.
 	};
 
@@ -42,12 +41,16 @@ struct ReplicatedMergeTreeLogEntryData
 	{
 		switch (type)
 		{
-			case ReplicatedMergeTreeLogEntryData::GET_PART: 	return "GET_PART";
-			case ReplicatedMergeTreeLogEntryData::MERGE_PARTS: 	return "MERGE_PARTS";
-			case ReplicatedMergeTreeLogEntryData::DROP_RANGE: 	return "DROP_RANGE";
-			case ReplicatedMergeTreeLogEntryData::ATTACH_PART: 	return "ATTACH_PART";
-			default:
-				throw Exception("Unknown log entry type: " + DB::toString(type), ErrorCodes::LOGICAL_ERROR);
+		case ReplicatedMergeTreeLogEntryData::GET_PART:
+			return "GET_PART";
+		case ReplicatedMergeTreeLogEntryData::MERGE_PARTS:
+			return "MERGE_PARTS";
+		case ReplicatedMergeTreeLogEntryData::DROP_RANGE:
+			return "DROP_RANGE";
+		case ReplicatedMergeTreeLogEntryData::ATTACH_PART:
+			return "ATTACH_PART";
+		default:
+			throw Exception("Unknown log entry type: " + DB::toString(type), ErrorCodes::LOGICAL_ERROR);
 		}
 	}
 
@@ -63,7 +66,7 @@ struct ReplicatedMergeTreeLogEntryData
 	/// Имя куска, получающегося в результате.
 	/// Для DROP_RANGE имя несуществующего куска. Нужно удалить все куски, покрытые им.
 	String new_part_name;
-	String block_id;	/// Для кусков нулевого уровня - идентификатор блока для дедупликации (имя ноды в /blocks/).
+	String block_id; /// Для кусков нулевого уровня - идентификатор блока для дедупликации (имя ноды в /blocks/).
 
 	Strings parts_to_merge;
 
@@ -76,15 +79,15 @@ struct ReplicatedMergeTreeLogEntryData
 	bool attach_unreplicated = false;
 
 	/// Доступ под queue_mutex, см. ReplicatedMergeTreeQueue.
-	bool currently_executing = false;	/// Выполняется ли действие сейчас.
+	bool currently_executing = false; /// Выполняется ли действие сейчас.
 	/// Эти несколько полей имеют лишь информационный характер (для просмотра пользователем с помощью системных таблиц).
 	/// Доступ под queue_mutex, см. ReplicatedMergeTreeQueue.
-	size_t num_tries = 0;				/// Количество попыток выполнить действие (с момента старта сервера; включая выполняющееся).
-	std::exception_ptr exception;		/// Последний эксепшен, в случае безуспешной попытки выполнить действие.
-	time_t last_attempt_time = 0;		/// Время начала последней попытки выполнить действие.
-	size_t num_postponed = 0;			/// Количество раз, когда действие было отложено.
-	String postpone_reason;				/// Причина, по которой действие было отложено, если оно отложено.
-	time_t last_postpone_time = 0;		/// Время последнего раза, когда действие было отложено.
+	size_t num_tries = 0; /// Количество попыток выполнить действие (с момента старта сервера; включая выполняющееся).
+	std::exception_ptr exception; /// Последний эксепшен, в случае безуспешной попытки выполнить действие.
+	time_t last_attempt_time = 0; /// Время начала последней попытки выполнить действие.
+	size_t num_postponed = 0; /// Количество раз, когда действие было отложено.
+	String postpone_reason; /// Причина, по которой действие было отложено, если оно отложено.
+	time_t last_postpone_time = 0; /// Время последнего раза, когда действие было отложено.
 
 	/// Время создания или время копирования из общего лога в очередь конкретной реплики.
 	time_t create_time = 0;
@@ -102,6 +105,4 @@ struct ReplicatedMergeTreeLogEntry : ReplicatedMergeTreeLogEntryData
 
 	static Ptr parse(const String & s, const Stat & stat);
 };
-
-
 }

@@ -1,7 +1,7 @@
 #pragma once
 
 #if defined(__x86_64__)
-	#include <nmmintrin.h>
+#include <nmmintrin.h>
 #endif
 
 
@@ -22,7 +22,6 @@
 
 namespace detail
 {
-
 template <char s0>
 inline bool is_in(char x)
 {
@@ -77,10 +76,22 @@ inline const char * find_first_symbols_sse2(const char * begin, const char * end
 
 
 template <size_t num_chars,
-	char c01,     char c02 = 0, char c03 = 0, char c04 = 0,
-	char c05 = 0, char c06 = 0, char c07 = 0, char c08 = 0,
-	char c09 = 0, char c10 = 0, char c11 = 0, char c12 = 0,
-	char c13 = 0, char c14 = 0, char c15 = 0, char c16 = 0>
+	char c01,
+	char c02 = 0,
+	char c03 = 0,
+	char c04 = 0,
+	char c05 = 0,
+	char c06 = 0,
+	char c07 = 0,
+	char c08 = 0,
+	char c09 = 0,
+	char c10 = 0,
+	char c11 = 0,
+	char c12 = 0,
+	char c13 = 0,
+	char c14 = 0,
+	char c15 = 0,
+	char c16 = 0>
 inline const char * find_first_symbols_sse42_impl(const char * begin, const char * end)
 {
 #if defined(__x86_64__)
@@ -98,9 +109,7 @@ inline const char * find_first_symbols_sse42_impl(const char * begin, const char
 #endif
 
 	for (; begin < end; ++begin)
-		if (   (num_chars >= 1 && *begin == c01)
-			|| (num_chars >= 2 && *begin == c02)
-			|| (num_chars >= 3 && *begin == c03)
+		if ((num_chars >= 1 && *begin == c01) || (num_chars >= 2 && *begin == c02) || (num_chars >= 3 && *begin == c03)
 			|| (num_chars >= 4 && *begin == c04)
 			|| (num_chars >= 5 && *begin == c05)
 			|| (num_chars >= 6 && *begin == c06)
@@ -124,7 +133,6 @@ inline const char * find_first_symbols_sse42(const char * begin, const char * en
 {
 	return find_first_symbols_sse42_impl<sizeof...(symbols), symbols...>(begin, end);
 }
-
 }
 
 

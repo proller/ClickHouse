@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 /*
  * remote('address', db, table) - создаёт временный StorageDistributed.
  * Чтобы получить структуру таблицы, делается запрос DESC TABLE на удалённый сервер.
@@ -16,8 +15,10 @@ namespace DB
 class TableFunctionRemote : public ITableFunction
 {
 public:
-	std::string getName() const override { return "remote"; }
+	std::string getName() const override
+	{
+		return "remote";
+	}
 	StoragePtr execute(ASTPtr ast_function, Context & context) const override;
 };
-
 }

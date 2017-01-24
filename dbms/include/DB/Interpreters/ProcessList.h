@@ -1,28 +1,27 @@
 #pragma once
 
-#include <map>
 #include <list>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
 #include <Poco/Condition.h>
+#include <DB/Common/CurrentMetrics.h>
+#include <DB/Common/MemoryTracker.h>
 #include <DB/Common/Stopwatch.h>
 #include <DB/Core/Defines.h>
 #include <DB/Core/Progress.h>
-#include <DB/Common/MemoryTracker.h>
-#include <DB/Interpreters/QueryPriorities.h>
 #include <DB/Interpreters/ClientInfo.h>
-#include <DB/Common/CurrentMetrics.h>
+#include <DB/Interpreters/QueryPriorities.h>
 
 
 namespace CurrentMetrics
 {
-	extern const Metric Query;
+extern const Metric Query;
 }
 
 namespace DB
 {
-
 class IStorage;
 using StoragePtr = std::shared_ptr<IStorage>;
 using Tables = std::map<String, StoragePtr>;
@@ -67,7 +66,7 @@ struct ProcessListElement
 
 	QueryPriorities::Handle priority_handle;
 
-	CurrentMetrics::Increment num_queries {CurrentMetrics::Query};
+	CurrentMetrics::Increment num_queries{ CurrentMetrics::Query };
 
 	bool is_cancelled = false;
 
@@ -75,14 +74,12 @@ struct ProcessListElement
 	Tables temporary_tables;
 
 
-	ProcessListElement(
-		const String & query_,
+	ProcessListElement(const String & query_,
 		const ClientInfo & client_info_,
 		size_t max_memory_usage,
 		double memory_tracker_fault_probability,
 		QueryPriorities::Handle && priority_handle_)
-		: query(query_), client_info(client_info_), memory_tracker(max_memory_usage),
-		priority_handle(std::move(priority_handle_))
+		: query(query_), client_info(client_info_), memory_tracker(max_memory_usage), priority_handle(std::move(priority_handle_))
 	{
 		memory_tracker.setDescription("(for query)");
 		current_memory_tracker = &memory_tracker;
@@ -101,7 +98,7 @@ struct ProcessListElement
 		progress_in.incrementPiecewiseAtomically(value);
 
 		if (priority_handle)
-			priority_handle->waitIfNeed(std::chrono::seconds(1));		/// NOTE Could make timeout customizable.
+			priority_handle->waitIfNeed(std::chrono::seconds(1)); /// NOTE Could make timeout customizable.
 
 		return !is_cancelled;
 	}
@@ -117,15 +114,15 @@ struct ProcessListElement
 	{
 		ProcessInfo res;
 
-		res.query 			= query;
-		res.client_info 	= client_info;
+		res.query = query;
+		res.client_info = client_info;
 		res.elapsed_seconds = watch.elapsedSeconds();
-		res.read_rows 		= progress_in.rows;
-		res.read_bytes		= progress_in.bytes;
-		res.total_rows		= progress_in.total_rows;
-		res.written_rows	= progress_out.rows;
-		res.written_bytes	= progress_out.bytes;
-		res.memory_usage 	= memory_tracker.get();
+		res.read_rows = progress_in.rows;
+		res.read_bytes = progress_in.bytes;
+		res.total_rows = progress_in.total_rows;
+		res.written_rows = progress_out.rows;
+		res.written_bytes = progress_out.bytes;
+		res.memory_usage = memory_tracker.get();
 
 		return res;
 	}
@@ -155,23 +152,38 @@ private:
 
 	ProcessList & parent;
 	Container::iterator it;
+
 public:
-	ProcessListEntry(ProcessList & parent_, Container::iterator it_)
-		: parent(parent_), it(it_) {}
+	ProcessListEntry(ProcessList & parent_, Container::iterator it_) : parent(parent_), it(it_)
+	{
+	}
 
 	~ProcessListEntry();
 
-	ProcessListElement * operator->() { return &*it; }
-	const ProcessListElement * operator->() const { return &*it; }
+	ProcessListElement * operator->()
+	{
+		return &*it;
+	}
+	const ProcessListElement * operator->() const
+	{
+		return &*it;
+	}
 
-	ProcessListElement & get() { return *it; }
-	const ProcessListElement & get() const { return *it; }
+	ProcessListElement & get()
+	{
+		return *it;
+	}
+	const ProcessListElement & get() const
+	{
+		return *it;
+	}
 };
 
 
 class ProcessList
 {
 	friend class ProcessListEntry;
+
 public:
 	using Element = ProcessListElement;
 	using Entry = ProcessListEntry;
@@ -184,11 +196,11 @@ public:
 
 private:
 	mutable std::mutex mutex;
-	mutable Poco::Condition have_space;		/// Number of currently running queries has become less than maximum.
+	mutable Poco::Condition have_space; /// Number of currently running queries has become less than maximum.
 
 	Container cont;
-	size_t cur_size;		/// In C++03 or C++11 and old ABI, std::list::size is not O(1).
-	size_t max_size;		/// 0 means no limit. Otherwise, when limit exceeded, an exception is thrown.
+	size_t cur_size; /// In C++03 or C++11 and old ABI, std::list::size is not O(1).
+	size_t max_size; /// 0 means no limit. Otherwise, when limit exceeded, an exception is thrown.
 	UserToQueries user_to_queries;
 	QueryPriorities priorities;
 
@@ -196,7 +208,9 @@ private:
 	MemoryTracker total_memory_tracker;
 
 public:
-	ProcessList(size_t max_size_ = 0) : cur_size(0), max_size(max_size_) {}
+	ProcessList(size_t max_size_ = 0) : cur_size(0), max_size(max_size_)
+	{
+	}
 
 	using EntryPtr = std::shared_ptr<ProcessListEntry>;
 
@@ -207,7 +221,10 @@ public:
 	EntryPtr insert(const String & query_, const ClientInfo & client_info, const Settings & settings);
 
 	/// Number of currently executing queries.
-	size_t size() const { return cur_size; }
+	size_t size() const
+	{
+		return cur_size;
+	}
 
 	/// Get current state of process list.
 	Info getInfo() const
@@ -234,5 +251,4 @@ public:
 	/// Find temporary table by query_id and name. NOTE: doesn't work fine if there are many queries with same query_id.
 	StoragePtr tryGetTemporaryTable(const String & query_id, const String & table_name) const;
 };
-
 }

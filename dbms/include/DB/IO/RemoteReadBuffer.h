@@ -1,7 +1,7 @@
 #pragma once
 
-#include <DB/IO/ReadBufferFromHTTP.h>
 #include "ReadHelpers.h"
+#include <DB/IO/ReadBufferFromHTTP.h>
 
 #define DEFAULT_REMOTE_READ_BUFFER_CONNECTION_TIMEOUT 1
 #define DEFAULT_REMOTE_READ_BUFFER_RECEIVE_TIMEOUT 1800
@@ -9,7 +9,6 @@
 
 namespace DB
 {
-
 /** Позволяет читать файл с удалённого сервера через riod.
   */
 class RemoteReadBuffer : public ReadBuffer
@@ -18,8 +17,7 @@ private:
 	std::unique_ptr<ReadBufferFromHTTP> impl;
 
 public:
-	RemoteReadBuffer(
-		const std::string & host,
+	RemoteReadBuffer(const std::string & host,
 		int port,
 		const std::string & path,
 		bool compress = true,
@@ -29,12 +27,11 @@ public:
 		const Poco::Timespan & receive_timeout = Poco::Timespan(DEFAULT_REMOTE_READ_BUFFER_RECEIVE_TIMEOUT, 0))
 		: ReadBuffer(nullptr, 0)
 	{
-		ReadBufferFromHTTP::Params params = {
-			std::make_pair("action", "read"),
-			std::make_pair("path", path),
-			std::make_pair("compress", (compress ? "true" : "false"))};
+		ReadBufferFromHTTP::Params params
+			= { std::make_pair("action", "read"), std::make_pair("path", path), std::make_pair("compress", (compress ? "true" : "false")) };
 
-		impl = std::make_unique<ReadBufferFromHTTP>(host, port, "", params, "", buffer_size, connection_timeout, send_timeout, receive_timeout);
+		impl = std::make_unique<ReadBufferFromHTTP>(
+			host, port, "", params, "", buffer_size, connection_timeout, send_timeout, receive_timeout);
 	}
 
 	bool nextImpl() override
@@ -47,15 +44,9 @@ public:
 	}
 
 	/// Вернуть список имен файлов в директории.
-	static std::vector<std::string> listFiles(
-		const std::string & host,
-		int port,
-		const std::string & path,
-		size_t timeout = 0)
+	static std::vector<std::string> listFiles(const std::string & host, int port, const std::string & path, size_t timeout = 0)
 	{
-		ReadBufferFromHTTP::Params params = {
-			std::make_pair("action", "list"),
-			std::make_pair("path", path)};
+		ReadBufferFromHTTP::Params params = { std::make_pair("action", "list"), std::make_pair("path", path) };
 
 		ReadBufferFromHTTP in(host, port, "", params, "", timeout);
 
@@ -71,5 +62,4 @@ public:
 		return files;
 	}
 };
-
 }

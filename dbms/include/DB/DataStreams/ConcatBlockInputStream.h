@@ -5,8 +5,6 @@
 
 namespace DB
 {
-
-
 /** Объединяет несколько источников в один.
   * В отличие от UnionBlockInputStream, делает это последовательно.
   * Блоки разных источников не перемежаются друг с другом.
@@ -20,7 +18,10 @@ public:
 		current_stream = children.begin();
 	}
 
-	String getName() const override { return "Concat"; }
+	String getName() const override
+	{
+		return "Concat";
+	}
 
 	String getID() const override
 	{
@@ -65,5 +66,4 @@ protected:
 private:
 	BlockInputStreams::iterator current_stream;
 };
-
 }

@@ -1,11 +1,11 @@
 #pragma once
 
-#include <DB/IO/WriteHelpers.h>
 #include <DB/IO/ReadHelpers.h>
+#include <DB/IO/WriteHelpers.h>
 
 #include <DB/DataTypes/DataTypeArray.h>
-#include <DB/DataTypes/DataTypesNumberFixed.h>
 #include <DB/DataTypes/DataTypeString.h>
+#include <DB/DataTypes/DataTypesNumberFixed.h>
 
 #include <DB/Columns/ColumnArray.h>
 
@@ -18,18 +18,11 @@
 
 namespace DB
 {
-
-
 template <typename T>
 struct AggregateFunctionGroupUniqArrayData
 {
 	/// При создании, хэш-таблица должна быть небольшой.
-	using Set = HashSet<
-		T,
-		DefaultHash<T>,
-		HashTableGrower<4>,
-		HashTableAllocatorWithStackMemory<sizeof(T) * (1 << 4)>
-	>;
+	using Set = HashSet<T, DefaultHash<T>, HashTableGrower<4>, HashTableAllocatorWithStackMemory<sizeof(T) * (1 << 4)>>;
 
 	Set value;
 };
@@ -44,7 +37,10 @@ private:
 	using State = AggregateFunctionGroupUniqArrayData<T>;
 
 public:
-	String getName() const override { return "groupUniqArray"; }
+	String getName() const override
+	{
+		return "groupUniqArray";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -106,7 +102,10 @@ struct AggreagteFunctionGroupUniqArrayGenericData
 {
 	static constexpr size_t INIT_ELEMS = 2; /// adjustable
 	static constexpr size_t ELEM_SIZE = sizeof(HashSetCellWithSavedHash<StringRef, StringRefHash>);
-	using Set = HashSetWithSavedHash<StringRef, StringRefHash, HashTableGrower<INIT_ELEMS>, HashTableAllocatorWithStackMemory<INIT_ELEMS * ELEM_SIZE>>;
+	using Set = HashSetWithSavedHash<StringRef,
+		StringRefHash,
+		HashTableGrower<INIT_ELEMS>,
+		HashTableAllocatorWithStackMemory<INIT_ELEMS * ELEM_SIZE>>;
 
 	Set value;
 };
@@ -115,7 +114,8 @@ struct AggreagteFunctionGroupUniqArrayGenericData
  *  For such columns groupUniqArray() can be implemented more efficently (especially for small numeric arrays).
  */
 template <bool is_plain_column = false>
-class AggreagteFunctionGroupUniqArrayGeneric : public IUnaryAggregateFunction<AggreagteFunctionGroupUniqArrayGenericData, AggreagteFunctionGroupUniqArrayGeneric<is_plain_column>>
+class AggreagteFunctionGroupUniqArrayGeneric
+	: public IUnaryAggregateFunction<AggreagteFunctionGroupUniqArrayGenericData, AggreagteFunctionGroupUniqArrayGeneric<is_plain_column>>
 {
 	DataTypePtr input_data_type;
 
@@ -126,8 +126,10 @@ class AggreagteFunctionGroupUniqArrayGeneric : public IUnaryAggregateFunction<Ag
 	static void deserializeAndInsert(StringRef str, IColumn & data_to);
 
 public:
-
-	String getName() const override { return "groupUniqArray"; }
+	String getName() const override
+	{
+		return "groupUniqArray";
+	}
 
 	void setArgument(const DataTypePtr & argument)
 	{
@@ -249,5 +251,4 @@ inline void AggreagteFunctionGroupUniqArrayGeneric<true>::deserializeAndInsert(S
 
 
 #undef AGGREGATE_FUNCTION_GROUP_ARRAY_UNIQ_MAX_SIZE
-
 }

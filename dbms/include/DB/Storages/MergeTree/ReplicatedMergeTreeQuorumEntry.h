@@ -1,17 +1,16 @@
 #pragma once
 
+#include <zkutil/ZooKeeper.h>
 #include <DB/Core/Types.h>
+#include <DB/IO/Operators.h>
 #include <DB/IO/ReadBuffer.h>
 #include <DB/IO/ReadBufferFromString.h>
 #include <DB/IO/WriteBuffer.h>
 #include <DB/IO/WriteBufferFromString.h>
-#include <DB/IO/Operators.h>
-#include <zkutil/ZooKeeper.h>
 
 
 namespace DB
 {
-
 /** Для реализации функциональности "кворумная запись".
   * Информация о том, на каких репликах появился вставленный кусок данных,
   *  и на скольких репликах он должен быть.
@@ -22,7 +21,9 @@ struct ReplicatedMergeTreeQuorumEntry
 	size_t required_number_of_replicas;
 	std::set<String> replicas;
 
-	ReplicatedMergeTreeQuorumEntry() {}
+	ReplicatedMergeTreeQuorumEntry()
+	{
+	}
 	ReplicatedMergeTreeQuorumEntry(const String & str)
 	{
 		fromString(str);
@@ -44,11 +45,8 @@ struct ReplicatedMergeTreeQuorumEntry
 	{
 		size_t actual_number_of_replicas = 0;
 
-		in >> "version: 1\n"
-			>> "part_name: " >> part_name >> "\n"
-			>> "required_number_of_replicas: " >> required_number_of_replicas >> "\n"
-			>> "actual_number_of_replicas: " >> actual_number_of_replicas >> "\n"
-			>> "replicas:\n";
+		in >> "version: 1\n" >> "part_name: " >> part_name >> "\n" >> "required_number_of_replicas: " >> required_number_of_replicas >> "\n"
+			>> "actual_number_of_replicas: " >> actual_number_of_replicas >> "\n" >> "replicas:\n";
 
 		for (size_t i = 0; i < actual_number_of_replicas; ++i)
 		{
@@ -74,5 +72,4 @@ struct ReplicatedMergeTreeQuorumEntry
 		readText(in);
 	}
 };
-
 }

@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 class Block;
 class WriteBuffer;
 
@@ -17,7 +16,9 @@ class WriteBuffer;
 class TabSeparatedBlockOutputStream : public IBlockOutputStream
 {
 public:
-	TabSeparatedBlockOutputStream(WriteBuffer & ostr_) : ostr(ostr_) {}
+	TabSeparatedBlockOutputStream(WriteBuffer & ostr_) : ostr(ostr_)
+	{
+	}
 
 	void write(const Block & block) override;
 	void flush() override;
@@ -25,5 +26,4 @@ public:
 private:
 	WriteBuffer & ostr;
 };
-
 }

@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 class Set;
 using ConstSetPtr = std::shared_ptr<const Set>;
 
@@ -17,18 +16,31 @@ using ConstSetPtr = std::shared_ptr<const Set>;
 class ColumnSet final : public IColumnDummy
 {
 public:
-	ColumnSet(size_t s_, ConstSetPtr data_) : IColumnDummy(s_), data(data_) {}
+	ColumnSet(size_t s_, ConstSetPtr data_) : IColumnDummy(s_), data(data_)
+	{
+	}
 
 	/// Столбец не константный. Иначе столбец будет использоваться в вычислениях в ExpressionActions::prepare, когда множество из подзапроса ещё не готово.
-	bool isConst() const override { return false; }
+	bool isConst() const override
+	{
+		return false;
+	}
 
-	std::string getName() const override { return "ColumnSet"; }
-	ColumnPtr cloneDummy(size_t s_) const override { return std::make_shared<ColumnSet>(s_, data); }
+	std::string getName() const override
+	{
+		return "ColumnSet";
+	}
+	ColumnPtr cloneDummy(size_t s_) const override
+	{
+		return std::make_shared<ColumnSet>(s_, data);
+	}
 
-	ConstSetPtr getData() const { return data; }
+	ConstSetPtr getData() const
+	{
+		return data;
+	}
 
 private:
 	ConstSetPtr data;
 };
-
 }

@@ -1,18 +1,18 @@
 #pragma once
 
 #include <DB/Core/SortDescription.h>
+#include <DB/DataStreams/GraphiteRollupSortedBlockInputStream.h>
+#include <DB/DataTypes/DataTypeString.h>
+#include <DB/DataTypes/DataTypesNumberFixed.h>
+#include <DB/IO/ReadBufferFromFile.h>
+#include <DB/IO/ReadBufferFromString.h>
+#include <DB/IO/WriteBufferFromFile.h>
 #include <DB/Interpreters/Context.h>
 #include <DB/Interpreters/ExpressionActions.h>
 #include <DB/Storages/IStorage.h>
 #include <DB/Storages/MergeTree/ActiveDataPartSet.h>
-#include <DB/Storages/MergeTree/MergeTreeSettings.h>
-#include <DB/IO/ReadBufferFromString.h>
-#include <DB/IO/WriteBufferFromFile.h>
-#include <DB/IO/ReadBufferFromFile.h>
-#include <DB/DataTypes/DataTypeString.h>
-#include <DB/DataTypes/DataTypesNumberFixed.h>
-#include <DB/DataStreams/GraphiteRollupSortedBlockInputStream.h>
 #include <DB/Storages/MergeTree/MergeTreeDataPart.h>
+#include <DB/Storages/MergeTree/MergeTreeSettings.h>
 
 
 struct SimpleIncrement;
@@ -20,7 +20,6 @@ struct SimpleIncrement;
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int LOGICAL_ERROR;
@@ -88,13 +87,19 @@ class MergeTreeData : public ITableDeclaration
 
 public:
 	/// Функция, которую можно вызвать, если есть подозрение, что данные куска испорчены.
-	using BrokenPartCallback = std::function<void (const String &)>;
+	using BrokenPartCallback = std::function<void(const String &)>;
 	using DataPart = MergeTreeDataPart;
 
 	using MutableDataPartPtr = std::shared_ptr<DataPart>;
 	/// После добавление в рабочее множество DataPart нельзя изменять.
 	using DataPartPtr = std::shared_ptr<const DataPart>;
-	struct DataPartPtrLess { bool operator() (const DataPartPtr & lhs, const DataPartPtr & rhs) const { return *lhs < *rhs; } };
+	struct DataPartPtrLess
+	{
+		bool operator()(const DataPartPtr & lhs, const DataPartPtr & rhs) const
+		{
+			return *lhs < *rhs;
+		}
+	};
 	using DataParts = std::set<DataPartPtr, DataPartPtrLess>;
 	using DataPartsVector = std::vector<DataPartPtr>;
 
@@ -107,7 +112,9 @@ public:
 	class Transaction : private boost::noncopyable
 	{
 	public:
-		Transaction() {}
+		Transaction()
+		{
+		}
 
 		void commit()
 		{
@@ -131,11 +138,12 @@ public:
 			{
 				rollback();
 			}
-			catch(...)
+			catch (...)
 			{
 				tryLogCurrentException("~MergeTreeData::Transaction");
 			}
 		}
+
 	private:
 		friend class MergeTreeData;
 
@@ -164,13 +172,21 @@ public:
 		~AlterDataPartTransaction();
 
 		/// Посмотреть изменения перед коммитом.
-		const NamesAndTypesList & getNewColumns() const { return new_columns; }
-		const DataPart::Checksums & getNewChecksums() const { return new_checksums; }
+		const NamesAndTypesList & getNewColumns() const
+		{
+			return new_columns;
+		}
+		const DataPart::Checksums & getNewChecksums() const
+		{
+			return new_checksums;
+		}
 
 	private:
 		friend class MergeTreeData;
 
-		AlterDataPartTransaction(DataPartPtr data_part_) : data_part(data_part_), alter_lock(data_part->alter_mutex) {}
+		AlterDataPartTransaction(DataPartPtr data_part_) : data_part(data_part_), alter_lock(data_part->alter_mutex)
+		{
+		}
 
 		void clear()
 		{
@@ -196,13 +212,13 @@ public:
 		/// Режим работы. См. выше.
 		enum Mode
 		{
-			Ordinary 	= 0,	/// Числа сохраняются - не меняйте.
-			Collapsing 	= 1,
-			Summing 	= 2,
+			Ordinary = 0, /// Числа сохраняются - не меняйте.
+			Collapsing = 1,
+			Summing = 2,
 			Aggregating = 3,
-			Unsorted 	= 4,
-			Replacing	= 5,
-			Graphite	= 6,
+			Unsorted = 4,
+			Replacing = 5,
+			Graphite = 6,
 		};
 
 		Mode mode;
@@ -235,33 +251,38 @@ public:
 	  * index_granularity 	- на сколько строчек пишется одно значение индекса.
 	  * require_part_metadata - обязательно ли в директории с куском должны быть checksums.txt и columns.txt
 	  */
-	MergeTreeData(	const String & full_path_, NamesAndTypesListPtr columns_,
-					const NamesAndTypesList & materialized_columns_,
-					const NamesAndTypesList & alias_columns_,
-					const ColumnDefaults & column_defaults_,
-					Context & context_,
-					ASTPtr & primary_expr_ast_,
-					const String & date_column_name_,
-					const ASTPtr & sampling_expression_, /// nullptr, если семплирование не поддерживается.
-					size_t index_granularity_,
-					const MergingParams & merging_params_,
-					const MergeTreeSettings & settings_,
-					const String & log_name_,
-					bool require_part_metadata_,
-					BrokenPartCallback broken_part_callback_ = [](const String &){});
+	MergeTreeData(const String & full_path_,
+		NamesAndTypesListPtr columns_,
+		const NamesAndTypesList & materialized_columns_,
+		const NamesAndTypesList & alias_columns_,
+		const ColumnDefaults & column_defaults_,
+		Context & context_,
+		ASTPtr & primary_expr_ast_,
+		const String & date_column_name_,
+		const ASTPtr & sampling_expression_, /// nullptr, если семплирование не поддерживается.
+		size_t index_granularity_,
+		const MergingParams & merging_params_,
+		const MergeTreeSettings & settings_,
+		const String & log_name_,
+		bool require_part_metadata_,
+		BrokenPartCallback broken_part_callback_ = [](const String &) {});
 
 	/// Загрузить множество кусков с данными с диска. Вызывается один раз - сразу после создания объекта.
 	void loadDataParts(bool skip_sanity_checks);
 
-	bool supportsSampling() const { return !!sampling_expression; }
-	bool supportsPrewhere() const { return true; }
+	bool supportsSampling() const
+	{
+		return !!sampling_expression;
+	}
+	bool supportsPrewhere() const
+	{
+		return true;
+	}
 
 	bool supportsFinal() const
 	{
-		return merging_params.mode == MergingParams::Collapsing
-			|| merging_params.mode == MergingParams::Summing
-			|| merging_params.mode == MergingParams::Aggregating
-			|| merging_params.mode == MergingParams::Replacing;
+		return merging_params.mode == MergingParams::Collapsing || merging_params.mode == MergingParams::Summing
+			|| merging_params.mode == MergingParams::Aggregating || merging_params.mode == MergingParams::Replacing;
 	}
 
 	Int64 getMaxDataPartIndex();
@@ -271,7 +292,10 @@ public:
 		throw Exception("Logical error: calling method getTableName of not a table.", ErrorCodes::LOGICAL_ERROR);
 	}
 
-	const NamesAndTypesList & getColumnsListImpl() const override { return *columns; }
+	const NamesAndTypesList & getColumnsListImpl() const override
+	{
+		return *columns;
+	}
 
 	NameAndTypePair getColumn(const String & column_name) const override
 	{
@@ -287,15 +311,19 @@ public:
 
 	bool hasColumn(const String & column_name) const override
 	{
-		return ITableDeclaration::hasColumn(column_name)
-			|| column_name == "_part"
-			|| column_name == "_part_index"
+		return ITableDeclaration::hasColumn(column_name) || column_name == "_part" || column_name == "_part_index"
 			|| column_name == "_sample_factor";
 	}
 
-	String getFullPath() const { return full_path; }
+	String getFullPath() const
+	{
+		return full_path;
+	}
 
-	String getLogName() const { return log_name; }
+	String getLogName() const
+	{
+		return log_name;
+	}
 
 	/** Возвращает копию списка, чтобы снаружи можно было не заботиться о блокировках.
 	  */
@@ -359,7 +387,8 @@ public:
 	/** Переименовывает кусок в detached/prefix_кусок и забывает про него. Данные не будут удалены в clearOldParts.
 	  * Если restore_covered, добавляет в рабочий набор неактивные куски, слиянием которых получен удаляемый кусок.
 	  */
-	void renameAndDetachPart(const DataPartPtr & part, const String & prefix = "", bool restore_covered = false, bool move_to_detached = true);
+	void renameAndDetachPart(
+		const DataPartPtr & part, const String & prefix = "", bool restore_covered = false, bool move_to_detached = true);
 
 	/** Убирает кусок из списка кусков (включая all_data_parts), но не перемещает директорию.
 	  */
@@ -406,13 +435,13 @@ public:
 	  * Если никаких действий над данными не требуется, возвращает nullptr.
 	  */
 	AlterDataPartTransactionPtr alterDataPart(
-		const DataPartPtr & part,
-		const NamesAndTypesList & new_columns,
-		const ASTPtr & new_primary_key,
-		bool skip_sanity_checks);
+		const DataPartPtr & part, const NamesAndTypesList & new_columns, const ASTPtr & new_primary_key, bool skip_sanity_checks);
 
 	/// Нужно вызывать под залоченным lockStructureForAlter().
-	void setColumnsList(const NamesAndTypesList & new_columns) { columns = std::make_shared<NamesAndTypesList>(new_columns); }
+	void setColumnsList(const NamesAndTypesList & new_columns)
+	{
+		columns = std::make_shared<NamesAndTypesList>(new_columns);
+	}
 
 	/// Нужно вызвать, если есть подозрение, что данные куска испорчены.
 	void reportBrokenPart(const String & name)
@@ -420,8 +449,14 @@ public:
 		broken_part_callback(name);
 	}
 
-	ExpressionActionsPtr getPrimaryExpression() const { return primary_expr; }
-	SortDescription getSortDescription() const { return sort_descr; }
+	ExpressionActionsPtr getPrimaryExpression() const
+	{
+		return primary_expr;
+	}
+	SortDescription getSortDescription() const
+	{
+		return sort_descr;
+	}
 
 	/// Проверить, что кусок не сломан и посчитать для него чексуммы, если их нет.
 	MutableDataPartPtr loadPartAndFixMetadata(const String & relative_path);
@@ -438,7 +473,7 @@ public:
 
 	size_t getColumnSize(const std::string & name) const
 	{
-		std::lock_guard<std::mutex> lock{data_parts_mutex};
+		std::lock_guard<std::mutex> lock{ data_parts_mutex };
 
 		const auto it = column_sizes.find(name);
 		return it == std::end(column_sizes) ? 0 : it->second;
@@ -447,7 +482,7 @@ public:
 	using ColumnSizes = std::unordered_map<std::string, size_t>;
 	ColumnSizes getColumnSizes() const
 	{
-		std::lock_guard<std::mutex> lock{data_parts_mutex};
+		std::lock_guard<std::mutex> lock{ data_parts_mutex };
 		return column_sizes;
 	}
 
@@ -524,8 +559,12 @@ private:
 	  * Файлы, которые нужно удалить, в out_rename_map отображаются в пустую строку.
 	  * Если !part, просто проверяет, что все нужные преобразования типов допустимы.
 	  */
-	void createConvertExpression(const DataPartPtr & part, const NamesAndTypesList & old_columns, const NamesAndTypesList & new_columns,
-		ExpressionActionsPtr & out_expression, NameToNameMap & out_rename_map, bool & out_force_update_metadata) const;
+	void createConvertExpression(const DataPartPtr & part,
+		const NamesAndTypesList & old_columns,
+		const NamesAndTypesList & new_columns,
+		ExpressionActionsPtr & out_expression,
+		NameToNameMap & out_rename_map,
+		bool & out_force_update_metadata) const;
 
 	/// Рассчитывает размеры столбцов в сжатом виде для текущего состояния data_parts. Вызывается под блокировкой.
 	void calculateColumnSizes();
@@ -533,5 +572,4 @@ private:
 	void addPartContributionToColumnSizes(const DataPartPtr & part);
 	void removePartContributionToColumnSizes(const DataPartPtr & part);
 };
-
 }

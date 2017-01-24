@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 class SimpleMergeSelector : public IMergeSelector
 {
 public:
@@ -71,14 +70,13 @@ public:
 		double heuristic_to_remove_small_parts_at_right_max_ratio = 0.01;
 	};
 
-	SimpleMergeSelector(const Settings & settings) : settings(settings) {}
+	SimpleMergeSelector(const Settings & settings) : settings(settings)
+	{
+	}
 
-	PartsInPartition select(
-		const Partitions & partitions,
-		const size_t max_total_size_to_merge) override;
+	PartsInPartition select(const Partitions & partitions, const size_t max_total_size_to_merge) override;
 
 private:
 	const Settings settings;
 };
-
 }

@@ -6,10 +6,10 @@
 #include <common/singleton.h>
 
 
-#define REGION_TYPE_CITY 	  6
-#define REGION_TYPE_AREA 	  5
-#define REGION_TYPE_DISTRICT  4
-#define REGION_TYPE_COUNTRY   3
+#define REGION_TYPE_CITY 6
+#define REGION_TYPE_AREA 5
+#define REGION_TYPE_DISTRICT 4
+#define REGION_TYPE_COUNTRY 3
 #define REGION_TYPE_CONTINENT 1
 
 
@@ -146,7 +146,8 @@ public:
 
 class RegionsHierarchySingleton : public Singleton<RegionsHierarchySingleton>, public RegionsHierarchy
 {
-friend class Singleton<RegionsHierarchySingleton>;
+	friend class Singleton<RegionsHierarchySingleton>;
+
 protected:
 	RegionsHierarchySingleton()
 	{

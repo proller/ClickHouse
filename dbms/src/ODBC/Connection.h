@@ -1,18 +1,19 @@
 #pragma once
 
-#include <Poco/NumberParser.h>
 #include <Poco/Net/HTTPClientSession.h>
+#include <Poco/NumberParser.h>
 
-#include "StringRef.h"
 #include "DiagnosticRecord.h"
 #include "Environment.h"
+#include "StringRef.h"
 #include "utils.h"
 
 
 struct Connection
 {
-	Connection(Environment & env_)
-		: environment(env_) {}
+	Connection(Environment & env_) : environment(env_)
+	{
+	}
 
 	Environment & environment;
 	std::string host = "localhost";
@@ -31,8 +32,7 @@ struct Connection
 		/// TODO Таймаут.
 	}
 
-	void init(
-		const std::string & host_,
+	void init(const std::string & host_,
 		const uint16_t port_,
 		const std::string & user_,
 		const std::string & password_,

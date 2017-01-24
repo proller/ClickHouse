@@ -3,27 +3,25 @@
 #include <thread>
 #include <boost/noncopyable.hpp>
 #include <common/logger_useful.h>
-#include <DB/Core/Types.h>
 #include <DB/Common/ConcurrentBoundedQueue.h>
-#include <DB/Storages/IStorage.h>
-#include <DB/Interpreters/Context.h>
 #include <DB/Common/Stopwatch.h>
-#include <DB/Parsers/ASTCreateQuery.h>
-#include <DB/Parsers/parseQuery.h>
-#include <DB/Parsers/ExpressionElementParsers.h>
-#include <DB/Parsers/ASTRenameQuery.h>
-#include <DB/Parsers/formatAST.h>
-#include <DB/Parsers/ASTInsertQuery.h>
-#include <DB/Interpreters/InterpreterCreateQuery.h>
-#include <DB/Interpreters/InterpreterRenameQuery.h>
-#include <DB/Interpreters/InterpreterInsertQuery.h>
 #include <DB/Common/setThreadName.h>
+#include <DB/Core/Types.h>
+#include <DB/Interpreters/Context.h>
+#include <DB/Interpreters/InterpreterCreateQuery.h>
+#include <DB/Interpreters/InterpreterInsertQuery.h>
+#include <DB/Interpreters/InterpreterRenameQuery.h>
+#include <DB/Parsers/ASTCreateQuery.h>
+#include <DB/Parsers/ASTInsertQuery.h>
+#include <DB/Parsers/ASTRenameQuery.h>
+#include <DB/Parsers/ExpressionElementParsers.h>
+#include <DB/Parsers/formatAST.h>
+#include <DB/Parsers/parseQuery.h>
+#include <DB/Storages/IStorage.h>
 
 
 namespace DB
 {
-
-
 /** Allow to store structured log in system table.
   *
   * Logging is asynchronous. Data is put into queue from where it will be read by separate thread.
@@ -57,7 +55,6 @@ template <typename LogElement>
 class SystemLog : private boost::noncopyable
 {
 public:
-
 	/** Parameter: table name where to write log.
 	  * If table is not exists, then it get created with specified engine.
 	  * If it already exists, then its structure is checked to be compatible with structure of log record.
@@ -66,8 +63,7 @@ public:
 	  *   where N - is a minimal number from 1, for that table with corresponding name doesn't exist yet;
 	  *   and new table get created - as if previous table was not exist.
 	  */
-	SystemLog(
-		Context & context_,
+	SystemLog(Context & context_,
 		const String & database_name_,
 		const String & table_name_,
 		const String & engine_,
@@ -81,7 +77,7 @@ public:
 	void add(const LogElement & element)
 	{
 		/// We could lock here in case of queue overflow. Maybe better to throw an exception or even don't do logging in that case.
-		queue.push({false, element});
+		queue.push({ false, element });
 	}
 
 private:
@@ -92,10 +88,10 @@ private:
 	const String engine;
 	const size_t flush_interval_milliseconds;
 
-	using QueueItem = std::pair<bool, LogElement>;		/// First element is shutdown flag for thread.
+	using QueueItem = std::pair<bool, LogElement>; /// First element is shutdown flag for thread.
 
 	/// Queue is bounded. But its size is quite large to not block in all normal cases.
-	ConcurrentBoundedQueue<QueueItem> queue {DBMS_SYSTEM_LOG_QUEUE_SIZE};
+	ConcurrentBoundedQueue<QueueItem> queue{ DBMS_SYSTEM_LOG_QUEUE_SIZE };
 
 	/** Data that was pulled from queue. Data is accumulated here before enough time passed.
 	  * It's possible to implement double-buffering, but we assume that insertion into table is faster
@@ -128,8 +124,10 @@ SystemLog<LogElement>::SystemLog(Context & context_,
 	const String & engine_,
 	size_t flush_interval_milliseconds_)
 	: context(context_),
-	database_name(database_name_), table_name(table_name_), engine(engine_),
-	flush_interval_milliseconds(flush_interval_milliseconds_)
+	  database_name(database_name_),
+	  table_name(table_name_),
+	  engine(engine_),
+	  flush_interval_milliseconds(flush_interval_milliseconds_)
 {
 	log = &Logger::get("SystemLog (" + database_name + "." + table_name + ")");
 
@@ -142,7 +140,7 @@ template <typename LogElement>
 SystemLog<LogElement>::~SystemLog()
 {
 	/// Tell thread to shutdown.
-	queue.push({true, {}});
+	queue.push({ true, {} });
 	saving_thread.join();
 }
 
@@ -217,7 +215,7 @@ void SystemLog<LogElement>::flush()
 	{
 		LOG_TRACE(log, "Flushing query log");
 
-		if (!is_prepared)	/// BTW, flush method is called from single thread.
+		if (!is_prepared) /// BTW, flush method is called from single thread.
 			prepareTable();
 
 		Block block = LogElement::createBlock();
@@ -284,8 +282,10 @@ void SystemLog<LogElement>::prepareTable()
 
 			rename->elements.emplace_back(elem);
 
-			LOG_DEBUG(log, "Existing table " << description << " for system log has obsolete or different structure."
-			" Renaming it to " << backQuoteIfNeed(to.table));
+			LOG_DEBUG(log,
+				"Existing table " << description << " for system log has obsolete or different structure."
+													" Renaming it to "
+								  << backQuoteIfNeed(to.table));
 
 			InterpreterRenameQuery(rename, context).execute();
 
@@ -311,7 +311,8 @@ void SystemLog<LogElement>::prepareTable()
 
 		ParserFunction engine_parser;
 
-		create->storage = parseQuery(engine_parser, engine.data(), engine.data() + engine.size(), "ENGINE to create table for" + LogElement::name());
+		create->storage
+			= parseQuery(engine_parser, engine.data(), engine.data() + engine.size(), "ENGINE to create table for" + LogElement::name());
 
 		InterpreterCreateQuery(create, context).execute();
 
@@ -320,6 +321,4 @@ void SystemLog<LogElement>::prepareTable()
 
 	is_prepared = true;
 }
-
-
 }

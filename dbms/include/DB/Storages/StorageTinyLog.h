@@ -6,22 +6,21 @@
 
 #include <Poco/File.h>
 
-#include <DB/Storages/IStorage.h>
 #include <DB/Common/FileChecker.h>
 #include <DB/Common/escapeForFileName.h>
+#include <DB/Storages/IStorage.h>
 
 
 namespace DB
 {
-
 /** Реализует хранилище, подходящее для маленьких кусочков лога.
   * Отличается от StorageLog отсутствием файлов с засечками.
   */
 class StorageTinyLog : private ext::shared_ptr_helper<StorageTinyLog>, public IStorage
 {
-friend class ext::shared_ptr_helper<StorageTinyLog>;
-friend class TinyLogBlockInputStream;
-friend class TinyLogBlockOutputStream;
+	friend class ext::shared_ptr_helper<StorageTinyLog>;
+	friend class TinyLogBlockInputStream;
+	friend class TinyLogBlockOutputStream;
 
 public:
 	/** Подцепить таблицу с соответствующим именем, по соответствующему пути (с / на конце),
@@ -29,8 +28,7 @@ public:
 	  *  состоящую из указанных столбцов.
 	  * Если не указано attach - создать директорию, если её нет.
 	  */
-	static StoragePtr create(
-		const std::string & path_,
+	static StoragePtr create(const std::string & path_,
 		const std::string & name_,
 		NamesAndTypesListPtr columns_,
 		const NamesAndTypesList & materialized_columns_,
@@ -39,13 +37,21 @@ public:
 		bool attach,
 		size_t max_compress_block_size_ = DEFAULT_MAX_COMPRESS_BLOCK_SIZE);
 
-	std::string getName() const override { return "TinyLog"; }
-	std::string getTableName() const override { return name; }
+	std::string getName() const override
+	{
+		return "TinyLog";
+	}
+	std::string getTableName() const override
+	{
+		return name;
+	}
 
-	const NamesAndTypesList & getColumnsListImpl() const override { return *columns; }
+	const NamesAndTypesList & getColumnsListImpl() const override
+	{
+		return *columns;
+	}
 
-	BlockInputStreams read(
-		const Names & column_names,
+	BlockInputStreams read(const Names & column_names,
 		ASTPtr query,
 		const Context & context,
 		const Settings & settings,
@@ -68,7 +74,10 @@ public:
 	};
 	using Files_t = std::map<String, ColumnData>;
 
-	std::string full_path() { return path + escapeForFileName(name) + '/';}
+	std::string full_path()
+	{
+		return path + escapeForFileName(name) + '/';
+	}
 
 private:
 	String path;
@@ -83,8 +92,7 @@ private:
 
 	Logger * log;
 
-	StorageTinyLog(
-		const std::string & path_,
+	StorageTinyLog(const std::string & path_,
 		const std::string & name_,
 		NamesAndTypesListPtr columns_,
 		const NamesAndTypesList & materialized_columns_,
@@ -95,5 +103,4 @@ private:
 
 	void addFile(const String & column_name, const IDataType & type, size_t level = 0);
 };
-
 }

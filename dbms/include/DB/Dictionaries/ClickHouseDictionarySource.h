@@ -1,16 +1,15 @@
 #pragma once
 
-#include <DB/Dictionaries/IDictionarySource.h>
+#include <memory>
+#include <Poco/Util/AbstractConfiguration.h>
+#include <DB/Client/ConnectionPool.h>
 #include <DB/Dictionaries/DictionaryStructure.h>
 #include <DB/Dictionaries/ExternalQueryBuilder.h>
-#include <DB/Client/ConnectionPool.h>
-#include <Poco/Util/AbstractConfiguration.h>
-#include <memory>
+#include <DB/Dictionaries/IDictionarySource.h>
 
 
 namespace DB
 {
-
 /** Allows loading dictionaries from local or remote ClickHouse instance
   *	@todo use ConnectionPoolWithFailover
   *	@todo invent a way to keep track of source modifications
@@ -21,7 +20,8 @@ public:
 	ClickHouseDictionarySource(const DictionaryStructure & dict_struct_,
 		const Poco::Util::AbstractConfiguration & config,
 		const std::string & config_prefix,
-		const Block & sample_block, Context & context);
+		const Block & sample_block,
+		Context & context);
 
 	/// copy-constructor is provided in order to support cloneability
 	ClickHouseDictionarySource(const ClickHouseDictionarySource & other);
@@ -30,13 +30,21 @@ public:
 
 	BlockInputStreamPtr loadIds(const std::vector<UInt64> & ids) override;
 
-	BlockInputStreamPtr loadKeys(
-		const ConstColumnPlainPtrs & key_columns, const std::vector<size_t> & requested_rows) override;
+	BlockInputStreamPtr loadKeys(const ConstColumnPlainPtrs & key_columns, const std::vector<size_t> & requested_rows) override;
 
-	bool isModified() const override { return true; }
-	bool supportsSelectiveLoad() const override { return true; }
+	bool isModified() const override
+	{
+		return true;
+	}
+	bool supportsSelectiveLoad() const override
+	{
+		return true;
+	}
 
-	DictionarySourcePtr clone() const override { return std::make_unique<ClickHouseDictionarySource>(*this); }
+	DictionarySourcePtr clone() const override
+	{
+		return std::make_unique<ClickHouseDictionarySource>(*this);
+	}
 
 	std::string toString() const override;
 
@@ -58,5 +66,4 @@ private:
 	ConnectionPoolPtr pool;
 	const std::string load_all_query;
 };
-
 }

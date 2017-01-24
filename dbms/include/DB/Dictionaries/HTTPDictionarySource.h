@@ -1,15 +1,17 @@
 #pragma once
 
-#include <DB/Dictionaries/IDictionarySource.h>
 #include <DB/Dictionaries/DictionaryStructure.h>
+#include <DB/Dictionaries/IDictionarySource.h>
 
 
-namespace Poco { class Logger; }
+namespace Poco
+{
+class Logger;
+}
 
 
 namespace DB
 {
-
 /// Allows loading dictionaries from executable
 class HTTPDictionarySource final : public IDictionarySource
 {
@@ -26,8 +28,7 @@ public:
 
 	BlockInputStreamPtr loadIds(const std::vector<UInt64> & ids) override;
 
-	BlockInputStreamPtr loadKeys(
-		const ConstColumnPlainPtrs & key_columns, const std::vector<std::size_t> & requested_rows) override;
+	BlockInputStreamPtr loadKeys(const ConstColumnPlainPtrs & key_columns, const std::vector<std::size_t> & requested_rows) override;
 
 	bool isModified() const override;
 
@@ -48,5 +49,4 @@ private:
 	Block sample_block;
 	const Context & context;
 };
-
 }

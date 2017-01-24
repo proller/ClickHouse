@@ -1,17 +1,14 @@
 #pragma once
 
-#include <DB/Storages/IStorage.h>
-#include <DB/Storages/AlterCommands.h>
 #include <DB/Interpreters/Context.h>
 #include <DB/Interpreters/IInterpreter.h>
 #include <DB/Parsers/ASTAlterQuery.h>
+#include <DB/Storages/AlterCommands.h>
+#include <DB/Storages/IStorage.h>
 
 
 namespace DB
 {
-
-
-
 /** Позволяет добавить или удалить столбец в таблице.
   * Также позволяет осуществить манипуляции с партициями таблиц семейства MergeTree.
   */
@@ -92,12 +89,24 @@ private:
 			return res;
 		}
 
-		static PartitionCommand reshardPartitions(const Field & first_partition_, const Field & last_partition_,
-			const WeightedZooKeeperPaths & weighted_zookeeper_paths_, const ASTPtr & sharding_key_expr_,
-			bool do_copy_, const Field & coordinator_)
+		static PartitionCommand reshardPartitions(const Field & first_partition_,
+			const Field & last_partition_,
+			const WeightedZooKeeperPaths & weighted_zookeeper_paths_,
+			const ASTPtr & sharding_key_expr_,
+			bool do_copy_,
+			const Field & coordinator_)
 		{
-			return {RESHARD_PARTITION, first_partition_, false, false, false, {},
-				last_partition_, weighted_zookeeper_paths_, sharding_key_expr_, do_copy_, coordinator_};
+			return { RESHARD_PARTITION,
+				first_partition_,
+				false,
+				false,
+				false,
+				{},
+				last_partition_,
+				weighted_zookeeper_paths_,
+				sharding_key_expr_,
+				do_copy_,
+				coordinator_ };
 		}
 	};
 
@@ -107,8 +116,7 @@ private:
 
 	Context context;
 
-	static void parseAlter(const ASTAlterQuery::ParameterContainer & params,
-		AlterCommands & out_alter_commands, PartitionCommands & out_partition_commands);
+	static void parseAlter(
+		const ASTAlterQuery::ParameterContainer & params, AlterCommands & out_alter_commands, PartitionCommands & out_partition_commands);
 };
-
 }

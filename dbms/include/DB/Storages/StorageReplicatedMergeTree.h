@@ -2,32 +2,31 @@
 
 #include <ext/shared_ptr_helper.hpp>
 
+#include <zkutil/LeaderElection.h>
+#include <zkutil/ZooKeeper.h>
+#include <DB/DataTypes/DataTypesNumberFixed.h>
 #include <DB/Storages/IStorage.h>
-#include <DB/Storages/MergeTree/MergeTreeData.h>
-#include <DB/Storages/MergeTree/MergeTreeDataMerger.h>
-#include <DB/Storages/MergeTree/MergeTreeDataWriter.h>
-#include <DB/Storages/MergeTree/MergeTreeDataSelectExecutor.h>
-#include <DB/Storages/MergeTree/ReplicatedMergeTreeLogEntry.h>
-#include <DB/Storages/MergeTree/ReplicatedMergeTreeQueue.h>
-#include <DB/Storages/MergeTree/ReplicatedMergeTreeCleanupThread.h>
-#include <DB/Storages/MergeTree/ReplicatedMergeTreeRestartingThread.h>
-#include <DB/Storages/MergeTree/ReplicatedMergeTreePartCheckThread.h>
-#include <DB/Storages/MergeTree/ReplicatedMergeTreeAlterThread.h>
 #include <DB/Storages/MergeTree/AbandonableLockInZooKeeper.h>
 #include <DB/Storages/MergeTree/BackgroundProcessingPool.h>
 #include <DB/Storages/MergeTree/DataPartsExchange.h>
+#include <DB/Storages/MergeTree/MergeTreeData.h>
+#include <DB/Storages/MergeTree/MergeTreeDataMerger.h>
+#include <DB/Storages/MergeTree/MergeTreeDataSelectExecutor.h>
+#include <DB/Storages/MergeTree/MergeTreeDataWriter.h>
 #include <DB/Storages/MergeTree/RemoteDiskSpaceMonitor.h>
-#include <DB/Storages/MergeTree/ShardedPartitionUploader.h>
-#include <DB/Storages/MergeTree/RemoteQueryExecutor.h>
 #include <DB/Storages/MergeTree/RemotePartChecker.h>
-#include <DB/DataTypes/DataTypesNumberFixed.h>
-#include <zkutil/ZooKeeper.h>
-#include <zkutil/LeaderElection.h>
+#include <DB/Storages/MergeTree/RemoteQueryExecutor.h>
+#include <DB/Storages/MergeTree/ReplicatedMergeTreeAlterThread.h>
+#include <DB/Storages/MergeTree/ReplicatedMergeTreeCleanupThread.h>
+#include <DB/Storages/MergeTree/ReplicatedMergeTreeLogEntry.h>
+#include <DB/Storages/MergeTree/ReplicatedMergeTreePartCheckThread.h>
+#include <DB/Storages/MergeTree/ReplicatedMergeTreeQueue.h>
+#include <DB/Storages/MergeTree/ReplicatedMergeTreeRestartingThread.h>
+#include <DB/Storages/MergeTree/ShardedPartitionUploader.h>
 
 
 namespace DB
 {
-
 /** Движок, использующий merge-дерево (см. MergeTreeData) и реплицируемый через ZooKeeper.
   *
   * ZooKeeper используется для следующих вещей:
@@ -71,16 +70,17 @@ namespace DB
 
 class StorageReplicatedMergeTree : private ext::shared_ptr_helper<StorageReplicatedMergeTree>, public IStorage
 {
-friend class ext::shared_ptr_helper<StorageReplicatedMergeTree>;
+	friend class ext::shared_ptr_helper<StorageReplicatedMergeTree>;
 
 public:
 	/** Если !attach, либо создает новую таблицу в ZK, либо добавляет реплику в существующую таблицу.
 	  */
-	static StoragePtr create(
-		const String & zookeeper_path_,
+	static StoragePtr create(const String & zookeeper_path_,
 		const String & replica_name_,
 		bool attach,
-		const String & path_, const String & database_name_, const String & name_,
+		const String & path_,
+		const String & database_name_,
+		const String & name_,
 		NamesAndTypesListPtr columns_,
 		const NamesAndTypesList & materialized_columns_,
 		const NamesAndTypesList & alias_columns_,
@@ -102,28 +102,47 @@ public:
 		return "Replicated" + data.merging_params.getModeName() + "MergeTree";
 	}
 
-	std::string getTableName() const override { return table_name; }
-	bool supportsSampling() const override { return data.supportsSampling(); }
-	bool supportsFinal() const override { return data.supportsFinal(); }
-	bool supportsPrewhere() const override { return data.supportsPrewhere(); }
-	bool supportsParallelReplicas() const override { return true; }
+	std::string getTableName() const override
+	{
+		return table_name;
+	}
+	bool supportsSampling() const override
+	{
+		return data.supportsSampling();
+	}
+	bool supportsFinal() const override
+	{
+		return data.supportsFinal();
+	}
+	bool supportsPrewhere() const override
+	{
+		return data.supportsPrewhere();
+	}
+	bool supportsParallelReplicas() const override
+	{
+		return true;
+	}
 
-	const NamesAndTypesList & getColumnsListImpl() const override { return data.getColumnsListNonMaterialized(); }
+	const NamesAndTypesList & getColumnsListImpl() const override
+	{
+		return data.getColumnsListNonMaterialized();
+	}
 
 	NameAndTypePair getColumn(const String & column_name) const override
 	{
-		if (column_name == "_replicated") return NameAndTypePair("_replicated", std::make_shared<DataTypeUInt8>());
+		if (column_name == "_replicated")
+			return NameAndTypePair("_replicated", std::make_shared<DataTypeUInt8>());
 		return data.getColumn(column_name);
 	}
 
 	bool hasColumn(const String & column_name) const override
 	{
-		if (column_name == "_replicated") return true;
+		if (column_name == "_replicated")
+			return true;
 		return data.hasColumn(column_name);
 	}
 
-	BlockInputStreams read(
-		const Names & column_names,
+	BlockInputStreams read(const Names & column_names,
 		ASTPtr query,
 		const Context & context,
 		const Settings & settings,
@@ -142,10 +161,14 @@ public:
 	void fetchPartition(const Field & partition, const String & from, const Settings & settings) override;
 	void freezePartition(const Field & partition, const String & with_name, const Settings & settings) override;
 
-	void reshardPartitions(ASTPtr query, const String & database_name,
-		const Field & first_partition, const Field & last_partition,
+	void reshardPartitions(ASTPtr query,
+		const String & database_name,
+		const Field & first_partition,
+		const Field & last_partition,
 		const WeightedZooKeeperPaths & weighted_zookeeper_paths,
-		const ASTPtr & sharding_key_expr, bool do_copy, const Field & coordinator,
+		const ASTPtr & sharding_key_expr,
+		bool do_copy,
+		const Field & coordinator,
 		const Settings & settings) override;
 
 	/** Удаляет реплику из ZooKeeper. Если других реплик нет, удаляет всю таблицу из ZooKeeper.
@@ -154,10 +177,19 @@ public:
 
 	void rename(const String & new_path_to_db, const String & new_database_name, const String & new_table_name) override;
 
-	bool supportsIndexForIn() const override { return true; }
+	bool supportsIndexForIn() const override
+	{
+		return true;
+	}
 
-	MergeTreeData & getData() { return data; }
-	MergeTreeData * getUnreplicatedData() { return unreplicated_data.get(); }
+	MergeTreeData & getData()
+	{
+		return data;
+	}
+	MergeTreeData * getUnreplicatedData()
+	{
+		return unreplicated_data.get();
+	}
 
 
 	/** Для системной таблицы replicas. */
@@ -213,8 +245,8 @@ private:
 
 	Context & context;
 
-	zkutil::ZooKeeperPtr current_zookeeper;		/// Используйте только с помощью методов ниже.
-	std::mutex current_zookeeper_mutex;			/// Для пересоздания сессии в фоновом потоке.
+	zkutil::ZooKeeperPtr current_zookeeper; /// Используйте только с помощью методов ниже.
+	std::mutex current_zookeeper_mutex; /// Для пересоздания сессии в фоновом потоке.
 
 	zkutil::ZooKeeperPtr tryGetZooKeeper();
 	zkutil::ZooKeeperPtr getZooKeeper();
@@ -276,7 +308,7 @@ private:
 	std::mutex unreplicated_mutex; /// Для мерджей и удаления нереплицируемых кусков.
 
 	/// Нужно ли завершить фоновые потоки (кроме restarting_thread).
-	std::atomic<bool> shutdown_called {false};
+	std::atomic<bool> shutdown_called{ false };
 	Poco::Event shutdown_event;
 
 	/// Потоки:
@@ -310,11 +342,12 @@ private:
 
 	Logger * log;
 
-	StorageReplicatedMergeTree(
-		const String & zookeeper_path_,
+	StorageReplicatedMergeTree(const String & zookeeper_path_,
 		const String & replica_name_,
 		bool attach,
-		const String & path_, const String & database_name_, const String & name_,
+		const String & path_,
+		const String & database_name_,
+		const String & name_,
 		NamesAndTypesListPtr columns_,
 		const NamesAndTypesList & materialized_columns_,
 		const NamesAndTypesList & alias_columns_,
@@ -408,16 +441,13 @@ private:
 	using MemoizedPartsThatCouldBeMerged = std::set<std::pair<std::string, std::string>>;
 	/// Можно ли мерджить куски в указанном диапазоне? memo - необязательный параметр.
 	bool canMergeParts(
-		const MergeTreeData::DataPartPtr & left,
-		const MergeTreeData::DataPartPtr & right,
-		MemoizedPartsThatCouldBeMerged * memo);
+		const MergeTreeData::DataPartPtr & left, const MergeTreeData::DataPartPtr & right, MemoizedPartsThatCouldBeMerged * memo);
 
 	/** Записать выбранные куски для слияния в лог,
 	  * Вызывать при заблокированном merge_selecting_mutex.
 	  * Возвращает false, если какого-то куска нет в ZK.
 	  */
-	bool createLogEntryToMergeParts(
-		const MergeTreeData::DataPartsVector & parts,
+	bool createLogEntryToMergeParts(const MergeTreeData::DataPartsVector & parts,
 		const String & merged_name,
 		ReplicatedMergeTreeLogEntryData * out_log_entry = nullptr);
 
@@ -505,5 +535,4 @@ private:
 
 extern const Int64 RESERVED_BLOCK_NUMBERS;
 extern const int MAX_AGE_OF_LOCAL_PART_THAT_WASNT_ADDED_TO_ZOOKEEPER;
-
 }

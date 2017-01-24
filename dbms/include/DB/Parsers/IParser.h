@@ -10,7 +10,6 @@
 
 namespace DB
 {
-
 using Expected = const char *;
 
 
@@ -62,9 +61,10 @@ public:
 			return true;
 	}
 
-	virtual ~IParser() {}
+	virtual ~IParser()
+	{
+	}
 };
 
 using ParserPtr = std::unique_ptr<IParser>;
-
 }

@@ -1,12 +1,11 @@
 #pragma once
 
-#include <DB/IO/WriteBuffer.h>
 #include <DB/IO/BufferWithOwnMemory.h>
+#include <DB/IO/WriteBuffer.h>
 
 
 namespace DB
 {
-
 /** Пишет данные в другой буфер, заменяя невалидные UTF-8 последовательности на указанную последовательность.
 	* Если записывается уже валидный UTF-8, работает быстрее.
 	* Замечение: перед использованием полученной строки, уничтожте этот объект.
@@ -30,15 +29,11 @@ public:
 	static const size_t DEFAULT_SIZE;
 
 	WriteBufferValidUTF8(
-		WriteBuffer & output_buffer,
-		bool group_replacements = true,
-		const char * replacement = "\xEF\xBF\xBD",
-		size_t size = DEFAULT_SIZE);
+		WriteBuffer & output_buffer, bool group_replacements = true, const char * replacement = "\xEF\xBF\xBD", size_t size = DEFAULT_SIZE);
 
 	virtual ~WriteBufferValidUTF8() override
 	{
 		finish();
 	}
 };
-
 }

@@ -1,16 +1,15 @@
 #pragma once
 
-#include <DB/Core/Field.h>
-#include <DB/Common/Exception.h>
 #include <DB/Columns/ColumnVector.h>
-#include <DB/Columns/IColumn.h>
 #include <DB/Columns/ColumnsCommon.h>
+#include <DB/Columns/IColumn.h>
+#include <DB/Common/Exception.h>
+#include <DB/Core/Field.h>
 #include <DB/DataTypes/IDataType.h>
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int CANNOT_INSERT_ELEMENT_INTO_CONSTANT_COLUMN;
@@ -23,9 +22,15 @@ namespace ErrorCodes
 class IColumnConst : public IColumn
 {
 public:
-	bool isConst() const override { return true; }
+	bool isConst() const override
+	{
+		return true;
+	}
 	virtual ColumnPtr convertToFullColumn() const = 0;
-	ColumnPtr convertToFullColumnIfConst() const override { return convertToFullColumn(); }
+	ColumnPtr convertToFullColumnIfConst() const override
+	{
+		return convertToFullColumn();
+	}
 };
 
 
@@ -70,24 +75,55 @@ protected:
 	DataHolder data;
 	DataTypePtr data_type;
 
-	T & getDataFromHolder() { return static_cast<Derived *>(this)->getDataFromHolderImpl(); }
-	const T & getDataFromHolder() const { return static_cast<const Derived *>(this)->getDataFromHolderImpl(); }
+	T & getDataFromHolder()
+	{
+		return static_cast<Derived *>(this)->getDataFromHolderImpl();
+	}
+	const T & getDataFromHolder() const
+	{
+		return static_cast<const Derived *>(this)->getDataFromHolderImpl();
+	}
 
-	ColumnConstBase(size_t s_, const DataHolder & data_, DataTypePtr data_type_)
-		: s(s_), data(data_), data_type(data_type_) {}
+	ColumnConstBase(size_t s_, const DataHolder & data_, DataTypePtr data_type_) : s(s_), data(data_), data_type(data_type_)
+	{
+	}
 
 public:
 	using Type = T;
 	using FieldType = typename NearestFieldType<T>::Type;
 
-	std::string getName() const override { return "ColumnConst<" + TypeName<T>::get() + ">"; }
-	bool isNumeric() const override { return IsNumber<T>::value; }
-	bool isFixed() const override { return IsNumber<T>::value; }
-	size_t sizeOfField() const override { return sizeof(T); }
-	ColumnPtr cloneResized(size_t s_) const override { return std::make_shared<Derived>(s_, data, data_type); }
-	size_t size() const override { return s; }
-	Field operator[](size_t n) const override { return FieldType(getDataFromHolder()); }
-	void get(size_t n, Field & res) const override { res = FieldType(getDataFromHolder()); }
+	std::string getName() const override
+	{
+		return "ColumnConst<" + TypeName<T>::get() + ">";
+	}
+	bool isNumeric() const override
+	{
+		return IsNumber<T>::value;
+	}
+	bool isFixed() const override
+	{
+		return IsNumber<T>::value;
+	}
+	size_t sizeOfField() const override
+	{
+		return sizeof(T);
+	}
+	ColumnPtr cloneResized(size_t s_) const override
+	{
+		return std::make_shared<Derived>(s_, data, data_type);
+	}
+	size_t size() const override
+	{
+		return s;
+	}
+	Field operator[](size_t n) const override
+	{
+		return FieldType(getDataFromHolder());
+	}
+	void get(size_t n, Field & res) const override
+	{
+		res = FieldType(getDataFromHolder());
+	}
 
 	void insertRangeFrom(const IColumn & src, size_t start, size_t length) override
 	{
@@ -119,7 +155,10 @@ public:
 		++s;
 	}
 
-	void insertDefault() override { ++s; }
+	void insertDefault() override
+	{
+		++s;
+	}
 
 	void popBack(size_t n) override
 	{
@@ -158,8 +197,14 @@ public:
 		return std::make_shared<Derived>(replicated_size, data, data_type);
 	}
 
-	size_t byteSize() const override { return sizeof(data) + sizeof(s); }
-	size_t allocatedSize() const override { return byteSize(); }
+	size_t byteSize() const override
+	{
+		return sizeof(data) + sizeof(s);
+	}
+	size_t allocatedSize() const override
+	{
+		return byteSize();
+	}
 
 	ColumnPtr permute(const Permutation & perm, size_t limit) const override
 	{
@@ -177,11 +222,9 @@ public:
 	int compareAt(size_t n, size_t m, const IColumn & rhs_, int nan_direction_hint) const override
 	{
 		const Derived & rhs = static_cast<const Derived &>(rhs_);
-		return getDataFromHolder() < rhs.getDataFromHolder()	/// TODO: правильное сравнение NaN-ов в константных столбцах.
+		return getDataFromHolder() < rhs.getDataFromHolder() /// TODO: правильное сравнение NaN-ов в константных столбцах.
 			? -1
-			: (data == rhs.data
-				? 0
-				: 1);
+			: (data == rhs.data ? 0 : 1);
 	}
 
 	void getPermutation(bool reverse, size_t limit, Permutation & res) const override
@@ -191,8 +234,14 @@ public:
 			res[i] = i;
 	}
 
-	DataTypePtr & getDataType() { return data_type; }
-	const DataTypePtr & getDataType() const { return data_type; }
+	DataTypePtr & getDataType()
+	{
+		return data_type;
+	}
+	const DataTypePtr & getDataType() const
+	{
+		return data_type;
+	}
 };
 
 
@@ -204,24 +253,41 @@ class ColumnConst final : public ColumnConstBase<T, T, ColumnConst<T>>
 private:
 	friend class ColumnConstBase<T, T, ColumnConst<T>>;
 
-	T & getDataFromHolderImpl() { return this->data; }
-	const T & getDataFromHolderImpl() const { return this->data; }
+	T & getDataFromHolderImpl()
+	{
+		return this->data;
+	}
+	const T & getDataFromHolderImpl() const
+	{
+		return this->data;
+	}
 
 public:
 	/// Для ColumnConst<Array> data_type_ должен быть ненулевым.
 	/// Для ColumnConst<Tuple> data_type_ должен быть ненулевым.
 	/// Для ColumnConst<String> data_type_ должен быть ненулевым, если тип данных FixedString.
 	ColumnConst(size_t s_, const T & data_, DataTypePtr data_type_ = DataTypePtr())
-		: ColumnConstBase<T, T, ColumnConst<T>>(s_, data_, data_type_) {}
+		: ColumnConstBase<T, T, ColumnConst<T>>(s_, data_, data_type_)
+	{
+	}
 
-	bool isNull() const override { return false; };
+	bool isNull() const override
+	{
+		return false;
+	};
 	StringRef getDataAt(size_t n) const override;
 	StringRef getDataAtWithTerminatingZero(size_t n) const override;
 	UInt64 get64(size_t n) const override;
 
 	/** Более эффективные методы манипуляции */
-	T & getData() { return this->data; }
-	const T & getData() const { return this->data; }
+	T & getData()
+	{
+		return this->data;
+	}
+	const T & getData() const
+	{
+		return this->data;
+	}
 
 	/** Преобразование из константы в полноценный столбец */
 	ColumnPtr convertToFullColumn() const override;
@@ -240,23 +306,36 @@ class ColumnConst<Array> final : public ColumnConstBase<Array, std::shared_ptr<A
 private:
 	friend class ColumnConstBase<Array, std::shared_ptr<Array>, ColumnConst<Array>>;
 
-	Array & getDataFromHolderImpl() { return *data; }
-	const Array & getDataFromHolderImpl() const { return *data; }
+	Array & getDataFromHolderImpl()
+	{
+		return *data;
+	}
+	const Array & getDataFromHolderImpl() const
+	{
+		return *data;
+	}
 
 public:
 	/// data_type_ должен быть ненулевым.
 	ColumnConst(size_t s_, const Array & data_, DataTypePtr data_type_)
-		: ColumnConstBase<Array, std::shared_ptr<Array>, ColumnConst<Array>>(s_, std::make_shared<Array>(data_), data_type_) {}
+		: ColumnConstBase<Array, std::shared_ptr<Array>, ColumnConst<Array>>(s_, std::make_shared<Array>(data_), data_type_)
+	{
+	}
 
 	ColumnConst(size_t s_, const std::shared_ptr<Array> & data_, DataTypePtr data_type_)
-		: ColumnConstBase<Array, std::shared_ptr<Array>, ColumnConst<Array>>(s_, data_, data_type_) {}
+		: ColumnConstBase<Array, std::shared_ptr<Array>, ColumnConst<Array>>(s_, data_, data_type_)
+	{
+	}
 
 	StringRef getDataAt(size_t n) const override;
 	StringRef getDataAtWithTerminatingZero(size_t n) const override;
 	UInt64 get64(size_t n) const override;
 
 	/** Более эффективные методы манипуляции */
-	const Array & getData() const { return *data; }
+	const Array & getData() const
+	{
+		return *data;
+	}
 
 	/** Преобразование из константы в полноценный столбец */
 	ColumnPtr convertToFullColumn() const override;
@@ -275,23 +354,36 @@ class ColumnConst<Tuple> final : public ColumnConstBase<Tuple, std::shared_ptr<T
 private:
 	friend class ColumnConstBase<Tuple, std::shared_ptr<Tuple>, ColumnConst<Tuple>>;
 
-	Tuple & getDataFromHolderImpl() { return *data; }
-	const Tuple & getDataFromHolderImpl() const { return *data; }
+	Tuple & getDataFromHolderImpl()
+	{
+		return *data;
+	}
+	const Tuple & getDataFromHolderImpl() const
+	{
+		return *data;
+	}
 
 public:
 	/// data_type_ должен быть ненулевым.
 	ColumnConst(size_t s_, const Tuple & data_, DataTypePtr data_type_)
-		: ColumnConstBase<Tuple, std::shared_ptr<Tuple>, ColumnConst<Tuple>>(s_, std::make_shared<Tuple>(data_), data_type_) {}
+		: ColumnConstBase<Tuple, std::shared_ptr<Tuple>, ColumnConst<Tuple>>(s_, std::make_shared<Tuple>(data_), data_type_)
+	{
+	}
 
 	ColumnConst(size_t s_, const std::shared_ptr<Tuple> & data_, DataTypePtr data_type_)
-		: ColumnConstBase<Tuple, std::shared_ptr<Tuple>, ColumnConst<Tuple>>(s_, data_, data_type_) {}
+		: ColumnConstBase<Tuple, std::shared_ptr<Tuple>, ColumnConst<Tuple>>(s_, data_, data_type_)
+	{
+	}
 
 	StringRef getDataAt(size_t n) const override;
 	StringRef getDataAtWithTerminatingZero(size_t n) const override;
 	UInt64 get64(size_t n) const override;
 
 	/** Более эффективные методы манипуляции */
-	const Tuple & getData() const { return *data; }
+	const Tuple & getData() const
+	{
+		return *data;
+	}
 
 	/** Преобразование из константы в полноценный столбец */
 	ColumnPtr convertToFullColumn() const override;
@@ -320,49 +412,57 @@ inline StringRef ColumnConst<Null>::getDataAt(size_t n) const
 	return {};
 }
 
-template <typename T> ColumnPtr ColumnConst<T>::convertToFullColumn() const
+template <typename T>
+ColumnPtr ColumnConst<T>::convertToFullColumn() const
 {
 	std::shared_ptr<ColumnVector<T>> res = std::make_shared<ColumnVector<T>>();
 	res->getData().assign(this->s, this->data);
 	return res;
 }
 
-template <> ColumnPtr ColumnConst<Null>::convertToFullColumn() const;
+template <>
+ColumnPtr ColumnConst<Null>::convertToFullColumn() const;
 
-template <> ColumnPtr ColumnConst<String>::convertToFullColumn() const;
+template <>
+ColumnPtr ColumnConst<String>::convertToFullColumn() const;
 
 
-template <typename T> StringRef ColumnConst<T>::getDataAt(size_t n) const
+template <typename T>
+StringRef ColumnConst<T>::getDataAt(size_t n) const
 {
 	throw Exception("Method getDataAt is not supported for " + this->getName(), ErrorCodes::NOT_IMPLEMENTED);
 }
 
-template <> inline StringRef ColumnConst<String>::getDataAt(size_t n) const
+template <>
+inline StringRef ColumnConst<String>::getDataAt(size_t n) const
 {
 	return StringRef(data);
 }
 
-template <typename T> UInt64 ColumnConst<T>::get64(size_t n) const
+template <typename T>
+UInt64 ColumnConst<T>::get64(size_t n) const
 {
 	throw Exception("Method get64 is not supported for " + this->getName(), ErrorCodes::NOT_IMPLEMENTED);
 }
 
 /// Для элементарных типов.
-template <typename T> StringRef getDataAtImpl(const T & data)
+template <typename T>
+StringRef getDataAtImpl(const T & data)
 {
 	return StringRef(reinterpret_cast<const char *>(&data), sizeof(data));
 }
 
 
-template <typename T> UInt64 get64IntImpl(const T & data)
+template <typename T>
+UInt64 get64IntImpl(const T & data)
 {
 	return data;
 }
 
-template <typename T> UInt64 get64FloatImpl(const T & data)
+template <typename T>
+UInt64 get64FloatImpl(const T & data)
 {
-	union
-	{
+	union {
 		T src;
 		UInt64 res;
 	};
@@ -372,38 +472,118 @@ template <typename T> UInt64 get64FloatImpl(const T & data)
 	return res;
 }
 
-template <> inline StringRef ColumnConst<UInt8		>::getDataAt(size_t n) const { return getDataAtImpl(data); }
-template <> inline StringRef ColumnConst<UInt16		>::getDataAt(size_t n) const { return getDataAtImpl(data); }
-template <> inline StringRef ColumnConst<UInt32		>::getDataAt(size_t n) const { return getDataAtImpl(data); }
-template <> inline StringRef ColumnConst<UInt64		>::getDataAt(size_t n) const { return getDataAtImpl(data); }
-template <> inline StringRef ColumnConst<Int8		>::getDataAt(size_t n) const { return getDataAtImpl(data); }
-template <> inline StringRef ColumnConst<Int16		>::getDataAt(size_t n) const { return getDataAtImpl(data); }
-template <> inline StringRef ColumnConst<Int32		>::getDataAt(size_t n) const { return getDataAtImpl(data); }
-template <> inline StringRef ColumnConst<Int64		>::getDataAt(size_t n) const { return getDataAtImpl(data); }
-template <> inline StringRef ColumnConst<Float32	>::getDataAt(size_t n) const { return getDataAtImpl(data); }
-template <> inline StringRef ColumnConst<Float64	>::getDataAt(size_t n) const { return getDataAtImpl(data); }
+template <>
+inline StringRef ColumnConst<UInt8>::getDataAt(size_t n) const
+{
+	return getDataAtImpl(data);
+}
+template <>
+inline StringRef ColumnConst<UInt16>::getDataAt(size_t n) const
+{
+	return getDataAtImpl(data);
+}
+template <>
+inline StringRef ColumnConst<UInt32>::getDataAt(size_t n) const
+{
+	return getDataAtImpl(data);
+}
+template <>
+inline StringRef ColumnConst<UInt64>::getDataAt(size_t n) const
+{
+	return getDataAtImpl(data);
+}
+template <>
+inline StringRef ColumnConst<Int8>::getDataAt(size_t n) const
+{
+	return getDataAtImpl(data);
+}
+template <>
+inline StringRef ColumnConst<Int16>::getDataAt(size_t n) const
+{
+	return getDataAtImpl(data);
+}
+template <>
+inline StringRef ColumnConst<Int32>::getDataAt(size_t n) const
+{
+	return getDataAtImpl(data);
+}
+template <>
+inline StringRef ColumnConst<Int64>::getDataAt(size_t n) const
+{
+	return getDataAtImpl(data);
+}
+template <>
+inline StringRef ColumnConst<Float32>::getDataAt(size_t n) const
+{
+	return getDataAtImpl(data);
+}
+template <>
+inline StringRef ColumnConst<Float64>::getDataAt(size_t n) const
+{
+	return getDataAtImpl(data);
+}
 
-template <> inline UInt64 ColumnConst<UInt8		>::get64(size_t n) const { return get64IntImpl(data); }
-template <> inline UInt64 ColumnConst<UInt16	>::get64(size_t n) const { return get64IntImpl(data); }
-template <> inline UInt64 ColumnConst<UInt32	>::get64(size_t n) const { return get64IntImpl(data); }
-template <> inline UInt64 ColumnConst<UInt64	>::get64(size_t n) const { return get64IntImpl(data); }
-template <> inline UInt64 ColumnConst<Int8		>::get64(size_t n) const { return get64IntImpl(data); }
-template <> inline UInt64 ColumnConst<Int16		>::get64(size_t n) const { return get64IntImpl(data); }
-template <> inline UInt64 ColumnConst<Int32		>::get64(size_t n) const { return get64IntImpl(data); }
-template <> inline UInt64 ColumnConst<Int64		>::get64(size_t n) const { return get64IntImpl(data); }
-template <> inline UInt64 ColumnConst<Float32	>::get64(size_t n) const { return get64FloatImpl(data); }
-template <> inline UInt64 ColumnConst<Float64	>::get64(size_t n) const { return get64FloatImpl(data); }
+template <>
+inline UInt64 ColumnConst<UInt8>::get64(size_t n) const
+{
+	return get64IntImpl(data);
+}
+template <>
+inline UInt64 ColumnConst<UInt16>::get64(size_t n) const
+{
+	return get64IntImpl(data);
+}
+template <>
+inline UInt64 ColumnConst<UInt32>::get64(size_t n) const
+{
+	return get64IntImpl(data);
+}
+template <>
+inline UInt64 ColumnConst<UInt64>::get64(size_t n) const
+{
+	return get64IntImpl(data);
+}
+template <>
+inline UInt64 ColumnConst<Int8>::get64(size_t n) const
+{
+	return get64IntImpl(data);
+}
+template <>
+inline UInt64 ColumnConst<Int16>::get64(size_t n) const
+{
+	return get64IntImpl(data);
+}
+template <>
+inline UInt64 ColumnConst<Int32>::get64(size_t n) const
+{
+	return get64IntImpl(data);
+}
+template <>
+inline UInt64 ColumnConst<Int64>::get64(size_t n) const
+{
+	return get64IntImpl(data);
+}
+template <>
+inline UInt64 ColumnConst<Float32>::get64(size_t n) const
+{
+	return get64FloatImpl(data);
+}
+template <>
+inline UInt64 ColumnConst<Float64>::get64(size_t n) const
+{
+	return get64FloatImpl(data);
+}
 
 
-template <typename T> StringRef ColumnConst<T>::getDataAtWithTerminatingZero(size_t n) const
+template <typename T>
+StringRef ColumnConst<T>::getDataAtWithTerminatingZero(size_t n) const
 {
 	return getDataAt(n);
 }
 
-template <> inline StringRef ColumnConst<String>::getDataAtWithTerminatingZero(size_t n) const
+template <>
+inline StringRef ColumnConst<String>::getDataAtWithTerminatingZero(size_t n) const
 {
 	return StringRef(data.data(), data.size() + 1);
 }
-
-
 }

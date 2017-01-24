@@ -1,7 +1,7 @@
 #pragma once
 
-#include <common/singleton.h>
 #include <common/Common.h>
+#include <common/singleton.h>
 
 
 /** @brief Класс, позволяющий узнавать, принадлежит ли поисковая система или операционная система
@@ -11,8 +11,8 @@
 class TechDataHierarchy
 {
 private:
-	UInt8 os_parent[256] {};
-	UInt8 se_parent[256] {};
+	UInt8 os_parent[256]{};
+	UInt8 se_parent[256]{};
 
 public:
 	void reload();
@@ -67,4 +67,6 @@ public:
 };
 
 
-class TechDataHierarchySingleton : public Singleton<TechDataHierarchySingleton>, public TechDataHierarchy {};
+class TechDataHierarchySingleton : public Singleton<TechDataHierarchySingleton>, public TechDataHierarchy
+{
+};

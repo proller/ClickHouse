@@ -32,7 +32,7 @@ inline DB::UInt64 intHashCRC32(DB::UInt64 x)
 {
 #if defined(__x86_64__)
 	DB::UInt64 crc = -1ULL;
-	asm("crc32q %[x], %[crc]\n" : [crc] "+r" (crc) : [x] "rm" (x));
+	asm("crc32q %[x], %[crc]\n" : [crc] "+r"(crc) : [x] "rm"(x));
 	return crc;
 #else
 	/// На других платформах используем не обязательно CRC32. NOTE Это может сбить с толку.
@@ -41,13 +41,13 @@ inline DB::UInt64 intHashCRC32(DB::UInt64 x)
 }
 
 
-template <typename T> struct DefaultHash;
+template <typename T>
+struct DefaultHash;
 
 template <typename T>
 inline size_t DefaultHash64(T key)
 {
-	union
-	{
+	union {
 		T in;
 		DB::UInt64 out;
 	} u;
@@ -56,14 +56,15 @@ inline size_t DefaultHash64(T key)
 	return intHash64(u.out);
 }
 
-#define DEFINE_HASH(T) \
-template <> struct DefaultHash<T>\
-{\
-	size_t operator() (T key) const\
-	{\
-		return DefaultHash64<T>(key);\
-	}\
-};
+#define DEFINE_HASH(T)                                                                                                                     \
+	template <>                                                                                                                            \
+	struct DefaultHash<T>                                                                                                                  \
+	{                                                                                                                                      \
+		size_t operator()(T key) const                                                                                                     \
+		{                                                                                                                                  \
+			return DefaultHash64<T>(key);                                                                                                  \
+		}                                                                                                                                  \
+	};
 
 DEFINE_HASH(DB::UInt8)
 DEFINE_HASH(DB::UInt16)
@@ -79,13 +80,13 @@ DEFINE_HASH(DB::Float64)
 #undef DEFINE_HASH
 
 
-template <typename T> struct HashCRC32;
+template <typename T>
+struct HashCRC32;
 
 template <typename T>
 inline size_t hashCRC32(T key)
 {
-	union
-	{
+	union {
 		T in;
 		DB::UInt64 out;
 	} u;
@@ -94,14 +95,15 @@ inline size_t hashCRC32(T key)
 	return intHashCRC32(u.out);
 }
 
-#define DEFINE_HASH(T) \
-template <> struct HashCRC32<T>\
-{\
-	size_t operator() (T key) const\
-	{\
-		return hashCRC32<T>(key);\
-	}\
-};
+#define DEFINE_HASH(T)                                                                                                                     \
+	template <>                                                                                                                            \
+	struct HashCRC32<T>                                                                                                                    \
+	{                                                                                                                                      \
+		size_t operator()(T key) const                                                                                                     \
+		{                                                                                                                                  \
+			return hashCRC32<T>(key);                                                                                                      \
+		}                                                                                                                                  \
+	};
 
 DEFINE_HASH(DB::UInt8)
 DEFINE_HASH(DB::UInt16)
@@ -121,7 +123,7 @@ DEFINE_HASH(DB::Float64)
 struct TrivialHash
 {
 	template <typename T>
-	size_t operator() (T key) const
+	size_t operator()(T key) const
 	{
 		return key;
 	}
@@ -160,7 +162,7 @@ inline DB::UInt32 intHash32(DB::UInt64 key)
 template <typename T, DB::UInt64 salt = 0>
 struct IntHash32
 {
-	size_t operator() (const T & key) const
+	size_t operator()(const T & key) const
 	{
 		return intHash32<salt>(key);
 	}

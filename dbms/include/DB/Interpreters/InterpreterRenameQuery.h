@@ -6,8 +6,6 @@
 
 namespace DB
 {
-
-
 /** Rename one table
   *  or rename many tables at once.
   */
@@ -21,6 +19,4 @@ private:
 	ASTPtr query_ptr;
 	Context context;
 };
-
-
 }

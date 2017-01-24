@@ -6,7 +6,6 @@
 
 namespace DB
 {
-
 class ASTSetQuery;
 
 /** Установить один или несколько параметров, для сессии или глобально... или для текущего запроса.
@@ -14,8 +13,9 @@ class ASTSetQuery;
 class InterpreterSetQuery : public IInterpreter
 {
 public:
-	InterpreterSetQuery(ASTPtr query_ptr_, Context & context_)
-		: query_ptr(query_ptr_), context(context_) {}
+	InterpreterSetQuery(ASTPtr query_ptr_, Context & context_) : query_ptr(query_ptr_), context(context_)
+	{
+	}
 
 	/** Обычный запрос SET. Задать настройку на сессию или глобальную (если указано GLOBAL).
 	  */
@@ -32,6 +32,4 @@ private:
 
 	void executeImpl(ASTSetQuery & ast, Context & target);
 };
-
-
 }

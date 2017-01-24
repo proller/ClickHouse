@@ -1,7 +1,7 @@
 #pragma once
 
-#include <time.h>
 #include <mutex>
+#include <time.h>
 #include <Poco/ScopedLock.h>
 #include <common/Common.h>
 
@@ -18,13 +18,36 @@ public:
 	/** CLOCK_MONOTONIC работает сравнительно эффективно (~15 млн. вызовов в сек.) и не приводит к системному вызову.
 	  * Поставьте CLOCK_MONOTONIC_COARSE, если нужна больше производительность, но достаточно погрешности в несколько мс.
 	  */
-	Stopwatch(clockid_t clock_type_ = CLOCK_MONOTONIC) : clock_type(clock_type_) { restart(); }
+	Stopwatch(clockid_t clock_type_ = CLOCK_MONOTONIC) : clock_type(clock_type_)
+	{
+		restart();
+	}
 
-	void start() 					{ setStart(); is_running = true; }
-	void stop() 					{ updateElapsed(); is_running = false; }
-	void restart() 					{ elapsed_ns = 0; start(); }
-	UInt64 elapsed() const 			{ updateElapsed(); return elapsed_ns; }
-	double elapsedSeconds() const	{ updateElapsed(); return static_cast<double>(elapsed_ns) / 1000000000ULL; }
+	void start()
+	{
+		setStart();
+		is_running = true;
+	}
+	void stop()
+	{
+		updateElapsed();
+		is_running = false;
+	}
+	void restart()
+	{
+		elapsed_ns = 0;
+		start();
+	}
+	UInt64 elapsed() const
+	{
+		updateElapsed();
+		return elapsed_ns;
+	}
+	double elapsedSeconds() const
+	{
+		updateElapsed();
+		return static_cast<double>(elapsed_ns) / 1000000000ULL;
+	}
 
 private:
 	mutable UInt64 start_ns;
@@ -80,12 +103,16 @@ public:
 		StopwatchWithLock * parent = nullptr;
 		std::unique_lock<std::mutex> lock;
 
-		Lock() {}
+		Lock()
+		{
+		}
 
-		operator bool() const { return parent != nullptr; }
+		operator bool() const
+		{
+			return parent != nullptr;
+		}
 
-		Lock(StopwatchWithLock * parent, std::unique_lock<std::mutex> && lock)
-			: parent(parent), lock(std::move(lock))
+		Lock(StopwatchWithLock * parent, std::unique_lock<std::mutex> && lock) : parent(parent), lock(std::move(lock))
 		{
 		}
 

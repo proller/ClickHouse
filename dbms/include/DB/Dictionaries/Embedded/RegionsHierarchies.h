@@ -1,8 +1,8 @@
 #pragma once
 
-#include <DB/Dictionaries/Embedded/RegionsHierarchy.h>
-#include <Poco/Exception.h>
 #include <unordered_map>
+#include <Poco/Exception.h>
+#include <DB/Dictionaries/Embedded/RegionsHierarchy.h>
 
 
 /** Содержит несколько иерархий регионов, загружаемых из нескольких разных файлов.

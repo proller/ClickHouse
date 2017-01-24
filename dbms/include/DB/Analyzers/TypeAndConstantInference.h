@@ -1,14 +1,13 @@
 #pragma once
 
-#include <DB/Parsers/IAST.h>
-#include <DB/DataTypes/IDataType.h>
-#include <DB/Common/UInt128.h>
 #include <unordered_map>
+#include <DB/Common/UInt128.h>
+#include <DB/DataTypes/IDataType.h>
+#include <DB/Parsers/IAST.h>
 
 
 namespace DB
 {
-
 class Context;
 class WriteBuffer;
 struct CollectAliases;
@@ -30,20 +29,18 @@ class IAggregateFunction;
   */
 struct TypeAndConstantInference
 {
-	void process(ASTPtr & ast, Context & context,
-		CollectAliases & aliases,
-		const AnalyzeColumns & columns,
-		const AnalyzeLambdas & analyze_lambdas);
+	void process(
+		ASTPtr & ast, Context & context, CollectAliases & aliases, const AnalyzeColumns & columns, const AnalyzeLambdas & analyze_lambdas);
 
 	struct ExpressionInfo
 	{
 		/// Must identify identical expressions.
 		/// For example following three expressions in query are the same: SELECT sum(x) AS a, SUM(t.x) AS b, a FROM t
-		UInt128 id {};
+		UInt128 id{};
 		ASTPtr node;
 		DataTypePtr data_type;
 		bool is_constant_expression = false;
-		Field value;	/// Has meaning if is_constant_expression == true.
+		Field value; /// Has meaning if is_constant_expression == true.
 		std::shared_ptr<IFunction> function;
 		std::shared_ptr<IAggregateFunction> aggregate_function;
 	};
@@ -55,5 +52,4 @@ struct TypeAndConstantInference
 	/// Debug output
 	void dump(WriteBuffer & out) const;
 };
-
 }

@@ -8,22 +8,20 @@
 
 #include <DB/DataStreams/BlockIO.h>
 
-#include <DB/Common/Stopwatch.h>
 #include <DB/Common/CurrentMetrics.h>
+#include <DB/Common/Stopwatch.h>
 
 #include "Server.h"
 
 
 namespace CurrentMetrics
 {
-	extern const Metric TCPConnection;
+extern const Metric TCPConnection;
 }
 
 
 namespace DB
 {
-
-
 /// State of query processing.
 struct QueryState
 {
@@ -75,9 +73,12 @@ class TCPHandler : public Poco::Net::TCPServerConnection
 {
 public:
 	TCPHandler(Server & server_, const Poco::Net::StreamSocket & socket_)
-		: Poco::Net::TCPServerConnection(socket_), server(server_),
-		log(&Logger::get("TCPHandler")), client_revision(0),
-		connection_context(*server.global_context), query_context(connection_context)
+		: Poco::Net::TCPServerConnection(socket_),
+		  server(server_),
+		  log(&Logger::get("TCPHandler")),
+		  client_revision(0),
+		  connection_context(*server.global_context),
+		  query_context(connection_context)
 	{
 	}
 
@@ -108,7 +109,7 @@ private:
 	/// На данный момент, поддерживается одновременное выполнение только одного запроса в соединении.
 	QueryState state;
 
-	CurrentMetrics::Increment metric_increment{CurrentMetrics::TCPConnection};
+	CurrentMetrics::Increment metric_increment{ CurrentMetrics::TCPConnection };
 
 
 	void runImpl();
@@ -126,7 +127,7 @@ private:
 	void processOrdinaryQuery();
 
 	void sendHello();
-	void sendData(Block & block);	/// Записать в сеть блок.
+	void sendData(Block & block); /// Записать в сеть блок.
 	void sendException(const Exception & e);
 	void sendProgress();
 	void sendEndOfStream();
@@ -143,6 +144,4 @@ private:
 	/// Эта функция вызывается из разных потоков.
 	void updateProgress(const Progress & value);
 };
-
-
 }

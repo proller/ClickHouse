@@ -8,7 +8,7 @@
 /// В формате VarUInt.
 inline void readSize(Poco::UInt64 & res, std::istream & istr)
 {
-	static constexpr auto MAX_LENGTH_OF_SIZE = 4;	/// Ограничивает размер 256 мегабайтами (2 ^ (7 * 4)).
+	static constexpr auto MAX_LENGTH_OF_SIZE = 4; /// Ограничивает размер 256 мегабайтами (2 ^ (7 * 4)).
 
 	res = 0;
 	for (size_t i = 0; i < MAX_LENGTH_OF_SIZE; ++i)

@@ -1,20 +1,19 @@
 #pragma once
 
-#include <set>
-#include <map>
-#include <list>
-#include <mutex>
-#include <thread>
 #include <atomic>
+#include <list>
+#include <map>
+#include <mutex>
+#include <set>
+#include <thread>
 #include <boost/noncopyable.hpp>
 #include <Poco/Event.h>
-#include <DB/Core/Types.h>
 #include <common/logger_useful.h>
+#include <DB/Core/Types.h>
 
 
 namespace DB
 {
-
 class StorageReplicatedMergeTree;
 
 
@@ -56,7 +55,10 @@ public:
 		}
 	};
 
-	TemporarilyStop temporarilyStop() { return TemporarilyStop(this); }
+	TemporarilyStop temporarilyStop()
+	{
+		return TemporarilyStop(this);
+	}
 
 	/// Добавить кусок (для которого есть подозрения, что он отсутствует, повреждён или не нужен) в очередь для проверки.
 	/// delay_to_check_seconds - проверять не раньше чем через указанное количество секунд.
@@ -80,7 +82,7 @@ private:
 	Logger * log;
 
 	using StringSet = std::set<String>;
-	using PartToCheck = std::pair<String, time_t>;	/// Имя куска и минимальное время для проверки (или ноль, если не важно).
+	using PartToCheck = std::pair<String, time_t>; /// Имя куска и минимальное время для проверки (или ноль, если не важно).
 	using PartsToCheckQueue = std::list<PartToCheck>;
 
 	/** Куски, для которых нужно проверить одно из двух:
@@ -92,9 +94,8 @@ private:
 	PartsToCheckQueue parts_queue;
 	mutable std::mutex mutex;
 	Poco::Event wakeup_event;
-	std::atomic<bool> need_stop { false };
+	std::atomic<bool> need_stop{ false };
 
 	std::thread thread;
 };
-
 }

@@ -1,22 +1,21 @@
 #pragma once
 
-#include <map>
-#include <mutex>
-#include <condition_variable>
-#include <memory>
 #include <chrono>
+#include <condition_variable>
+#include <map>
+#include <memory>
+#include <mutex>
 #include <DB/Common/CurrentMetrics.h>
 
 
 namespace CurrentMetrics
 {
-	extern const Metric QueryPreempted;
+extern const Metric QueryPreempted;
 }
 
 
 namespace DB
 {
-
 /** Implements query priorities in very primitive way.
   * Allows to freeze query execution if at least one query of higher priority is executed.
   *
@@ -77,7 +76,7 @@ private:
 			if (!found)
 				return true;
 
-			CurrentMetrics::Increment metric_increment{CurrentMetrics::QueryPreempted};
+			CurrentMetrics::Increment metric_increment{ CurrentMetrics::QueryPreempted };
 			if (std::cv_status::timeout == condvar.wait_for(lock, timeout))
 				return false;
 		}
@@ -91,8 +90,9 @@ public:
 		QueryPriorities::Container::value_type & value;
 
 	public:
-		HandleImpl(QueryPriorities & parent_, QueryPriorities::Container::value_type & value_)
-			: parent(parent_), value(value_) {}
+		HandleImpl(QueryPriorities & parent_, QueryPriorities::Container::value_type & value_) : parent(parent_), value(value_)
+		{
+		}
 
 		~HandleImpl()
 		{
@@ -126,5 +126,4 @@ public:
 		return std::make_shared<HandleImpl>(*this, *it);
 	}
 };
-
 }

@@ -1,12 +1,11 @@
 #pragma once
 
-#include <DB/Parsers/IAST.h>
 #include <vector>
+#include <DB/Parsers/IAST.h>
 
 
 namespace DB
 {
-
 class WriteBuffer;
 
 
@@ -31,5 +30,4 @@ struct AnalyzeLambdas
 	/// Debug output
 	void dump(WriteBuffer & out) const;
 };
-
 }

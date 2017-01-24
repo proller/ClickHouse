@@ -1,10 +1,10 @@
 #pragma once
 
-#include <DB/IO/WriteHelpers.h>
 #include <DB/IO/ReadHelpers.h>
+#include <DB/IO/WriteHelpers.h>
 
-#include <DB/Columns/ColumnVector.h>
 #include <DB/Columns/ColumnString.h>
+#include <DB/Columns/ColumnVector.h>
 #include <DB/DataTypes/DataTypeAggregateFunction.h>
 
 #include <DB/AggregateFunctions/IUnaryAggregateFunction.h>
@@ -12,7 +12,6 @@
 
 namespace DB
 {
-
 /** Агрегатные функции, запоминающие одно какое-либо переданное значение.
   * Например, min, max, any, anyLast.
   */
@@ -24,7 +23,7 @@ struct SingleValueDataFixed
 {
 	using Self = SingleValueDataFixed<T>;
 
-	bool has_value = false;	/// Надо запомнить, было ли передано хотя бы одно значение. Это нужно для AggregateFunctionIf.
+	bool has_value = false; /// Надо запомнить, было ли передано хотя бы одно значение. Это нужно для AggregateFunctionIf.
 	T value;
 
 
@@ -171,14 +170,13 @@ struct __attribute__((__packed__, __aligned__(1))) SingleValueDataString
 {
 	using Self = SingleValueDataString;
 
-	Int32 size = -1;	/// -1 обозначает, что значения нет.
+	Int32 size = -1; /// -1 обозначает, что значения нет.
 
 	static constexpr Int32 AUTOMATIC_STORAGE_SIZE = 64;
 	static constexpr Int32 MAX_SMALL_STRING_SIZE = AUTOMATIC_STORAGE_SIZE - sizeof(size);
 
-	union __attribute__((__packed__, __aligned__(1)))
-	{
-		char small_data[MAX_SMALL_STRING_SIZE];	/// Включая завершающий ноль.
+	union __attribute__((__packed__, __aligned__(1))) {
+		char small_data[MAX_SMALL_STRING_SIZE]; /// Включая завершающий ноль.
 		char * __attribute__((__packed__, __aligned__(1))) large_data;
 	};
 
@@ -392,8 +390,7 @@ struct __attribute__((__packed__, __aligned__(1))) SingleValueDataString
 };
 
 static_assert(
-	sizeof(SingleValueDataString) == SingleValueDataString::AUTOMATIC_STORAGE_SIZE,
-	"Incorrect size of SingleValueDataString struct");
+	sizeof(SingleValueDataString) == SingleValueDataString::AUTOMATIC_STORAGE_SIZE, "Incorrect size of SingleValueDataString struct");
 
 
 /// Для любых других типов значений.
@@ -571,10 +568,19 @@ struct AggregateFunctionMinData : Data
 {
 	using Self = AggregateFunctionMinData<Data>;
 
-	bool changeIfBetter(const IColumn & column, size_t row_num) { return this->changeIfLess(column, row_num); }
-	bool changeIfBetter(const Self & to) 						{ return this->changeIfLess(to); }
+	bool changeIfBetter(const IColumn & column, size_t row_num)
+	{
+		return this->changeIfLess(column, row_num);
+	}
+	bool changeIfBetter(const Self & to)
+	{
+		return this->changeIfLess(to);
+	}
 
-	static const char * name() { return "min"; }
+	static const char * name()
+	{
+		return "min";
+	}
 };
 
 template <typename Data>
@@ -582,10 +588,19 @@ struct AggregateFunctionMaxData : Data
 {
 	using Self = AggregateFunctionMaxData<Data>;
 
-	bool changeIfBetter(const IColumn & column, size_t row_num) { return this->changeIfGreater(column, row_num); }
-	bool changeIfBetter(const Self & to) 						{ return this->changeIfGreater(to); }
+	bool changeIfBetter(const IColumn & column, size_t row_num)
+	{
+		return this->changeIfGreater(column, row_num);
+	}
+	bool changeIfBetter(const Self & to)
+	{
+		return this->changeIfGreater(to);
+	}
 
-	static const char * name() { return "max"; }
+	static const char * name()
+	{
+		return "max";
+	}
 };
 
 template <typename Data>
@@ -593,10 +608,19 @@ struct AggregateFunctionAnyData : Data
 {
 	using Self = AggregateFunctionAnyData<Data>;
 
-	bool changeIfBetter(const IColumn & column, size_t row_num) { return this->changeFirstTime(column, row_num); }
-	bool changeIfBetter(const Self & to) 						{ return this->changeFirstTime(to); }
+	bool changeIfBetter(const IColumn & column, size_t row_num)
+	{
+		return this->changeFirstTime(column, row_num);
+	}
+	bool changeIfBetter(const Self & to)
+	{
+		return this->changeFirstTime(to);
+	}
 
-	static const char * name() { return "any"; }
+	static const char * name()
+	{
+		return "any";
+	}
 };
 
 template <typename Data>
@@ -604,10 +628,19 @@ struct AggregateFunctionAnyLastData : Data
 {
 	using Self = AggregateFunctionAnyLastData<Data>;
 
-	bool changeIfBetter(const IColumn & column, size_t row_num) { return this->changeEveryTime(column, row_num); }
-	bool changeIfBetter(const Self & to) 						{ return this->changeEveryTime(to); }
+	bool changeIfBetter(const IColumn & column, size_t row_num)
+	{
+		return this->changeEveryTime(column, row_num);
+	}
+	bool changeIfBetter(const Self & to)
+	{
+		return this->changeEveryTime(to);
+	}
 
-	static const char * name() { return "anyLast"; }
+	static const char * name()
+	{
+		return "anyLast";
+	}
 };
 
 
@@ -674,18 +707,24 @@ struct AggregateFunctionAnyHeavyData : Data
 		readBinary(counter, buf);
 	}
 
-	static const char * name() { return "anyHeavy"; }
+	static const char * name()
+	{
+		return "anyHeavy";
+	}
 };
 
 
 template <typename Data>
-class AggregateFunctionsSingleValue final : public IUnaryAggregateFunction<Data, AggregateFunctionsSingleValue<Data> >
+class AggregateFunctionsSingleValue final : public IUnaryAggregateFunction<Data, AggregateFunctionsSingleValue<Data>>
 {
 private:
 	DataTypePtr type;
 
 public:
-	String getName() const override { return Data::name(); }
+	String getName() const override
+	{
+		return Data::name();
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -697,7 +736,8 @@ public:
 		type = argument;
 
 		if (typeid_cast<const DataTypeAggregateFunction *>(type.get()))
-			throw Exception("Illegal type " + type->getName() + " of argument of aggregate function " + getName(), ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+			throw Exception("Illegal type " + type->getName() + " of argument of aggregate function " + getName(),
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 	}
 
 
@@ -726,5 +766,4 @@ public:
 		this->data(place).insertResultInto(to);
 	}
 };
-
 }

@@ -1,16 +1,14 @@
 #pragma once
 
-#include <vector>
-#include <memory>
 #include <functional>
+#include <memory>
+#include <vector>
 #include <boost/noncopyable.hpp>
 #include <DB/Core/Block.h>
 
 
 namespace DB
 {
-
-
 class IBlockInputStream;
 
 using BlockInputStreamPtr = std::shared_ptr<IBlockInputStream>;
@@ -22,7 +20,6 @@ using TableStructureReadLockPtr = std::shared_ptr<TableStructureReadLock>;
 using TableStructureReadLocks = std::vector<TableStructureReadLockPtr>;
 
 struct Progress;
-
 
 
 /** Коллбэк для отслеживания прогресса выполнения запроса.
@@ -39,7 +36,9 @@ using ProgressCallback = std::function<void(const Progress & progress)>;
 class IBlockInputStream : private boost::noncopyable
 {
 public:
-	IBlockInputStream() {}
+	IBlockInputStream()
+	{
+	}
 
 	/** Прочитать следующий блок.
 	  * Если блоков больше нет - вернуть пустой блок (для которого operator bool возвращает false).
@@ -58,10 +57,16 @@ public:
 	  * readPrefix() должна вызываться до первого вызова read().
 	  * readSuffix() должна вызываться после того, как read() вернула пустой блок, или после вызова cancel(), но не во время выполнения read().
 	  */
-	virtual void readPrefix() {}
-	virtual void readSuffix() {}
+	virtual void readPrefix()
+	{
+	}
+	virtual void readSuffix()
+	{
+	}
 
-	virtual ~IBlockInputStream() {}
+	virtual ~IBlockInputStream()
+	{
+	}
 
 	/** Для вывода дерева преобразований потока данных (плана выполнения запроса).
 	  */
@@ -75,7 +80,10 @@ public:
 	  */
 	virtual String getID() const = 0;
 
-	BlockInputStreams & getChildren() { return children; }
+	BlockInputStreams & getChildren()
+	{
+		return children;
+	}
 
 	void dumpTree(std::ostream & ostr, size_t indent = 0, size_t multiplier = 1);
 
@@ -92,7 +100,10 @@ public:
 
 	/** Не давать изменить таблицу, пока жив поток блоков.
 	  */
-	void addTableLock(const TableStructureReadLockPtr & lock) { table_locks.push_back(lock); }
+	void addTableLock(const TableStructureReadLockPtr & lock)
+	{
+		table_locks.push_back(lock);
+	}
 
 protected:
 	TableStructureReadLocks table_locks;
@@ -109,7 +120,4 @@ private:
 	  */
 	String getTreeID() const;
 };
-
-
 }
-

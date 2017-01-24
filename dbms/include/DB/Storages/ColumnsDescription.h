@@ -1,13 +1,11 @@
 #pragma once
 
-#include <DB/Storages/ColumnDefault.h>
 #include <DB/Core/NamesAndTypes.h>
+#include <DB/Storages/ColumnDefault.h>
 
 
 namespace DB
 {
-
-
 template <bool store>
 struct ColumnsDescription
 {
@@ -23,6 +21,4 @@ struct ColumnsDescription
 
 	static ColumnsDescription parse(const String & str);
 };
-
-
 }

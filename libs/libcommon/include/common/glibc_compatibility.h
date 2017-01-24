@@ -12,7 +12,7 @@
   *  add fallocate, pipe2, __longjmp_chk, __vasprintf_chk.
   */
 
-#if defined (__cplusplus)
+#if defined(__cplusplus)
 extern "C" {
 #endif
 
@@ -43,21 +43,21 @@ __asm__(".symver __memcpy_glibc_2_2_5, memcpy@GLIBC_2.2.5");
 
 __attribute__((__weak__)) void * __wrap_memcpy(void * dest, const void * src, size_t n)
 {
-    return __memcpy_glibc_2_2_5(dest, src, n);
+	return __memcpy_glibc_2_2_5(dest, src, n);
 }
 
 
 __attribute__((__weak__)) size_t __pthread_get_minstack(const pthread_attr_t * attr)
 {
-	return 1048576;		/// This is a guess. Don't sure it is correct.
+	return 1048576; /// This is a guess. Don't sure it is correct.
 }
 
-#include <string.h>
 #include <signal.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/syscall.h>
 
-extern long int syscall (long int __sysno, ...) __THROW;
+extern long int syscall(long int __sysno, ...) __THROW;
 
 __attribute__((__weak__)) int __gai_sigqueue(int sig, const union sigval val, pid_t caller_pid)
 {
@@ -74,6 +74,6 @@ __attribute__((__weak__)) int __gai_sigqueue(int sig, const union sigval val, pi
 }
 
 
-#if defined (__cplusplus)
+#if defined(__cplusplus)
 }
 #endif

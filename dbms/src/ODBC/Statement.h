@@ -1,7 +1,7 @@
 #pragma once
 
-#include <sstream>
 #include <memory>
+#include <sstream>
 
 #include <Poco/Base64Encoder.h>
 #include <Poco/Net/HTTPRequest.h>
@@ -24,7 +24,9 @@ struct Binding
 class Statement
 {
 public:
-	Statement(Connection & conn_) : connection(conn_) {}
+	Statement(Connection & conn_) : connection(conn_)
+	{
+	}
 
 	void sendRequest()
 	{
@@ -43,10 +45,11 @@ public:
 		request.setKeepAlive(true);
 		request.setChunkedTransferEncoding(true);
 		request.setCredentials("Basic", user_password_base64.str());
-		request.setURI("/?database=" + connection.database + "&default_format=ODBCDriver");	/// TODO Возможность передать настройки. TODO эскейпинг
+		request.setURI(
+			"/?database=" + connection.database + "&default_format=ODBCDriver"); /// TODO Возможность передать настройки. TODO эскейпинг
 
-//		if (in && in->peek() != EOF)
-			connection.session.reset();
+		//		if (in && in->peek() != EOF)
+		connection.session.reset();
 
 		connection.session.sendRequest(request) << query;
 
@@ -63,10 +66,7 @@ public:
 			LOG("Receiving !!!!");
 
 			std::stringstream error_message;
-			error_message
-				<< "HTTP status code: " << status << std::endl
-				<< "Received error:" << std::endl
-				<< in->rdbuf() << std::endl;
+			error_message << "HTTP status code: " << status << std::endl << "Received error:" << std::endl << in->rdbuf() << std::endl;
 
 			throw std::runtime_error(error_message.str());
 		}

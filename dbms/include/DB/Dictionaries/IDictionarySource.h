@@ -1,11 +1,10 @@
 #pragma once
 
-#include <DB/DataStreams/IBlockInputStream.h>
 #include <vector>
+#include <DB/DataStreams/IBlockInputStream.h>
 
 namespace DB
 {
-
 class IDictionarySource;
 using DictionarySourcePtr = std::unique_ptr<IDictionarySource>;
 
@@ -29,8 +28,7 @@ public:
 
 	/** returns an input stream with the data for a collection of composite keys.
 	 *	`requested_rows` contains indices of all rows containing unique keys. */
-	virtual BlockInputStreamPtr loadKeys(
-		const ConstColumnPlainPtrs & key_columns, const std::vector<std::size_t> & requested_rows) = 0;
+	virtual BlockInputStreamPtr loadKeys(const ConstColumnPlainPtrs & key_columns, const std::vector<std::size_t> & requested_rows) = 0;
 
 	/// indicates whether the source has been modified since last load* operation
 	virtual bool isModified() const = 0;
@@ -42,5 +40,4 @@ public:
 
 	virtual ~IDictionarySource() = default;
 };
-
 }

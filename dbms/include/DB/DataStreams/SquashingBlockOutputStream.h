@@ -6,7 +6,6 @@
 
 namespace DB
 {
-
 /** Merging consecutive blocks of stream to specified minimum size.
   */
 class SquashingBlockOutputStream : public IBlockOutputStream
@@ -28,5 +27,4 @@ private:
 
 	void finalize();
 };
-
 }

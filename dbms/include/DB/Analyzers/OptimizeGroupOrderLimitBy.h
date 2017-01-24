@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 class Context;
 class WriteBuffer;
 struct TypeAndConstantInference;
@@ -32,5 +31,4 @@ struct OptimizeGroupOrderLimitBy
 {
 	void process(ASTPtr & ast, TypeAndConstantInference & expression_info);
 };
-
 }

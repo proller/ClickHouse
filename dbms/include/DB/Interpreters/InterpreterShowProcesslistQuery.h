@@ -1,20 +1,19 @@
 #pragma once
 
-#include <DB/Interpreters/IInterpreter.h>
 #include <DB/Interpreters/Context.h>
+#include <DB/Interpreters/IInterpreter.h>
 
 
 namespace DB
 {
-
-
 /** Вернуть список запросов, исполняющихся прямо сейчас.
   */
 class InterpreterShowProcesslistQuery : public IInterpreter
 {
 public:
-	InterpreterShowProcesslistQuery(ASTPtr query_ptr_, Context & context_)
-		: query_ptr(query_ptr_), context(context_) {}
+	InterpreterShowProcesslistQuery(ASTPtr query_ptr_, Context & context_) : query_ptr(query_ptr_), context(context_)
+	{
+	}
 
 	BlockIO execute() override;
 
@@ -24,6 +23,4 @@ private:
 
 	String getRewrittenQuery();
 };
-
-
 }

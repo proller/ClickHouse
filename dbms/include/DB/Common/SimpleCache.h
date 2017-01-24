@@ -1,8 +1,8 @@
 #pragma once
 
 #include <map>
-#include <tuple>
 #include <mutex>
+#include <tuple>
 #include <ext/function_traits.hpp>
 
 
@@ -17,7 +17,7 @@
   * SimpleCache<decltype(func), &func> func_cached;
   * std::cerr << func_cached(args...);
   */
-template <typename F, F* f>
+template <typename F, F * f>
 class SimpleCache
 {
 private:
@@ -29,12 +29,12 @@ private:
 
 public:
 	template <typename... Args>
-	Result operator() (Args &&... args)
+	Result operator()(Args &&... args)
 	{
 		{
 			std::lock_guard<std::mutex> lock(mutex);
 
-			Key key{std::forward<Args>(args)...};
+			Key key{ std::forward<Args>(args)... };
 			auto it = cache.find(key);
 
 			if (cache.end() != it)

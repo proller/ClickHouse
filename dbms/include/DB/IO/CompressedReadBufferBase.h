@@ -1,7 +1,7 @@
 #pragma once
 
 #ifdef USE_QUICKLZ
-	struct qlz_state_decompress;
+struct qlz_state_decompress;
 #endif
 
 #include <DB/Common/PODArray.h>
@@ -9,7 +9,6 @@
 
 namespace DB
 {
-
 class ReadBuffer;
 
 /** Basic functionality for implementation of
@@ -28,7 +27,7 @@ protected:
 #ifdef USE_QUICKLZ
 	std::unique_ptr<qlz_state_decompress> qlz_state;
 #else
-	void * fixed_size_padding = nullptr;	/// ABI compatibility for USE_QUICKLZ
+	void * fixed_size_padding = nullptr; /// ABI compatibility for USE_QUICKLZ
 #endif
 
 	/// Don't checksum on decompressing.
@@ -55,5 +54,4 @@ public:
 		disable_checksum = true;
 	}
 };
-
 }

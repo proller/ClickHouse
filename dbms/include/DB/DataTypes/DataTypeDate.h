@@ -9,16 +9,26 @@
 
 namespace DB
 {
-
 class DataTypeDate final : public IDataTypeNumberFixed<UInt16, ColumnUInt16>
 {
 public:
-	DataTypeDate() {}
+	DataTypeDate()
+	{
+	}
 
-	bool behavesAsNumber() const override { return false; }
+	bool behavesAsNumber() const override
+	{
+		return false;
+	}
 
-	std::string getName() const override { return "Date"; }
-	DataTypePtr clone() const override { return std::make_shared<DataTypeDate>(); }
+	std::string getName() const override
+	{
+		return "Date";
+	}
+	DataTypePtr clone() const override
+	{
+		return std::make_shared<DataTypeDate>();
+	}
 
 	void serializeText(const IColumn & column, size_t row_num, WriteBuffer & ostr) const override
 	{
@@ -55,7 +65,7 @@ public:
 		assertChar('\'', istr);
 		readDateText(x, istr);
 		assertChar('\'', istr);
-		static_cast<ColumnType &>(column).getData().push_back(x);	/// Важно делать это в конце - для exception safety.
+		static_cast<ColumnType &>(column).getData().push_back(x); /// Важно делать это в конце - для exception safety.
 	}
 
 	void serializeTextJSON(const IColumn & column, size_t row_num, WriteBuffer & ostr, bool) const override
@@ -88,5 +98,4 @@ public:
 		static_cast<ColumnType &>(column).getData().push_back(value.getDayNum());
 	}
 };
-
 }

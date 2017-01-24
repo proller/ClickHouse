@@ -1,14 +1,12 @@
 #pragma once
 
+#include <mutex>
 #include <DB/Core/NamesAndTypes.h>
 #include <DB/Storages/MergeTree/RangesInDataPart.h>
-#include <mutex>
 
 
 namespace DB
 {
-
-
 /// A batch of work for MergeTreeThreadBlockInputStream
 struct MergeTreeReadTask
 {
@@ -32,14 +30,26 @@ struct MergeTreeReadTask
 	/// resulting block may require reordering in accordance with `ordered_names`
 	const bool should_reorder;
 
-	MergeTreeReadTask(
-		const MergeTreeData::DataPartPtr & data_part, const MarkRanges & ranges, const std::size_t part_index_in_query,
-		const Names & ordered_names, const NameSet & column_name_set, const NamesAndTypesList & columns,
-		const NamesAndTypesList & pre_columns, const bool remove_prewhere_column, const bool should_reorder)
-		: data_part{data_part}, mark_ranges{ranges}, part_index_in_query{part_index_in_query},
-		  ordered_names{ordered_names}, column_name_set{column_name_set}, columns{columns}, pre_columns{pre_columns},
-		  remove_prewhere_column{remove_prewhere_column}, should_reorder{should_reorder}
-	{}
+	MergeTreeReadTask(const MergeTreeData::DataPartPtr & data_part,
+		const MarkRanges & ranges,
+		const std::size_t part_index_in_query,
+		const Names & ordered_names,
+		const NameSet & column_name_set,
+		const NamesAndTypesList & columns,
+		const NamesAndTypesList & pre_columns,
+		const bool remove_prewhere_column,
+		const bool should_reorder)
+		: data_part{ data_part },
+		  mark_ranges{ ranges },
+		  part_index_in_query{ part_index_in_query },
+		  ordered_names{ ordered_names },
+		  column_name_set{ column_name_set },
+		  columns{ columns },
+		  pre_columns{ pre_columns },
+		  remove_prewhere_column{ remove_prewhere_column },
+		  should_reorder{ should_reorder }
+	{
+	}
 };
 
 using MergeTreeReadTaskPtr = std::unique_ptr<MergeTreeReadTask>;
@@ -71,13 +81,15 @@ public:
 		/// Constants above is just an example.
 		BackoffSettings(const Settings & settings)
 			: min_read_latency_ms(settings.read_backoff_min_latency_ms.totalMilliseconds()),
-			max_throughput(settings.read_backoff_max_throughput),
-			min_interval_between_events_ms(settings.read_backoff_min_interval_between_events_ms.totalMilliseconds()),
-			min_events(settings.read_backoff_min_events)
+			  max_throughput(settings.read_backoff_max_throughput),
+			  min_interval_between_events_ms(settings.read_backoff_min_interval_between_events_ms.totalMilliseconds()),
+			  min_events(settings.read_backoff_min_events)
 		{
 		}
 
-		BackoffSettings() : min_read_latency_ms(0) {}
+		BackoffSettings() : min_read_latency_ms(0)
+		{
+		}
 	};
 
 	BackoffSettings backoff_settings;
@@ -88,19 +100,26 @@ private:
 	struct BackoffState
 	{
 		size_t current_threads;
-		Stopwatch time_since_prev_event {CLOCK_MONOTONIC_COARSE};
+		Stopwatch time_since_prev_event{ CLOCK_MONOTONIC_COARSE };
 		size_t num_events = 0;
 
-		BackoffState(size_t threads) : current_threads(threads) {}
+		BackoffState(size_t threads) : current_threads(threads)
+		{
+		}
 	};
 
 	BackoffState backoff_state;
 
 public:
-	MergeTreeReadPool(
-		const std::size_t threads, const std::size_t sum_marks, const std::size_t min_marks_for_concurrent_read,
-		RangesInDataParts parts, MergeTreeData & data, const ExpressionActionsPtr & prewhere_actions,
-		const String & prewhere_column_name, const bool check_columns, const Names & column_names,
+	MergeTreeReadPool(const std::size_t threads,
+		const std::size_t sum_marks,
+		const std::size_t min_marks_for_concurrent_read,
+		RangesInDataParts parts,
+		MergeTreeData & data,
+		const ExpressionActionsPtr & prewhere_actions,
+		const String & prewhere_column_name,
+		const bool check_columns,
+		const Names & column_names,
 		const BackoffSettings & backoff_settings,
 		const bool do_not_steal_tasks = false);
 
@@ -113,13 +132,16 @@ public:
 	void profileFeedback(const ReadBufferFromFileBase::ProfileInfo info);
 
 private:
-	std::vector<std::size_t> fillPerPartInfo(
-		RangesInDataParts & parts, const ExpressionActionsPtr & prewhere_actions, const String & prewhere_column_name,
+	std::vector<std::size_t> fillPerPartInfo(RangesInDataParts & parts,
+		const ExpressionActionsPtr & prewhere_actions,
+		const String & prewhere_column_name,
 		const bool check_columns);
 
-	void fillPerThreadInfo(
-		const std::size_t threads, const std::size_t sum_marks, std::vector<std::size_t> per_part_sum_marks,
-		RangesInDataParts & parts, const std::size_t min_marks_for_concurrent_read);
+	void fillPerThreadInfo(const std::size_t threads,
+		const std::size_t sum_marks,
+		std::vector<std::size_t> per_part_sum_marks,
+		RangesInDataParts & parts,
+		const std::size_t min_marks_for_concurrent_read);
 
 
 	/** Если некоторых запрошенных столбцов нет в куске,
@@ -170,6 +192,4 @@ private:
 };
 
 using MergeTreeReadPoolPtr = std::shared_ptr<MergeTreeReadPool>;
-
-
 }

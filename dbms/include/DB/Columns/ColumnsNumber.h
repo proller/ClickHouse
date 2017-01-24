@@ -1,13 +1,12 @@
 #pragma once
 
-#include <DB/Core/Types.h>
-#include <DB/Columns/ColumnVector.h>
 #include <DB/Columns/ColumnConst.h>
+#include <DB/Columns/ColumnVector.h>
+#include <DB/Core/Types.h>
 
 
 namespace DB
 {
-
 /** Столбцы чисел. */
 
 using ColumnUInt8 = ColumnVector<UInt8>;
@@ -36,5 +35,4 @@ using ColumnConstInt64 = ColumnConst<Int64>;
 
 using ColumnConstFloat32 = ColumnConst<Float32>;
 using ColumnConstFloat64 = ColumnConst<Float64>;
-
 }

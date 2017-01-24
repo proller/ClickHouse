@@ -6,7 +6,6 @@
 
 namespace DB
 {
-
 /** This class is intended for implementation of SELECT DISTINCT clause and
   * leaves only unique rows in the stream.
   *
@@ -20,7 +19,10 @@ public:
 	/// Empty columns_ means all collumns.
 	DistinctBlockInputStream(BlockInputStreamPtr input_, const Limits & limits, size_t limit_hint_, Names columns_);
 
-	String getName() const override { return "Distinct"; }
+	String getName() const override
+	{
+		return "Distinct";
+	}
 
 	String getID() const override;
 
@@ -34,11 +36,7 @@ private:
 
 	template <typename Method>
 	void buildFilter(
-		Method & method,
-		const ConstColumnPlainPtrs & key_columns,
-		IColumn::Filter & filter,
-		size_t rows,
-		SetVariants & variants) const;
+		Method & method, const ConstColumnPlainPtrs & key_columns, IColumn::Filter & filter, size_t rows, SetVariants & variants) const;
 
 
 	Names columns_names;
@@ -51,5 +49,4 @@ private:
 	size_t max_bytes;
 	OverflowMode overflow_mode;
 };
-
 }

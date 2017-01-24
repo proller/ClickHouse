@@ -1,16 +1,15 @@
 #pragma once
 
-#include <zkutil/ZooKeeper.h>
-#include <zkutil/Common.h>
-#include <DB/Common/Exception.h>
-#include <Poco/Event.h>
+#include <functional>
 #include <string>
 #include <type_traits>
-#include <functional>
+#include <zkutil/Common.h>
+#include <zkutil/ZooKeeper.h>
+#include <Poco/Event.h>
+#include <DB/Common/Exception.h>
 
 namespace zkutil
 {
-
 /** Distributed read/write lock for ZooKeeper.
   * Such a RWLock object may not be shared among threads.
   */
@@ -62,11 +61,13 @@ public:
 	void release();
 
 public:
-	template <Type, Mode = Blocking> class Guard;
+	template <Type, Mode = Blocking>
+	class Guard;
 
 private:
 	/// Cancel any ongoing operation if requested.
-	template <RWLock::Type lock_type> void acquireImpl(RWLock::Mode mode);
+	template <RWLock::Type lock_type>
+	void acquireImpl(RWLock::Mode mode);
 	void abortIfRequested();
 
 private:
@@ -92,8 +93,7 @@ class RWLock::Guard final
 
 public:
 	/// Acquire lock.
-	Guard(RWLock & rw_lock_)
-		: rw_lock(rw_lock_)
+	Guard(RWLock & rw_lock_) : rw_lock(rw_lock_)
 	{
 		if (lock_type == RWLock::Read)
 			rw_lock.acquireRead(lock_mode);
@@ -123,5 +123,4 @@ public:
 private:
 	RWLock & rw_lock;
 };
-
 }

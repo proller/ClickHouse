@@ -1,20 +1,25 @@
 #pragma once
 
-#include <DB/IO/WriteHelpers.h>
 #include <DB/AggregateFunctions/IAggregateFunction.h>
+#include <DB/IO/WriteHelpers.h>
 
 
 namespace DB
 {
-
 /** Интерфейс для агрегатных функций, принимающих одно значение. Это почти все агрегатные функции.
   */
 template <typename T, typename Derived>
 class IUnaryAggregateFunction : public IAggregateFunctionHelper<T>
 {
 private:
-	Derived & getDerived() { return static_cast<Derived &>(*this); }
-	const Derived & getDerived() const { return static_cast<const Derived &>(*this); }
+	Derived & getDerived()
+	{
+		return static_cast<Derived &>(*this);
+	}
+	const Derived & getDerived() const
+	{
+		return static_cast<const Derived &>(*this);
+	}
 
 public:
 	void setArguments(const DataTypes & arguments) override final
@@ -37,12 +42,14 @@ public:
 		static_cast<const Derived &>(*that).addImpl(place, *columns[0], row_num, arena);
 	}
 
-	IAggregateFunction::AddFunc getAddressOfAddFunction() const override { return &addFree; }
+	IAggregateFunction::AddFunc getAddressOfAddFunction() const override
+	{
+		return &addFree;
+	}
 
 	/** Реализуйте это в классе-наследнике:
 	  * void addImpl(AggregateDataPtr place, const IColumn & column, size_t row_num) const;
 	  * void setArgument(const DataTypePtr & argument);
 	  */
 };
-
 }

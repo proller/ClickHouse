@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 class IDataType;
 
 /** Используется для интерпретации выражений в множестве в IN,
@@ -16,5 +15,4 @@ class IDataType;
   * Если значение не попадает в диапазон - возвращает Null.
   */
 Field convertFieldToType(const Field & src, const IDataType & type);
-
 }

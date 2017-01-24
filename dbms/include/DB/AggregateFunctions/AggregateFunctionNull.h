@@ -6,12 +6,9 @@
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
-
-extern const int LOGICAL_ERROR;
-
+	extern const int LOGICAL_ERROR;
 }
 
 /// This class implements a wrapper around an aggregate function. Despite its name,
@@ -21,8 +18,7 @@ extern const int LOGICAL_ERROR;
 class AggregateFunctionNull : public IAggregateFunction
 {
 public:
-	AggregateFunctionNull(AggregateFunctionPtr nested_function_)
-		: nested_function{nested_function_}
+	AggregateFunctionNull(AggregateFunctionPtr nested_function_) : nested_function{ nested_function_ }
 	{
 	}
 
@@ -140,8 +136,7 @@ public:
 		nested_function->insertResultInto(place, to);
 	}
 
-	static void addFree(const IAggregateFunction * that, AggregateDataPtr place,
-		const IColumn ** columns, size_t row_num, Arena * arena)
+	static void addFree(const IAggregateFunction * that, AggregateDataPtr place, const IColumn ** columns, size_t row_num, Arena * arena)
 	{
 		return static_cast<const AggregateFunctionNull &>(*that).add(place, columns, row_num, arena);
 	}
@@ -156,5 +151,4 @@ private:
 	std::vector<bool> is_nullable;
 	size_t argument_count = 0;
 };
-
 }

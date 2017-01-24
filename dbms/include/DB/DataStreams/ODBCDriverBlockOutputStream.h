@@ -6,7 +6,6 @@
 
 namespace DB
 {
-
 class WriteBuffer;
 
 
@@ -24,11 +23,13 @@ public:
 	void write(const Block & block) override;
 
 	void flush() override;
-	std::string getContentType() const override { return "application/octet-stream"; }
+	std::string getContentType() const override
+	{
+		return "application/octet-stream";
+	}
 
 private:
 	bool is_first = true;
 	WriteBuffer & out;
 };
-
 }

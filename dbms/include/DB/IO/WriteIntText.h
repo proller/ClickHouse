@@ -14,7 +14,6 @@
 
 namespace DB
 {
-
 namespace detail
 {
 	/** Смотрите:
@@ -99,17 +98,16 @@ namespace detail
 	template <typename T>
 	UInt32 writeUIntText(T x, char * dst)
 	{
-		static const char digits[201] =
-			"00010203040506070809"
-			"10111213141516171819"
-			"20212223242526272829"
-			"30313233343536373839"
-			"40414243444546474849"
-			"50515253545556575859"
-			"60616263646566676869"
-			"70717273747576777879"
-			"80818283848586878889"
-			"90919293949596979899";
+		static const char digits[201] = "00010203040506070809"
+										"10111213141516171819"
+										"20212223242526272829"
+										"30313233343536373839"
+										"40414243444546474849"
+										"50515253545556575859"
+										"60616263646566676869"
+										"70717273747576777879"
+										"80818283848586878889"
+										"90919293949596979899";
 
 		const UInt32 length = digits10(x);
 		UInt32 next = length - 1;
@@ -179,7 +177,6 @@ namespace detail
 
 		writeUIntText(static_cast<typename std::make_unsigned<T>::type>(x), buf);
 	}
-
 }
 
 
@@ -194,5 +191,4 @@ typename std::enable_if<std::is_unsigned<T>::value, void>::type writeIntText(T x
 {
 	detail::writeUIntText(x, buf);
 }
-
 }

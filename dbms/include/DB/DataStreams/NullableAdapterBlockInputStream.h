@@ -4,7 +4,6 @@
 
 namespace DB
 {
-
 /// This stream allows perfoming INSERT requests in which the types of
 /// the target and source blocks are compatible up to nullability:
 ///
@@ -16,10 +15,13 @@ namespace DB
 class NullableAdapterBlockInputStream : public IProfilingBlockInputStream
 {
 public:
-	NullableAdapterBlockInputStream(BlockInputStreamPtr input_, const Block & in_sample_,
-		const Block & out_sample_, const NamesAndTypesListPtr & required_columns_);
+	NullableAdapterBlockInputStream(
+		BlockInputStreamPtr input_, const Block & in_sample_, const Block & out_sample_, const NamesAndTypesListPtr & required_columns_);
 
-	String getName() const override { return "NullableAdapterBlockInputStream"; }
+	String getName() const override
+	{
+		return "NullableAdapterBlockInputStream";
+	}
 
 	String getID() const override;
 
@@ -57,5 +59,4 @@ private:
 	const Actions actions;
 	const bool must_transform;
 };
-
 }

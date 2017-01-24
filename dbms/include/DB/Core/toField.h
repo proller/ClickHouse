@@ -1,14 +1,12 @@
 #pragma once
 
-#include <common/Common.h>		/// VisitID_t
+#include <common/Common.h> /// VisitID_t
 
 #include <DB/Core/Field.h>
 
 
 namespace DB
 {
-
-
 /// Перевести что угодно в Field.
 template <typename T>
 inline Field toField(const T & x)
@@ -36,6 +34,4 @@ inline Field toField(const mysqlxx::Null<T> & x)
 {
 	return x.isNull() ? Field(Null()) : toField(static_cast<const T &>(x));
 }
-
-
 }

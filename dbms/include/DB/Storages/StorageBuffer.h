@@ -6,16 +6,18 @@
 #include <ext/shared_ptr_helper.hpp>
 
 #include <DB/Core/NamesAndTypes.h>
-#include <DB/Storages/IStorage.h>
 #include <DB/DataStreams/IBlockOutputStream.h>
+#include <DB/Storages/IStorage.h>
 
 
-namespace Poco { class Logger; }
+namespace Poco
+{
+class Logger;
+}
 
 
 namespace DB
 {
-
 class Context;
 
 
@@ -39,37 +41,49 @@ class Context;
   */
 class StorageBuffer : private ext::shared_ptr_helper<StorageBuffer>, public IStorage
 {
-friend class ext::shared_ptr_helper<StorageBuffer>;
-friend class BufferBlockInputStream;
-friend class BufferBlockOutputStream;
+	friend class ext::shared_ptr_helper<StorageBuffer>;
+	friend class BufferBlockInputStream;
+	friend class BufferBlockOutputStream;
 
 public:
 	/// Пороги.
 	struct Thresholds
 	{
-		time_t time;	/// Количество секунд от момента вставки первой строчки в блок.
-		size_t rows;	/// Количество строк в блоке.
-		size_t bytes;	/// Количество (несжатых) байт в блоке.
+		time_t time; /// Количество секунд от момента вставки первой строчки в блок.
+		size_t rows; /// Количество строк в блоке.
+		size_t bytes; /// Количество (несжатых) байт в блоке.
 	};
 
 	/** num_shards - уровень внутреннего параллелизма (количество независимых буферов)
 	  * Буфер сбрасывается, если превышены все минимальные пороги или хотя бы один из максимальных.
 	  */
-	static StoragePtr create(const std::string & name_, NamesAndTypesListPtr columns_,
+	static StoragePtr create(const std::string & name_,
+		NamesAndTypesListPtr columns_,
 		const NamesAndTypesList & materialized_columns_,
 		const NamesAndTypesList & alias_columns_,
 		const ColumnDefaults & column_defaults_,
 		Context & context_,
-		size_t num_shards_, const Thresholds & min_thresholds_, const Thresholds & max_thresholds_,
-		const String & destination_database_, const String & destination_table_);
+		size_t num_shards_,
+		const Thresholds & min_thresholds_,
+		const Thresholds & max_thresholds_,
+		const String & destination_database_,
+		const String & destination_table_);
 
-	std::string getName() const override { return "Buffer"; }
-	std::string getTableName() const override { return name; }
+	std::string getName() const override
+	{
+		return "Buffer";
+	}
+	std::string getTableName() const override
+	{
+		return name;
+	}
 
-	const NamesAndTypesList & getColumnsListImpl() const override { return *columns; }
+	const NamesAndTypesList & getColumnsListImpl() const override
+	{
+		return *columns;
+	}
 
-	BlockInputStreams read(
-		const Names & column_names,
+	BlockInputStreams read(const Names & column_names,
 		ASTPtr query,
 		const Context & context,
 		const Settings & settings,
@@ -83,13 +97,31 @@ public:
 	void shutdown() override;
 	bool optimize(const String & partition, bool final, const Settings & settings) override;
 
-	void rename(const String & new_path_to_db, const String & new_database_name, const String & new_table_name) override { name = new_table_name; }
+	void rename(const String & new_path_to_db, const String & new_database_name, const String & new_table_name) override
+	{
+		name = new_table_name;
+	}
 
-	bool supportsSampling() const override { return true; }
-	bool supportsPrewhere() const override { return true; }
-	bool supportsFinal() const override { return true; }
-	bool supportsIndexForIn() const override { return true; }
-	bool supportsParallelReplicas() const override { return true; }
+	bool supportsSampling() const override
+	{
+		return true;
+	}
+	bool supportsPrewhere() const override
+	{
+		return true;
+	}
+	bool supportsFinal() const override
+	{
+		return true;
+	}
+	bool supportsIndexForIn() const override
+	{
+		return true;
+	}
+	bool supportsParallelReplicas() const override
+	{
+		return true;
+	}
 
 	/// Структура подчинённой таблицы не проверяется и не изменяется.
 	void alter(const AlterCommands & params, const String & database_name, const String & table_name, const Context & context) override;
@@ -116,7 +148,7 @@ private:
 
 	const String destination_database;
 	const String destination_table;
-	bool no_destination;	/// Если задано - не записывать данные из буфера, а просто опустошать буфер.
+	bool no_destination; /// Если задано - не записывать данные из буфера, а просто опустошать буфер.
 
 	Poco::Logger * log;
 
@@ -124,13 +156,17 @@ private:
 	/// Выполняет сброс данных по таймауту.
 	std::thread flush_thread;
 
-	StorageBuffer(const std::string & name_, NamesAndTypesListPtr columns_,
+	StorageBuffer(const std::string & name_,
+		NamesAndTypesListPtr columns_,
 		const NamesAndTypesList & materialized_columns_,
 		const NamesAndTypesList & alias_columns_,
 		const ColumnDefaults & column_defaults_,
 		Context & context_,
-		size_t num_shards_, const Thresholds & min_thresholds_, const Thresholds & max_thresholds_,
-		const String & destination_database_, const String & destination_table_);
+		size_t num_shards_,
+		const Thresholds & min_thresholds_,
+		const Thresholds & max_thresholds_,
+		const String & destination_database_,
+		const String & destination_table_);
 
 	void flushAllBuffers(bool check_thresholds = true);
 	/// Сбросить буфер. Если выставлено check_thresholds - сбрасывает только если превышены пороги.
@@ -143,5 +179,4 @@ private:
 
 	void flushThread();
 };
-
 }

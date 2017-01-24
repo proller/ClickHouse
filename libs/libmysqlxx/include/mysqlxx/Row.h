@@ -1,14 +1,13 @@
 #pragma once
 
+#include <mysqlxx/Exception.h>
+#include <mysqlxx/ResultBase.h>
 #include <mysqlxx/Types.h>
 #include <mysqlxx/Value.h>
-#include <mysqlxx/ResultBase.h>
-#include <mysqlxx/Exception.h>
 
 
 namespace mysqlxx
 {
-
 class ResultBase;
 
 
@@ -36,15 +35,14 @@ public:
 	}
 
 	/** Для того, чтобы создать Row, используйте соответствующие методы UseQueryResult или StoreQueryResult. */
-	Row(MYSQL_ROW row_, ResultBase * res_, MYSQL_LENGTHS lengths_)
-		: row(row_), res(res_), lengths(lengths_)
+	Row(MYSQL_ROW row_, ResultBase * res_, MYSQL_LENGTHS lengths_) : row(row_), res(res_), lengths(lengths_)
 	{
 	}
 
 	/** Получить значение по индексу.
 	  * Здесь используется int, а не unsigned, чтобы не было неоднозначности с тем же методом, принимающим const char *.
 	  */
-	Value operator[] (int n) const
+	Value operator[](int n) const
 	{
 		if (unlikely(static_cast<size_t>(n) >= res->getNumFields()))
 			throw Exception("Index of column is out of range.");
@@ -52,9 +50,9 @@ public:
 	}
 
 	/** Get value by column name. Less efficient. */
-	Value operator[] (const char * name) const;
+	Value operator[](const char * name) const;
 
-	Value operator[] (const std::string & name) const
+	Value operator[](const std::string & name) const
 	{
 		return operator[](name.c_str());
 	}
@@ -66,23 +64,31 @@ public:
 	}
 
 	/** Количество столбцов. */
-	size_t size() const { return res->getNumFields(); }
+	size_t size() const
+	{
+		return res->getNumFields();
+	}
 
 	/** Является ли пустым? Такой объект используется, чтобы обозначить конец результата
 	  * при использовании UseQueryResult. Или это значит, что объект не инициализирован.
 	  * Вы можете использовать вместо этого преобразование в bool.
 	  */
-	bool empty() const { return row == nullptr; }
+	bool empty() const
+	{
+		return row == nullptr;
+	}
 
 	/** Преобразование в bool.
 	  * (Точнее - в тип, который преобразуется в bool, и с которым больше почти ничего нельзя сделать.)
 	  */
-	operator private_bool_type() const	{ return row == nullptr ? NULL : &Row::row; }
+	operator private_bool_type() const
+	{
+		return row == nullptr ? NULL : &Row::row;
+	}
 
 private:
 	MYSQL_ROW row = nullptr;
 	ResultBase * res = nullptr;
 	MYSQL_LENGTHS lengths;
 };
-
 }

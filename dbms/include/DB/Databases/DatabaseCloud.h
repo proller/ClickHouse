@@ -1,12 +1,11 @@
 #pragma once
 
-#include <DB/Databases/IDatabase.h>
 #include <DB/Common/UInt128.h>
+#include <DB/Databases/IDatabase.h>
 
 
 namespace DB
 {
-
 /** Позволяет создавать "облачные таблицы".
   * Список таких таблиц хранится в ZooKeeper.
   * Все серверы, ссылающиеся на один путь в ZooKeeper, видят один и тот же список таблиц.
@@ -73,15 +72,17 @@ private:
 	friend class DatabaseCloudIterator;
 
 public:
-	DatabaseCloud(
-		bool attach,
+	DatabaseCloud(bool attach,
 		const String & name_,
 		const String & zookeeper_path_,
 		size_t replication_factor_,
 		const String & datacenter_name_,
 		Context & context_);
 
-	String getEngineName() const override { return "Cloud"; }
+	String getEngineName() const override
+	{
+		return "Cloud";
+	}
 
 	void loadTables(Context & context, ThreadPool * thread_pool, bool has_force_restore_data_flag) override;
 
@@ -92,16 +93,22 @@ public:
 
 	bool empty() const override;
 
-	void createTable(
-		const String & table_name, const StoragePtr & table, const ASTPtr & query, const String & engine, const Settings & settings) override;
+	void createTable(const String & table_name,
+		const StoragePtr & table,
+		const ASTPtr & query,
+		const String & engine,
+		const Settings & settings) override;
 
 	void removeTable(const String & table_name) override;
 
 	void attachTable(const String & table_name, const StoragePtr & table) override;
 	StoragePtr detachTable(const String & table_name) override;
 
-	void renameTable(
-		const Context & context, const String & table_name, IDatabase & to_database, const String & to_table_name, const Settings & settings) override;
+	void renameTable(const Context & context,
+		const String & table_name,
+		IDatabase & to_database,
+		const String & to_table_name,
+		const Settings & settings) override;
 
 	time_t getTableMetadataModificationTime(const String & name) override;
 
@@ -110,8 +117,7 @@ public:
 	void shutdown() override;
 	void drop() override;
 
-	void alterTable(
-		const Context & context,
+	void alterTable(const Context & context,
 		const String & name,
 		const NamesAndTypesList & columns,
 		const NamesAndTypesList & materialized_columns,
@@ -142,5 +148,4 @@ private:
 	/// Определить серверы, на которых будут храниться данные таблицы.
 	std::vector<String> selectHostsForTable(const String & locality_key) const;
 };
-
 }

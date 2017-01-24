@@ -1,15 +1,13 @@
 #pragma once
 
+#include <DB/AggregateFunctions/IAggregateFunction.h>
 #include <DB/Columns/ColumnArray.h>
 #include <DB/DataTypes/DataTypeArray.h>
 #include <DB/DataTypes/DataTypesNumberFixed.h>
-#include <DB/AggregateFunctions/IAggregateFunction.h>
 
 
 namespace DB
 {
-
-
 /** Не агрегатная функция, а адаптер агрегатных функций,
   *  который любую агрегатную функцию agg(x) делает агрегатной функцией вида aggArray(x).
   * Адаптированная агрегатная функция вычисляет вложенную агрегатную функцию для каждого элемента массива.
@@ -22,7 +20,9 @@ private:
 	size_t num_agruments;
 
 public:
-	AggregateFunctionArray(AggregateFunctionPtr nested_) : nested_func_owner(nested_), nested_func(nested_func_owner.get()) {}
+	AggregateFunctionArray(AggregateFunctionPtr nested_) : nested_func_owner(nested_), nested_func(nested_func_owner.get())
+	{
+	}
 
 	String getName() const override
 	{
@@ -47,7 +47,10 @@ public:
 			if (const DataTypeArray * array = typeid_cast<const DataTypeArray *>(&*arguments[i]))
 				nested_arguments.push_back(array->getNestedType());
 			else
-				throw Exception("Illegal type " + arguments[i]->getName() + " of argument #" + toString(i + 1) + " for aggregate function " + getName() + ". Must be array.", ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+				throw Exception("Illegal type " + arguments[i]->getName() + " of argument #" + toString(i + 1) + " for aggregate function "
+						+ getName()
+						+ ". Must be array.",
+					ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 		}
 
 		nested_func->setArguments(nested_arguments);
@@ -125,7 +128,9 @@ public:
 		static_cast<const AggregateFunctionArray &>(*that).add(place, columns, row_num, arena);
 	}
 
-	IAggregateFunction::AddFunc getAddressOfAddFunction() const override final { return &addFree; }
+	IAggregateFunction::AddFunc getAddressOfAddFunction() const override final
+	{
+		return &addFree;
+	}
 };
-
 }

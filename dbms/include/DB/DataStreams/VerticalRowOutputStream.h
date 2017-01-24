@@ -7,7 +7,6 @@
 
 namespace DB
 {
-
 class WriteBuffer;
 class Context;
 
@@ -45,11 +44,11 @@ class VerticalRawRowOutputStream final : public VerticalRowOutputStream
 {
 public:
 	VerticalRawRowOutputStream(WriteBuffer & ostr_, const Block & sample_, const Context & context)
-		: VerticalRowOutputStream(ostr_, sample_, context) {}
+		: VerticalRowOutputStream(ostr_, sample_, context)
+	{
+	}
 
 protected:
 	void writeValue(const IColumn & column, const IDataType & type, size_t row_num) const override;
 };
-
 }
-

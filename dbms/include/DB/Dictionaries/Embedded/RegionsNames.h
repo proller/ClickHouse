@@ -36,22 +36,24 @@ private:
 
 	static const char ** getSupportedLanguages()
 	{
-		static const char * res[] { "ru", "en", "ua", "by", "kz", "tr" };
+		static const char * res[]{ "ru", "en", "ua", "by", "kz", "tr" };
 		return res;
 	}
 
-	struct language_alias { const char * const name; const Language lang; };
+	struct language_alias
+	{
+		const char * const name;
+		const Language lang;
+	};
 	static const language_alias * getLanguageAliases()
 	{
-		static constexpr const language_alias language_aliases[] {
-			{ "ru", Language::RU },
+		static constexpr const language_alias language_aliases[]{ { "ru", Language::RU },
 			{ "en", Language::EN },
 			{ "ua", Language::UA },
 			{ "uk", Language::UA },
 			{ "by", Language::BY },
 			{ "kz", Language::KZ },
-			{ "tr", Language::TR }
-		};
+			{ "tr", Language::TR } };
 
 		return language_aliases;
 	}

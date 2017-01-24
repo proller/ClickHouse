@@ -4,7 +4,6 @@
 
 namespace DB
 {
-
 /** Преобразует столбцы-константы в полноценные столбцы ("материализует" их).
   */
 class MaterializingBlockInputStream : public IProfilingBlockInputStream
@@ -17,5 +16,4 @@ public:
 protected:
 	Block readImpl() override;
 };
-
 }

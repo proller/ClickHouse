@@ -9,12 +9,13 @@
 
 namespace DB
 {
-
 struct AggregateFunctionCountData
 {
 	UInt64 count;
 
-	AggregateFunctionCountData() : count(0) {}
+	AggregateFunctionCountData() : count(0)
+	{
+	}
 };
 
 
@@ -22,7 +23,10 @@ struct AggregateFunctionCountData
 class AggregateFunctionCount final : public INullaryAggregateFunction<AggregateFunctionCountData, AggregateFunctionCount>
 {
 public:
-	String getName() const override { return "count"; }
+	String getName() const override
+	{
+		return "count";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -61,5 +65,4 @@ public:
 		data(place).count += x;
 	}
 };
-
 }

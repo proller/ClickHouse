@@ -6,7 +6,6 @@
 
 namespace DB
 {
-
 class ReadBuffer;
 class WriteBuffer;
 
@@ -59,8 +58,7 @@ private:
 		pos_of_current_row = istr.position();
 	}
 
-	bool parseRowAndPrintDiagnosticInfo(Block & block,
-		WriteBuffer & out, size_t max_length_of_column_name, size_t max_length_of_data_type_name);
+	bool parseRowAndPrintDiagnosticInfo(
+		Block & block, WriteBuffer & out, size_t max_length_of_column_name, size_t max_length_of_data_type_name);
 };
-
 }

@@ -5,16 +5,20 @@
 
 namespace DB
 {
-
 /** List of expressions, for example "a, b + c, f(d)"
   */
 class ASTExpressionList : public IAST
 {
 public:
 	ASTExpressionList() = default;
-	ASTExpressionList(const StringRange range_) : IAST(range_) {}
+	ASTExpressionList(const StringRange range_) : IAST(range_)
+	{
+	}
 
-	String getID() const override { return "ExpressionList"; }
+	String getID() const override
+	{
+		return "ExpressionList";
+	}
 
 	ASTPtr clone() const override
 	{
@@ -57,5 +61,4 @@ public:
 		}
 	}
 };
-
 }

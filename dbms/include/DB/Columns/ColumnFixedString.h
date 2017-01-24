@@ -2,18 +2,17 @@
 
 #include <string.h> // memcpy
 
-#include <DB/Common/PODArray.h>
+#include <DB/Columns/IColumn.h>
 #include <DB/Common/Arena.h>
+#include <DB/Common/PODArray.h>
 #include <DB/Common/SipHash.h>
 #include <DB/Common/memcpySmall.h>
-#include <DB/Columns/IColumn.h>
 #include <DB/IO/ReadHelpers.h>
 #include <DB/IO/WriteHelpers.h>
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int TOO_LARGE_STRING_SIZE;
@@ -41,9 +40,14 @@ private:
 
 public:
 	/** Создать пустой столбец строк фиксированной длины n */
-	ColumnFixedString(size_t n_) : n(n_) {}
+	ColumnFixedString(size_t n_) : n(n_)
+	{
+	}
 
-	std::string getName() const override { return "ColumnFixedString"; }
+	std::string getName() const override
+	{
+		return "ColumnFixedString";
+	}
 
 	ColumnPtr cloneResized(size_t size) const override
 	{
@@ -178,7 +182,9 @@ public:
 	struct less
 	{
 		const ColumnFixedString & parent;
-		less(const ColumnFixedString & parent_) : parent(parent_) {}
+		less(const ColumnFixedString & parent_) : parent(parent_)
+		{
+		}
 		bool operator()(size_t lhs, size_t rhs) const
 		{
 			/// TODO: memcmp тормозит.
@@ -218,10 +224,11 @@ public:
 		const ColumnFixedString & src_concrete = static_cast<const ColumnFixedString &>(src);
 
 		if (start + length > src_concrete.size())
-			throw Exception("Parameters start = "
-				+ toString(start) + ", length = "
-				+ toString(length) + " are out of bound in ColumnFixedString::insertRangeFrom method"
-				" (size() = " + toString(src_concrete.size()) + ").",
+			throw Exception("Parameters start = " + toString(start) + ", length = " + toString(length)
+					+ " are out of bound in ColumnFixedString::insertRangeFrom method"
+					  " (size() = "
+					+ toString(src_concrete.size())
+					+ ").",
 				ErrorCodes::PARAMETER_OUT_OF_BOUND);
 
 		size_t old_size = chars.size();
@@ -315,10 +322,19 @@ public:
 	};
 
 
-	Chars_t & getChars() { return chars; }
-	const Chars_t & getChars() const { return chars; }
+	Chars_t & getChars()
+	{
+		return chars;
+	}
+	const Chars_t & getChars() const
+	{
+		return chars;
+	}
 
-	size_t getN() const { return n; }
+	size_t getN() const
+	{
+		return n;
+	}
 
 	void getExtremes(Field & min, Field & max) const override
 	{
@@ -326,6 +342,4 @@ public:
 		max = String();
 	}
 };
-
-
 }

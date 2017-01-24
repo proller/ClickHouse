@@ -1,8 +1,8 @@
 #pragma once
 
-#include <string>
-#include <iomanip>
 #include <exception>
+#include <iomanip>
+#include <string>
 #include <common/DateLUT.h>
 #include <common/LocalDate.h>
 
@@ -16,7 +16,7 @@
   *
   * packed - для memcmp (из-за того, что m_year - 2 байта, little endian, работает корректно только до 2047 года)
   */
-class __attribute__ ((__packed__)) LocalDateTime
+class __attribute__((__packed__)) LocalDateTime
 {
 private:
 	unsigned short m_year;
@@ -30,12 +30,12 @@ private:
 	{
 		if (unlikely(time > DATE_LUT_MAX || time == 0))
 		{
-			m_year 		= 0;
-			m_month 	= 0;
-			m_day 		= 0;
-			m_hour 		= 0;
-			m_minute 	= 0;
-			m_second 	= 0;
+			m_year = 0;
+			m_month = 0;
+			m_day = 0;
+			m_hour = 0;
+			m_minute = 0;
+			m_second = 0;
 
 			return;
 		}
@@ -71,8 +71,8 @@ public:
 		init(time);
 	}
 
-	LocalDateTime(unsigned short year_, unsigned char month_, unsigned char day_,
-		unsigned char hour_, unsigned char minute_, unsigned char second_)
+	LocalDateTime(
+		unsigned short year_, unsigned char month_, unsigned char day_, unsigned char hour_, unsigned char minute_, unsigned char second_)
 		: m_year(year_), m_month(month_), m_day(day_), m_hour(hour_), m_minute(minute_), m_second(second_)
 	{
 	}
@@ -99,7 +99,7 @@ public:
 		operator=(x);
 	}
 
-	LocalDateTime & operator= (const LocalDateTime & x)
+	LocalDateTime & operator=(const LocalDateTime & x)
 	{
 		m_year = x.m_year;
 		m_month = x.m_month;
@@ -111,7 +111,7 @@ public:
 		return *this;
 	}
 
-	LocalDateTime & operator= (time_t time)
+	LocalDateTime & operator=(time_t time)
 	{
 		init(time);
 		return *this;
@@ -119,69 +119,107 @@ public:
 
 	operator time_t() const
 	{
-		return m_year == 0
-			? 0
-			: DateLUT::instance().makeDateTime(m_year, m_month, m_day, m_hour, m_minute, m_second);
+		return m_year == 0 ? 0 : DateLUT::instance().makeDateTime(m_year, m_month, m_day, m_hour, m_minute, m_second);
 	}
 
-	unsigned short year() const 	{ return m_year; }
-	unsigned char month() const 	{ return m_month; }
-	unsigned char day() const 		{ return m_day; }
-	unsigned char hour() const 		{ return m_hour; }
-	unsigned char minute() const 	{ return m_minute; }
-	unsigned char second() const 	{ return m_second; }
+	unsigned short year() const
+	{
+		return m_year;
+	}
+	unsigned char month() const
+	{
+		return m_month;
+	}
+	unsigned char day() const
+	{
+		return m_day;
+	}
+	unsigned char hour() const
+	{
+		return m_hour;
+	}
+	unsigned char minute() const
+	{
+		return m_minute;
+	}
+	unsigned char second() const
+	{
+		return m_second;
+	}
 
-	void year(unsigned short x) 	{ m_year = x; }
-	void month(unsigned char x) 	{ m_month = x; }
-	void day(unsigned char x) 		{ m_day = x; }
-	void hour(unsigned char x) 		{ m_hour = x; }
-	void minute(unsigned char x) 	{ m_minute = x; }
-	void second(unsigned char x) 	{ m_second = x; }
+	void year(unsigned short x)
+	{
+		m_year = x;
+	}
+	void month(unsigned char x)
+	{
+		m_month = x;
+	}
+	void day(unsigned char x)
+	{
+		m_day = x;
+	}
+	void hour(unsigned char x)
+	{
+		m_hour = x;
+	}
+	void minute(unsigned char x)
+	{
+		m_minute = x;
+	}
+	void second(unsigned char x)
+	{
+		m_second = x;
+	}
 
-	LocalDate toDate() const { return LocalDate(m_year, m_month, m_day); }
+	LocalDate toDate() const
+	{
+		return LocalDate(m_year, m_month, m_day);
+	}
 
-	LocalDateTime toStartOfDate() { return LocalDateTime(m_year, m_month, m_day, 0, 0, 0); }
+	LocalDateTime toStartOfDate()
+	{
+		return LocalDateTime(m_year, m_month, m_day, 0, 0, 0);
+	}
 
-	bool operator< (const LocalDateTime & other) const
+	bool operator<(const LocalDateTime & other) const
 	{
 		return 0 > memcmp(this, &other, sizeof(*this));
 	}
 
-	bool operator> (const LocalDateTime & other) const
+	bool operator>(const LocalDateTime & other) const
 	{
 		return 0 < memcmp(this, &other, sizeof(*this));
 	}
 
-	bool operator<= (const LocalDateTime & other) const
+	bool operator<=(const LocalDateTime & other) const
 	{
 		return 0 >= memcmp(this, &other, sizeof(*this));
 	}
 
-	bool operator>= (const LocalDateTime & other) const
+	bool operator>=(const LocalDateTime & other) const
 	{
 		return 0 <= memcmp(this, &other, sizeof(*this));
 	}
 
-	bool operator== (const LocalDateTime & other) const
+	bool operator==(const LocalDateTime & other) const
 	{
 		return 0 == memcmp(this, &other, sizeof(*this));
 	}
 
-	bool operator!= (const LocalDateTime & other) const
+	bool operator!=(const LocalDateTime & other) const
 	{
 		return !(*this == other);
 	}
 };
 
-inline std::ostream & operator<< (std::ostream & ostr, const LocalDateTime & datetime)
+inline std::ostream & operator<<(std::ostream & ostr, const LocalDateTime & datetime)
 {
 	ostr << std::setfill('0') << std::setw(4) << datetime.year();
 
-	ostr << '-' << (datetime.month() / 10) 	<< (datetime.month() % 10)
-		<< '-' << (datetime.day() / 10) 	<< (datetime.day() % 10)
-		<< ' ' << (datetime.hour() / 10) 	<< (datetime.hour() % 10)
-		<< ':' << (datetime.minute() / 10) 	<< (datetime.minute() % 10)
-		<< ':' << (datetime.second() / 10) 	<< (datetime.second() % 10);
+	ostr << '-' << (datetime.month() / 10) << (datetime.month() % 10) << '-' << (datetime.day() / 10) << (datetime.day() % 10) << ' '
+		 << (datetime.hour() / 10) << (datetime.hour() % 10) << ':' << (datetime.minute() / 10) << (datetime.minute() % 10) << ':'
+		 << (datetime.second() / 10) << (datetime.second() % 10);
 
 	return ostr;
 }

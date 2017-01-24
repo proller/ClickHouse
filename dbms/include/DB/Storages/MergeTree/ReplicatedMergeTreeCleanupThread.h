@@ -1,12 +1,11 @@
 #pragma once
 
-#include <common/logger_useful.h>
 #include <thread>
+#include <common/logger_useful.h>
 
 
 namespace DB
 {
-
 class StorageReplicatedMergeTree;
 
 
@@ -43,6 +42,4 @@ private:
 	/// TODO Удаление старых quorum/failed_parts
 	/// TODO Удаление старых nonincrement_block_numbers
 };
-
-
 }

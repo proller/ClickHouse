@@ -1,12 +1,11 @@
 #pragma once
 
-#include <DB/Parsers/ASTWithAlias.h>
 #include <DB/Parsers/ASTExpressionList.h>
+#include <DB/Parsers/ASTWithAlias.h>
 
 
 namespace DB
 {
-
 /** AST for function application or operator.
   */
 class ASTFunction : public ASTWithAlias
@@ -28,11 +27,13 @@ public:
 	/// parameters - for parametric aggregate function. Example: quantile(0.9)(x) - what in first parens are 'parameters'.
 	ASTPtr parameters;
 
-	FunctionKind kind{UNKNOWN};
+	FunctionKind kind{ UNKNOWN };
 
 public:
 	ASTFunction() = default;
-	ASTFunction(const StringRange range_) : ASTWithAlias(range_) {}
+	ASTFunction(const StringRange range_) : ASTWithAlias(range_)
+	{
+	}
 
 	String getColumnName() const override;
 
@@ -50,7 +51,7 @@ template <typename... Args>
 ASTPtr makeASTFunction(const String & name, Args &&... args)
 {
 	const auto function = std::make_shared<ASTFunction>();
-	ASTPtr result{function};
+	ASTPtr result{ function };
 
 	function->name = name;
 	function->arguments = std::make_shared<ASTExpressionList>();
@@ -63,11 +64,10 @@ ASTPtr makeASTFunction(const String & name, Args &&... args)
 
 
 template <typename... Args>
-ASTPtr makeASTFunction(const String & name, const StringRange & function_range,
-	const StringRange & arguments_range, Args &&... args)
+ASTPtr makeASTFunction(const String & name, const StringRange & function_range, const StringRange & arguments_range, Args &&... args)
 {
 	const auto function = std::make_shared<ASTFunction>(function_range);
-	ASTPtr result{function};
+	ASTPtr result{ function };
 
 	function->name = name;
 	function->arguments = std::make_shared<ASTExpressionList>(arguments_range);
@@ -77,5 +77,4 @@ ASTPtr makeASTFunction(const String & name, const StringRange & function_range,
 
 	return result;
 }
-
 }

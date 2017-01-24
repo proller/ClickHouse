@@ -5,8 +5,6 @@
 
 namespace DB
 {
-
-
 /** Реализует реляционную операцию LIMIT.
   */
 class LimitBlockInputStream : public IProfilingBlockInputStream
@@ -19,7 +17,10 @@ public:
 	  */
 	LimitBlockInputStream(BlockInputStreamPtr input_, size_t limit_, size_t offset_, bool always_read_till_end_ = false);
 
-	String getName() const override { return "Limit"; }
+	String getName() const override
+	{
+		return "Limit";
+	}
 
 	String getID() const override
 	{
@@ -37,5 +38,4 @@ private:
 	size_t pos = 0;
 	bool always_read_till_end;
 };
-
 }

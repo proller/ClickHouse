@@ -1,16 +1,14 @@
 #pragma once
 
-#include <DB/Core/FieldVisitors.h>
 #include <DB/AggregateFunctions/IUnaryAggregateFunction.h>
 #include <DB/AggregateFunctions/UniqVariadicHash.h>
-#include <DB/DataTypes/DataTypesNumberFixed.h>
+#include <DB/Core/FieldVisitors.h>
 #include <DB/DataTypes/DataTypeTuple.h>
+#include <DB/DataTypes/DataTypesNumberFixed.h>
 
 
 namespace DB
 {
-
-
 /** Считает количество уникальных значений до не более чем указанного в параметре.
   *
   * Пример: uniqUpTo(3)(UserID)
@@ -115,10 +113,10 @@ struct AggregateFunctionUniqUpToData<String> : AggregateFunctionUniqUpToData<UIn
 constexpr UInt8 uniq_upto_max_threshold = 100;
 
 template <typename T>
-class AggregateFunctionUniqUpTo final : public IUnaryAggregateFunction<AggregateFunctionUniqUpToData<T>, AggregateFunctionUniqUpTo<T> >
+class AggregateFunctionUniqUpTo final : public IUnaryAggregateFunction<AggregateFunctionUniqUpToData<T>, AggregateFunctionUniqUpTo<T>>
 {
 private:
-	UInt8 threshold = 5;	/// Значение по-умолчанию, если параметр не указан.
+	UInt8 threshold = 5; /// Значение по-умолчанию, если параметр не указан.
 
 public:
 	size_t sizeOfData() const override
@@ -126,7 +124,10 @@ public:
 		return sizeof(AggregateFunctionUniqUpToData<T>) + sizeof(T) * threshold;
 	}
 
-	String getName() const override { return "uniqUpTo"; }
+	String getName() const override
+	{
+		return "uniqUpTo";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -140,7 +141,8 @@ public:
 	void setParameters(const Array & params) override
 	{
 		if (params.size() != 1)
-			throw Exception("Aggregate function " + getName() + " requires exactly one parameter.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+			throw Exception(
+				"Aggregate function " + getName() + " requires exactly one parameter.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
 		UInt64 threshold_param = applyVisitor(FieldVisitorConvertToNumber<UInt64>(), params[0]);
 
@@ -187,7 +189,7 @@ class AggregateFunctionUniqUpToVariadic final : public IAggregateFunctionHelper<
 {
 private:
 	size_t num_args = 0;
-	UInt8 threshold = 5;	/// Значение по-умолчанию, если параметр не указан.
+	UInt8 threshold = 5; /// Значение по-умолчанию, если параметр не указан.
 
 public:
 	size_t sizeOfData() const override
@@ -195,7 +197,10 @@ public:
 		return sizeof(AggregateFunctionUniqUpToData<UInt64>) + sizeof(UInt64) * threshold;
 	}
 
-	String getName() const override { return "uniqUpTo"; }
+	String getName() const override
+	{
+		return "uniqUpTo";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -213,7 +218,8 @@ public:
 	void setParameters(const Array & params) override
 	{
 		if (params.size() != 1)
-			throw Exception("Aggregate function " + getName() + " requires exactly one parameter.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+			throw Exception(
+				"Aggregate function " + getName() + " requires exactly one parameter.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
 		UInt64 threshold_param = applyVisitor(FieldVisitorConvertToNumber<UInt64>(), params[0]);
 
@@ -249,13 +255,14 @@ public:
 		static_cast<ColumnUInt64 &>(to).getData().push_back(this->data(place).size());
 	}
 
-	static void addFree(const IAggregateFunction * that, AggregateDataPtr place, const IColumn ** columns, size_t row_num, Arena *arena)
+	static void addFree(const IAggregateFunction * that, AggregateDataPtr place, const IColumn ** columns, size_t row_num, Arena * arena)
 	{
 		static_cast<const AggregateFunctionUniqUpToVariadic &>(*that).add(place, columns, row_num, arena);
 	}
 
-	IAggregateFunction::AddFunc getAddressOfAddFunction() const override final { return &addFree; }
+	IAggregateFunction::AddFunc getAddressOfAddFunction() const override final
+	{
+		return &addFree;
+	}
 };
-
-
 }

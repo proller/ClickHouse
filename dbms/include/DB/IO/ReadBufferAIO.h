@@ -1,42 +1,50 @@
 #pragma once
 
-#include <DB/IO/ReadBufferFromFileBase.h>
-#include <DB/IO/ReadBuffer.h>
-#include <DB/IO/BufferWithOwnMemory.h>
-#include <DB/Core/Defines.h>
 #include <DB/Common/AIO.h>
 #include <DB/Common/CurrentMetrics.h>
+#include <DB/Core/Defines.h>
+#include <DB/IO/BufferWithOwnMemory.h>
+#include <DB/IO/ReadBuffer.h>
+#include <DB/IO/ReadBufferFromFileBase.h>
 
-#include <string>
 #include <limits>
-#include <unistd.h>
+#include <string>
 #include <fcntl.h>
+#include <unistd.h>
 
 
 namespace CurrentMetrics
 {
-	extern const Metric OpenFileForRead;
+extern const Metric OpenFileForRead;
 }
 
 namespace DB
 {
-
 /** Класс для асинхронного чтения данных.
   */
 class ReadBufferAIO : public ReadBufferFromFileBase
 {
 public:
-	ReadBufferAIO(const std::string & filename_, size_t buffer_size_ = DBMS_DEFAULT_BUFFER_SIZE, int flags_ = -1,
-		char * existing_memory_ = nullptr);
+	ReadBufferAIO(
+		const std::string & filename_, size_t buffer_size_ = DBMS_DEFAULT_BUFFER_SIZE, int flags_ = -1, char * existing_memory_ = nullptr);
 	~ReadBufferAIO() override;
 
 	ReadBufferAIO(const ReadBufferAIO &) = delete;
 	ReadBufferAIO & operator=(const ReadBufferAIO &) = delete;
 
 	void setMaxBytes(size_t max_bytes_read_);
-	off_t getPositionInFile() override { return first_unread_pos_in_file - (working_buffer.end() - pos); }
-	std::string getFileName() const override { return filename; }
-	int getFD() const override { return fd; }
+	off_t getPositionInFile() override
+	{
+		return first_unread_pos_in_file - (working_buffer.end() - pos);
+	}
+	std::string getFileName() const override
+	{
+		return filename;
+	}
+	int getFD() const override
+	{
+		return fd;
+	}
 
 private:
 	///
@@ -103,7 +111,6 @@ private:
 	/// Асинхронная операция завершилась неудачно?
 	bool aio_failed = false;
 
-	CurrentMetrics::Increment metric_increment{CurrentMetrics::OpenFileForRead};
+	CurrentMetrics::Increment metric_increment{ CurrentMetrics::OpenFileForRead };
 };
-
 }

@@ -1,13 +1,12 @@
 #pragma once
 
+#include <DB/Core/Block.h>
 #include <DB/Interpreters/AggregateDescription.h>
 #include <DB/Interpreters/Settings.h>
-#include <DB/Core/Block.h>
 
 
 namespace DB
 {
-
 class Context;
 
 class ExpressionActions;
@@ -67,8 +66,7 @@ private:
 	using ExpressionActionsPtr = std::shared_ptr<ExpressionActions>;
 
 public:
-	ExpressionAnalyzer(
-		const ASTPtr & ast_,
+	ExpressionAnalyzer(const ASTPtr & ast_,
 		const Context & context_,
 		StoragePtr storage_,
 		const NamesAndTypesList & columns_,
@@ -76,7 +74,10 @@ public:
 		bool do_global_ = false);
 
 	/// Есть ли в выражении агрегатные функции или секция GROUP BY или HAVING.
-	bool hasAggregation() const { return has_aggregation; }
+	bool hasAggregation() const
+	{
+		return has_aggregation;
+	}
 
 	/// Получить список ключей агрегирования и описаний агрегатных функций, если в запросе есть GROUP BY.
 	void getAggregateInfo(Names & key_names, AggregateDescriptions & aggregates) const;
@@ -128,11 +129,17 @@ public:
 	  * То есть, нужно вызвать getSetsWithSubqueries после всех вызовов append* или getActions
 	  *  и создать все возвращенные множества перед выполнением действий.
 	  */
-	SubqueriesForSets getSubqueriesForSets() { return subqueries_for_sets; }
+	SubqueriesForSets getSubqueriesForSets()
+	{
+		return subqueries_for_sets;
+	}
 
 	/** Таблицы, которые надо будет отправить на удалённые серверы при распределённой обработке запроса.
 	  */
-	const Tables & getExternalTables() const { return external_tables; }
+	const Tables & getExternalTables() const
+	{
+		return external_tables;
+	}
 
 	/// Если ast - запрос SELECT, получает имена (алиасы) и типы столбцов из секции SELECT.
 	Block getSelectSampleBlock();
@@ -209,7 +216,10 @@ private:
 	void init();
 
 	static NamesAndTypesList::iterator findColumn(const String & name, NamesAndTypesList & cols);
-	NamesAndTypesList::iterator findColumn(const String & name) { return findColumn(name, columns); }
+	NamesAndTypesList::iterator findColumn(const String & name)
+	{
+		return findColumn(name, columns);
+	}
 
 	/** Из списка всех доступных столбцов таблицы (columns) удалить все ненужные.
 	  * Заодно, сформировать множество неизвестных столбцов (unknown_required_columns),
@@ -294,8 +304,10 @@ private:
 	  * Положить в required_joined_columns множество столбцов, доступных из JOIN-а и востребованных.
 	  */
 	void getRequiredColumnsImpl(ASTPtr ast,
-		NameSet & required_columns, NameSet & ignored_names,
-		const NameSet & available_joined_columns, NameSet & required_joined_columns);
+		NameSet & required_columns,
+		NameSet & ignored_names,
+		const NameSet & available_joined_columns,
+		NameSet & required_joined_columns);
 
 	/// Получить таблицу, из которой идет запрос
 	StoragePtr getTable();
@@ -312,5 +324,4 @@ private:
 	void makeExplicitSet(ASTFunction * node, const Block & sample_block, bool create_ordered_set);
 	void makeSetsForIndexImpl(ASTPtr & node, const Block & sample_block);
 };
-
 }

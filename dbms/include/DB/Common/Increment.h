@@ -10,7 +10,9 @@ class Increment
 {
 public:
 	/// path - имя файла, включая путь
-	Increment(const std::string & path_) : counter(path_) {}
+	Increment(const std::string & path_) : counter(path_)
+	{
+	}
 
 	/** Получить следующее число.
 	  * Если параметр create_if_need не установлен в true, то
@@ -73,7 +75,9 @@ struct SimpleIncrement : private boost::noncopyable
 {
 	std::atomic<UInt64> value;
 
-	SimpleIncrement(UInt64 start = 0) : value(start) {}
+	SimpleIncrement(UInt64 start = 0) : value(start)
+	{
+	}
 
 	void set(UInt64 new_value)
 	{

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <DB/IO/ReadBuffer.h>
 #include <DB/IO/HashingWriteBuffer.h>
+#include <DB/IO/ReadBuffer.h>
 
 namespace DB
 {
@@ -12,8 +12,7 @@ namespace DB
 class HashingReadBuffer : public IHashingBuffer<ReadBuffer>
 {
 public:
-	HashingReadBuffer(ReadBuffer & in_, size_t block_size = DBMS_DEFAULT_HASHING_BLOCK_SIZE) :
-		in(in_)
+	HashingReadBuffer(ReadBuffer & in_, size_t block_size = DBMS_DEFAULT_HASHING_BLOCK_SIZE) : in(in_)
 	{
 		working_buffer = in.buffer();
 		pos = in.position();

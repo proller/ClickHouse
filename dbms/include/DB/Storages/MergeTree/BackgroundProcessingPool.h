@@ -1,19 +1,18 @@
 #pragma once
 
-#include <thread>
-#include <set>
-#include <map>
-#include <list>
 #include <condition_variable>
+#include <list>
+#include <map>
 #include <mutex>
-#include <Poco/RWLock.h>
+#include <set>
+#include <thread>
 #include <Poco/Event.h>
+#include <Poco/RWLock.h>
 #include <Poco/Timestamp.h>
 #include <DB/Core/Types.h>
 
 namespace DB
 {
-
 /** Используя фиксированное количество потоков, выполнять произвольное количество задач в бесконечном цикле.
   * При этом, одна задача может выполняться одновременно из разных потоков.
   * Предназначена для задач, выполняющих постоянную фоновую работу (например, слияния).
@@ -33,7 +32,9 @@ public:
 		/// Wake up any thread.
 		void wake();
 
-		TaskInfo(BackgroundProcessingPool & pool_, const Task & function_) : pool(pool_), function(function_) {}
+		TaskInfo(BackgroundProcessingPool & pool_, const Task & function_) : pool(pool_), function(function_)
+		{
+		}
 
 	private:
 		friend class BackgroundProcessingPool;
@@ -43,7 +44,7 @@ public:
 
 		/// Read lock is hold when task is executed.
 		Poco::RWLock rwlock;
-		std::atomic<bool> removed {false};
+		std::atomic<bool> removed{ false };
 
 		std::multimap<Poco::Timestamp, std::shared_ptr<TaskInfo>>::iterator iterator;
 	};
@@ -64,19 +65,19 @@ public:
 	~BackgroundProcessingPool();
 
 private:
-	using Tasks = std::multimap<Poco::Timestamp, TaskHandle>;	/// key is desired next time to execute (priority).
+	using Tasks = std::multimap<Poco::Timestamp, TaskHandle>; /// key is desired next time to execute (priority).
 	using Threads = std::vector<std::thread>;
 
 	const size_t size;
 	static constexpr double sleep_seconds = 10;
 	static constexpr double sleep_seconds_random_part = 1.0;
 
-	Tasks tasks; 		/// Ordered in priority.
+	Tasks tasks; /// Ordered in priority.
 	std::mutex tasks_mutex;
 
 	Threads threads;
 
-	std::atomic<bool> shutdown {false};
+	std::atomic<bool> shutdown{ false };
 	std::condition_variable wake_event;
 
 
@@ -84,5 +85,4 @@ private:
 };
 
 using BackgroundProcessingPoolPtr = std::shared_ptr<BackgroundProcessingPool>;
-
 }

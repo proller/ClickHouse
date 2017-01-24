@@ -1,27 +1,26 @@
 #pragma once
 
-#include <zkutil/ZooKeeper.h>
 #include <functional>
 #include <memory>
+#include <zkutil/ZooKeeper.h>
 #include <common/logger_useful.h>
 #include <DB/Common/CurrentMetrics.h>
 
 
 namespace ProfileEvents
 {
-	extern const Event ObsoleteEphemeralNode;
-	extern const Event LeaderElectionAcquiredLeadership;
+extern const Event ObsoleteEphemeralNode;
+extern const Event LeaderElectionAcquiredLeadership;
 }
 
 namespace CurrentMetrics
 {
-	extern const Metric LeaderElection;
+extern const Metric LeaderElection;
 }
 
 
 namespace zkutil
 {
-
 /** Implements leader election algorithm described here: http://zookeeper.apache.org/doc/r3.4.5/recipes.html#sc_leaderElection
   */
 class LeaderElection
@@ -63,10 +62,10 @@ private:
 	std::string node_name;
 
 	std::thread thread;
-	std::atomic<bool> shutdown {false};
+	std::atomic<bool> shutdown{ false };
 	zkutil::EventPtr event = std::make_shared<Poco::Event>();
 
-	CurrentMetrics::Increment metric_increment{CurrentMetrics::LeaderElection};
+	CurrentMetrics::Increment metric_increment{ CurrentMetrics::LeaderElection };
 
 	void createNode()
 	{
@@ -104,8 +103,8 @@ private:
 			if (brother_identifier == identifier)
 			{
 				ProfileEvents::increment(ProfileEvents::ObsoleteEphemeralNode);
-				LOG_WARNING(&Logger::get("LeaderElection"), "Found obsolete ephemeral node for identifier "
-					+ identifier + ", removing: " + brother_path);
+				LOG_WARNING(&Logger::get("LeaderElection"),
+					"Found obsolete ephemeral node for identifier " + identifier + ", removing: " + brother_path);
 				zookeeper.tryRemoveWithRetries(brother_path);
 			}
 		}
@@ -158,5 +157,4 @@ private:
 };
 
 using LeaderElectionPtr = std::shared_ptr<LeaderElection>;
-
 }

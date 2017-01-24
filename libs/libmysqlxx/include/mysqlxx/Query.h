@@ -1,16 +1,14 @@
 #pragma once
 
-#include <sstream>
 #include <ostream>
+#include <sstream>
 
-#include <mysqlxx/UseQueryResult.h>
 #include <mysqlxx/StoreQueryResult.h>
+#include <mysqlxx/UseQueryResult.h>
 
 
 namespace mysqlxx
 {
-
-
 /** Запрос.
   * Ссылается на Connection. Если уничтожить Connection, то Query станет некорректным и пользоваться им будет нельзя.
   *
@@ -33,7 +31,7 @@ class Query : public std::ostream
 public:
 	Query(Connection * conn_, const std::string & query_string = "");
 	Query(const Query & other);
-	Query & operator= (const Query & other);
+	Query & operator=(const Query & other);
 	~Query();
 
 	/** Сбросить текст запроса. Это используется, если нужно написать новый запрос в том же объекте. */
@@ -56,7 +54,10 @@ public:
 	UInt64 insertID();
 
 	/// Для совместимости, то же, что insertID().
-	UInt64 insert_id() { return insertID(); }
+	UInt64 insert_id()
+	{
+		return insertID();
+	}
 
 	/// Получить текст запроса (например, для вывода его в лог). См. ещё operator<< ниже.
 	std::string str() const
@@ -73,10 +74,8 @@ private:
 
 
 /// Вывести текст запроса в ostream.
-inline std::ostream & operator<< (std::ostream & ostr, const Query & query)
+inline std::ostream & operator<<(std::ostream & ostr, const Query & query)
 {
 	return ostr << query.rdbuf();
 }
-
-
 }

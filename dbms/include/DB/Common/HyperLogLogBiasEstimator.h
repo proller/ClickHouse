@@ -78,8 +78,7 @@ private:
 	static_assert(std::is_same<TRawEstimates, TBiasData>::value, "Bias estimator data have inconsistent types");
 	static_assert(std::tuple_size<TRawEstimates>::value > 0, "Bias estimator has no raw estimate data");
 	static_assert(std::tuple_size<TBiasData>::value > 0, "Bias estimator has no bias data");
-	static_assert(std::tuple_size<TRawEstimates>::value == std::tuple_size<TBiasData>::value,
-				  "Bias estimator has inconsistent data");
+	static_assert(std::tuple_size<TRawEstimates>::value == std::tuple_size<TBiasData>::value, "Bias estimator has inconsistent data");
 };
 
 /** Тривиальный случай HyperLogLogBiasEstimator: употребляется, если не хотим исправить

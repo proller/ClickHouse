@@ -1,11 +1,11 @@
 #pragma once
 
-#include <time.h>
 #include <cstdlib>
+#include <time.h>
+#include <DB/Common/Exception.h>
+#include <DB/Common/NetException.h>
 #include <DB/Common/PoolBase.h>
 #include <DB/Common/ProfileEvents.h>
-#include <DB/Common/NetException.h>
-#include <DB/Common/Exception.h>
 #include <DB/Common/randomSeed.h>
 #include <DB/Interpreters/Settings.h>
 
@@ -20,52 +20,51 @@ namespace ErrorCodes
 
 namespace ProfileEvents
 {
-	extern const Event DistributedConnectionFailTry;
-	extern const Event DistributedConnectionFailAtAll;
+extern const Event DistributedConnectionFailTry;
+extern const Event DistributedConnectionFailAtAll;
 }
 
 
 namespace
 {
-	/** Класс, который употребляется для того, чтобы оптимизировать выделение
+/** Класс, который употребляется для того, чтобы оптимизировать выделение
 	  * нескольких ресурсов в PoolWithFailoverBase. Проверки границ не проводятся,
 	  * потому что мы предполагаем, что PoolWithFailoverBase делает все нужные
 	  * проверки.
 	  */
-	class ResourceTracker
+class ResourceTracker
+{
+public:
+	ResourceTracker(size_t s) : handles(s), unallocated_size(s)
 	{
-	public:
-		ResourceTracker(size_t s)
-		: handles(s), unallocated_size(s)
+		size_t i = 0;
+		for (auto & index : handles)
 		{
-			size_t i = 0;
-			for (auto & index : handles)
-			{
-				index = i;
-				++i;
-			}
+			index = i;
+			++i;
 		}
+	}
 
-		size_t getHandle(size_t i) const
-		{
-			return handles[i];
-		}
+	size_t getHandle(size_t i) const
+	{
+		return handles[i];
+	}
 
-		size_t getUnallocatedSize() const
-		{
-			return unallocated_size;
-		}
+	size_t getUnallocatedSize() const
+	{
+		return unallocated_size;
+	}
 
-		void markAsAllocated(size_t i)
-		{
-			std::swap(handles[i], handles[unallocated_size - 1]);
-			--unallocated_size;
-		}
+	void markAsAllocated(size_t i)
+	{
+		std::swap(handles[i], handles[unallocated_size - 1]);
+		--unallocated_size;
+	}
 
-	private:
-		std::vector<size_t> handles;
-		size_t unallocated_size;
-	};
+private:
+	std::vector<size_t> handles;
+	size_t unallocated_size;
+};
 }
 
 /** Класс, от которого можно унаследоваться и получить пул с отказоустойчивостью. Используется для пулов соединений с реплицированной БД.
@@ -89,14 +88,12 @@ public:
 	using Entry = typename NestedPool::Entry;
 	using NestedPools = std::vector<NestedPoolPtr>;
 
-	virtual ~PoolWithFailoverBase() {}
+	virtual ~PoolWithFailoverBase()
+	{
+	}
 
-	PoolWithFailoverBase(NestedPools & nested_pools_,
-		size_t max_tries_,
-		time_t decrease_error_period_,
-		Logger * log_)
-	   : nested_pools(nested_pools_.begin(), nested_pools_.end(), decrease_error_period_), max_tries(max_tries_),
-	   log(log_)
+	PoolWithFailoverBase(NestedPools & nested_pools_, size_t max_tries_, time_t decrease_error_period_, Logger * log_)
+		: nested_pools(nested_pools_.begin(), nested_pools_.end(), decrease_error_period_), max_tries(max_tries_), log(log_)
 	{
 	}
 
@@ -111,7 +108,8 @@ public:
 		if (getResource(entry, fail_messages, nullptr, settings))
 			return entry;
 		else if (!skip_unavailable)
-			throw DB::NetException("All connection tries failed. Log: \n\n" + fail_messages.str() + "\n", DB::ErrorCodes::ALL_CONNECTION_TRIES_FAILED);
+			throw DB::NetException(
+				"All connection tries failed. Log: \n\n" + fail_messages.str() + "\n", DB::ErrorCodes::ALL_CONNECTION_TRIES_FAILED);
 		else
 			return {};
 	}
@@ -134,7 +132,7 @@ public:
 	  */
 	std::vector<Entry> getMany(const DB::Settings * settings, PoolMode pool_mode)
 	{
-		ResourceTracker resource_tracker{nested_pools.size()};
+		ResourceTracker resource_tracker{ nested_pools.size() };
 
 		UInt64 max_connections;
 		if (pool_mode == PoolMode::GET_ALL)
@@ -159,7 +157,8 @@ public:
 			if (getResource(entry, fail_messages, &resource_tracker, settings))
 				connections.push_back(entry);
 			else if ((pool_mode == PoolMode::GET_ALL) || ((i == 0) && !skip_unavailable))
-				throw DB::NetException("All connection tries failed. Log: \n\n" + fail_messages.str() + "\n", DB::ErrorCodes::ALL_CONNECTION_TRIES_FAILED);
+				throw DB::NetException(
+					"All connection tries failed. Log: \n\n" + fail_messages.str() + "\n", DB::ErrorCodes::ALL_CONNECTION_TRIES_FAILED);
 			else
 				break;
 		}
@@ -171,7 +170,9 @@ protected:
 	struct PoolWithErrorCount
 	{
 	public:
-		PoolWithErrorCount(const NestedPoolPtr & pool_) : pool(pool_) {}
+		PoolWithErrorCount(const NestedPoolPtr & pool_) : pool(pool_)
+		{
+		}
 
 		void randomize()
 		{
@@ -187,16 +188,18 @@ protected:
 					< std::forward_as_tuple(rhs.priority, rhs.error_count.load(std::memory_order_relaxed), rhs.random);
 			}
 
-			Int64 priority {0};
-			std::atomic<UInt64> error_count {0};
-			UInt32 random {0};
+			Int64 priority{ 0 };
+			std::atomic<UInt64> error_count{ 0 };
+			UInt32 random{ 0 };
 
-			State() {}
+			State()
+			{
+			}
 
 			State(const State & other)
-				: priority(other.priority),
-				error_count(other.error_count.load(std::memory_order_relaxed)),
-				random(other.random) {}
+				: priority(other.priority), error_count(other.error_count.load(std::memory_order_relaxed)), random(other.random)
+			{
+			}
 		};
 
 	public:
@@ -210,10 +213,8 @@ protected:
 	class PoolsWithErrorCount : public std::vector<PoolWithErrorCount>
 	{
 	public:
-		PoolsWithErrorCount(typename NestedPools::iterator begin_, typename NestedPools::iterator end_,
-							time_t decrease_error_period_)
-			: std::vector<PoolWithErrorCount>(begin_, end_),
-			decrease_error_period(decrease_error_period_)
+		PoolsWithErrorCount(typename NestedPools::iterator begin_, typename NestedPools::iterator end_, time_t decrease_error_period_)
+			: std::vector<PoolWithErrorCount>(begin_, end_), decrease_error_period(decrease_error_period_)
 		{
 		}
 
@@ -255,8 +256,7 @@ protected:
 						{
 							for (auto & pool : *this)
 								pool.state.error_count.store(
-									pool.state.error_count.load(std::memory_order_relaxed) >> shift_amount,
-									std::memory_order_relaxed);
+									pool.state.error_count.load(std::memory_order_relaxed) >> shift_amount, std::memory_order_relaxed);
 						}
 					}
 				}
@@ -312,11 +312,9 @@ private:
 			record.index = i;
 		}
 
-		std::sort(pool_ptrs.begin(), pool_ptrs.end(),
-			[](const IndexedPoolWithErrorCount & lhs, const IndexedPoolWithErrorCount & rhs)
-			{
-				return PoolWithErrorCount::State::compare(*(lhs.state), *(rhs.state));
-			});
+		std::sort(pool_ptrs.begin(), pool_ptrs.end(), [](const IndexedPoolWithErrorCount & lhs, const IndexedPoolWithErrorCount & rhs) {
+			return PoolWithErrorCount::State::compare(*(lhs.state), *(rhs.state));
+		});
 
 		for (size_t try_no = 0; try_no < max_tries; ++try_no)
 		{
@@ -333,8 +331,7 @@ private:
 
 				ProfileEvents::increment(ProfileEvents::DistributedConnectionFailTry);
 
-				LOG_WARNING(log, "Connection failed at try №"
-					<< (try_no + 1) << ", reason: " << fail_message.str());
+				LOG_WARNING(log, "Connection failed at try №" << (try_no + 1) << ", reason: " << fail_message.str());
 
 				fail_messages << fail_message.str() << std::endl;
 

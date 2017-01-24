@@ -1,14 +1,12 @@
 #pragma once
 
-#include <DB/DataTypes/DataTypeAggregateFunction.h>
 #include <DB/AggregateFunctions/IAggregateFunction.h>
 #include <DB/Columns/ColumnAggregateFunction.h>
+#include <DB/DataTypes/DataTypeAggregateFunction.h>
 
 
 namespace DB
 {
-
-
 /** Не агрегатная функция, а адаптер агрегатных функций,
   * Агрегатные функции с суффиксом State отличаются от соответствующих тем, что их состояния не финализируются.
   * Возвращаемый тип - DataTypeAggregateFunction.
@@ -23,7 +21,9 @@ private:
 	Array params;
 
 public:
-	AggregateFunctionState(AggregateFunctionPtr nested_) : nested_func_owner(nested_), nested_func(nested_func_owner.get()) {}
+	AggregateFunctionState(AggregateFunctionPtr nested_) : nested_func_owner(nested_), nested_func(nested_func_owner.get())
+	{
+	}
 
 	String getName() const override
 	{
@@ -98,16 +98,24 @@ public:
 	}
 
 	/// Аггрегатная функция или состояние аггрегатной функции.
-	bool isState() const override { return true; }
+	bool isState() const override
+	{
+		return true;
+	}
 
-	AggregateFunctionPtr getNestedFunction() const { return nested_func_owner; }
+	AggregateFunctionPtr getNestedFunction() const
+	{
+		return nested_func_owner;
+	}
 
 	static void addFree(const IAggregateFunction * that, AggregateDataPtr place, const IColumn ** columns, size_t row_num, Arena * arena)
 	{
 		static_cast<const AggregateFunctionState &>(*that).add(place, columns, row_num, arena);
 	}
 
-	IAggregateFunction::AddFunc getAddressOfAddFunction() const override final { return &addFree; }
+	IAggregateFunction::AddFunc getAddressOfAddFunction() const override final
+	{
+		return &addFree;
+	}
 };
-
 }

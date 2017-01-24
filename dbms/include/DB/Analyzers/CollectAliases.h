@@ -1,12 +1,11 @@
 #pragma once
 
-#include <DB/Parsers/IAST.h>
 #include <unordered_map>
+#include <DB/Parsers/IAST.h>
 
 
 namespace DB
 {
-
 class WriteBuffer;
 
 
@@ -31,9 +30,9 @@ struct CollectAliases
 
 	enum class Kind
 	{
-		Expression,		/// Example: SELECT a AS b, f(x) AS y
-		Table,			/// Example: SELECT t.* FROM (SELECT 1) AS t
-		ArrayJoin		/// Example: SELECT t.x.a FROM t ARRAY JOIN arr AS x
+		Expression, /// Example: SELECT a AS b, f(x) AS y
+		Table, /// Example: SELECT t.* FROM (SELECT 1) AS t
+		ArrayJoin /// Example: SELECT t.x.a FROM t ARRAY JOIN arr AS x
 	};
 
 	struct AliasInfo
@@ -41,7 +40,9 @@ struct CollectAliases
 		ASTPtr node;
 		Kind kind;
 
-		AliasInfo(ASTPtr node, Kind kind) : node(node), kind(kind) {}
+		AliasInfo(ASTPtr node, Kind kind) : node(node), kind(kind)
+		{
+		}
 	};
 
 	using Aliases = std::unordered_map<String, AliasInfo>;
@@ -50,5 +51,4 @@ struct CollectAliases
 	/// Debug output
 	void dump(WriteBuffer & out) const;
 };
-
 }

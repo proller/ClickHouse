@@ -1,21 +1,20 @@
 #pragma once
 
+#include <map>
+#include <numeric>
+#include <string>
+#include <vector>
+#include <experimental/optional>
+#include <Poco/Util/AbstractConfiguration.h>
+#include <ext/range.hpp>
 #include <DB/DataTypes/DataTypeFactory.h>
 #include <DB/IO/ReadBufferFromString.h>
 #include <DB/IO/WriteBuffer.h>
 #include <DB/IO/WriteHelpers.h>
-#include <Poco/Util/AbstractConfiguration.h>
-#include <ext/range.hpp>
-#include <numeric>
-#include <vector>
-#include <string>
-#include <map>
-#include <experimental/optional>
 
 
 namespace DB
 {
-
 enum class AttributeUnderlyingType
 {
 	UInt8,
@@ -98,9 +97,9 @@ struct DictionaryStructure final
 	std::size_t getKeySize() const;
 
 private:
-	std::vector<DictionaryAttribute> getAttributes(
-		const Poco::Util::AbstractConfiguration & config, const std::string & config_prefix,
-		const bool hierarchy_allowed = true, const bool allow_null_values = true);
+	std::vector<DictionaryAttribute> getAttributes(const Poco::Util::AbstractConfiguration & config,
+		const std::string & config_prefix,
+		const bool hierarchy_allowed = true,
+		const bool allow_null_values = true);
 };
-
 }

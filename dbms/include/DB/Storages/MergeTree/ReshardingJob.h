@@ -1,13 +1,11 @@
 #pragma once
 
+#include <string>
 #include <DB/Storages/AlterCommands.h>
 #include <DB/Storages/IStorage.h>
-#include <string>
 
 namespace DB
 {
-
-
 class StorageReplicatedMergeTree;
 
 /** Описание задачи перешардирования.
@@ -20,9 +18,12 @@ public:
 	/// Создаёт описание на основе его сериализованного представления.
 	ReshardingJob(const std::string & serialized_job);
 
-	ReshardingJob(const std::string & database_name_, const std::string & table_name_,
-		const std::string & partition_, const WeightedZooKeeperPaths & paths_,
-		const ASTPtr & sharding_key_expr_, const std::string & coordinator_id_);
+	ReshardingJob(const std::string & database_name_,
+		const std::string & table_name_,
+		const std::string & partition_,
+		const WeightedZooKeeperPaths & paths_,
+		const ASTPtr & sharding_key_expr_,
+		const std::string & coordinator_id_);
 
 	ReshardingJob(const ReshardingJob &) = delete;
 	ReshardingJob & operator=(const ReshardingJob &) = delete;
@@ -52,5 +53,4 @@ public:
 	bool do_copy;
 	bool is_aborted = false;
 };
-
 }

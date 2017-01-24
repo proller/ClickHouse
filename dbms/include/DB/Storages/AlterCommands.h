@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 /// Операция из запроса ALTER (кроме манипуляции с PART/PARTITION). Добавление столбцов типа Nested не развернуто в добавление отдельных столбцов.
 struct AlterCommand
 {
@@ -41,17 +40,25 @@ struct AlterCommand
 	}
 
 	void apply(NamesAndTypesList & columns,
-			   NamesAndTypesList & materialized_columns,
-			   NamesAndTypesList & alias_columns,
-			   ColumnDefaults & column_defaults) const;
+		NamesAndTypesList & materialized_columns,
+		NamesAndTypesList & alias_columns,
+		ColumnDefaults & column_defaults) const;
 
 	AlterCommand() = default;
-	AlterCommand(const Type type, const String & column_name, const DataTypePtr & data_type,
-				 const ColumnDefaultType default_type, const ASTPtr & default_expression,
-				 const String & after_column = String{})
-		: type{type}, column_name{column_name}, data_type{data_type}, default_type{default_type},
-		default_expression{default_expression}, after_column{after_column}
-	{}
+	AlterCommand(const Type type,
+		const String & column_name,
+		const DataTypePtr & data_type,
+		const ColumnDefaultType default_type,
+		const ASTPtr & default_expression,
+		const String & after_column = String{})
+		: type{ type },
+		  column_name{ column_name },
+		  data_type{ data_type },
+		  default_type{ default_type },
+		  default_expression{ default_expression },
+		  after_column{ after_column }
+	{
+	}
 };
 
 class IStorage;
@@ -61,11 +68,10 @@ class AlterCommands : public std::vector<AlterCommand>
 {
 public:
 	void apply(NamesAndTypesList & columns,
-			   NamesAndTypesList & materialized_columns,
-			   NamesAndTypesList & alias_columns,
-			   ColumnDefaults & column_defaults) const;
+		NamesAndTypesList & materialized_columns,
+		NamesAndTypesList & alias_columns,
+		ColumnDefaults & column_defaults) const;
 
 	void validate(IStorage * table, const Context & context);
 };
-
 }

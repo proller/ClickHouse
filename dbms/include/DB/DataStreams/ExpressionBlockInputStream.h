@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 class ExpressionActions;
 
 /** Выполняет над блоком вычисление некоторого выражения.
@@ -31,5 +30,4 @@ protected:
 private:
 	ExpressionActionsPtr expression;
 };
-
 }

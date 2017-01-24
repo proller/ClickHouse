@@ -2,14 +2,13 @@
 
 #include <DB/Storages/StorageDistributed.h>
 
-#include <thread>
-#include <mutex>
 #include <condition_variable>
+#include <mutex>
+#include <thread>
 
 
 namespace DB
 {
-
 /** Details of StorageDistributed.
   * This type is not designed for standalone use.
   */
@@ -32,12 +31,11 @@ private:
 	size_t error_count{};
 	std::chrono::milliseconds default_sleep_time;
 	std::chrono::milliseconds sleep_time;
-	std::chrono::time_point<std::chrono::system_clock> last_decrease_time {std::chrono::system_clock::now()};
-	bool quit {false};
+	std::chrono::time_point<std::chrono::system_clock> last_decrease_time{ std::chrono::system_clock::now() };
+	bool quit{ false };
 	std::mutex mutex;
 	std::condition_variable cond;
 	Logger * log;
-	std::thread thread {&StorageDistributedDirectoryMonitor::run, this};
+	std::thread thread{ &StorageDistributedDirectoryMonitor::run, this };
 };
-
 }

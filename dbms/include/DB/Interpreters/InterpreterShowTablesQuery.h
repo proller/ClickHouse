@@ -6,8 +6,6 @@
 
 namespace DB
 {
-
-
 /** Вывести список имён таблиц/баз данных по некоторым условиям.
   * Интерпретирует запрос путём замены его на запрос SELECT из таблицы system.tables или system.databases.
   */
@@ -24,6 +22,4 @@ private:
 
 	String getRewrittenQuery();
 };
-
-
 }

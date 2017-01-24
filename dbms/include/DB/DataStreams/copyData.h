@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 class IBlockInputStream;
 class IBlockOutputStream;
 
@@ -13,5 +12,4 @@ class IBlockOutputStream;
   * (например, из БД в консоль и т. п.)
   */
 void copyData(IBlockInputStream & from, IBlockOutputStream & to, std::atomic<bool> * is_cancelled = nullptr);
-
 }

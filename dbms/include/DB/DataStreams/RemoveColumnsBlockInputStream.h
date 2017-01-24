@@ -1,27 +1,25 @@
 #pragma once
 
-#include <DB/DataStreams/IProfilingBlockInputStream.h>
 #include <DB/Columns/ColumnConst.h>
-
+#include <DB/DataStreams/IProfilingBlockInputStream.h>
 
 
 namespace DB
 {
-
 /** Удаляет из блока указанные столбцы.
   */
 class RemoveColumnsBlockInputStream : public IProfilingBlockInputStream
 {
 public:
-	RemoveColumnsBlockInputStream(
-		BlockInputStreamPtr input_,
-		const Names & columns_to_remove_)
-		: columns_to_remove(columns_to_remove_)
+	RemoveColumnsBlockInputStream(BlockInputStreamPtr input_, const Names & columns_to_remove_) : columns_to_remove(columns_to_remove_)
 	{
 		children.push_back(input_);
 	}
 
-	String getName() const override { return "RemoveColumns"; }
+	String getName() const override
+	{
+		return "RemoveColumns";
+	}
 
 	String getID() const override
 	{
@@ -52,5 +50,4 @@ protected:
 private:
 	Names columns_to_remove;
 };
-
 }

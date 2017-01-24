@@ -1,23 +1,22 @@
 #pragma once
 
-#include <DB/DataTypes/DataTypesNumberFixed.h>
-#include <DB/DataTypes/DataTypeArray.h>
-#include <DB/DataTypes/DataTypeString.h>
-#include <DB/DataTypes/DataTypeFixedString.h>
-#include <DB/DataTypes/DataTypeTuple.h>
-#include <DB/Columns/ColumnVector.h>
-#include <DB/Columns/ColumnString.h>
-#include <DB/Columns/ColumnConst.h>
 #include <DB/Columns/ColumnArray.h>
+#include <DB/Columns/ColumnConst.h>
 #include <DB/Columns/ColumnFixedString.h>
+#include <DB/Columns/ColumnString.h>
 #include <DB/Columns/ColumnTuple.h>
+#include <DB/Columns/ColumnVector.h>
+#include <DB/DataTypes/DataTypeArray.h>
+#include <DB/DataTypes/DataTypeFixedString.h>
+#include <DB/DataTypes/DataTypeString.h>
+#include <DB/DataTypes/DataTypeTuple.h>
+#include <DB/DataTypes/DataTypesNumberFixed.h>
+#include <DB/Functions/DataTypeTraits.h>
 #include <DB/Functions/IFunction.h>
 #include <DB/Functions/NumberTraits.h>
-#include <DB/Functions/DataTypeTraits.h>
 
 namespace DB
 {
-
 /** Функция выбора по условию: if(cond, then, else).
   * cond - UInt8
   * then, else - числовые типы, для которых есть общий тип, либо даты, даты-с-временем, либо строки, либо массивы таких типов.
@@ -38,12 +37,10 @@ private:
 
 		return vec_res;
 	}
+
 public:
 	static void vector_vector(
-		const PaddedPODArray<UInt8> & cond,
-		const PaddedPODArray<A> & a, const PaddedPODArray<B> & b,
-		Block & block,
-		size_t result)
+		const PaddedPODArray<UInt8> & cond, const PaddedPODArray<A> & a, const PaddedPODArray<B> & b, Block & block, size_t result)
 	{
 		size_t size = cond.size();
 		PaddedPODArray<ResultType> & res = result_vector(block, result, size);
@@ -51,11 +48,7 @@ public:
 			res[i] = cond[i] ? static_cast<ResultType>(a[i]) : static_cast<ResultType>(b[i]);
 	}
 
-	static void vector_constant(
-		const PaddedPODArray<UInt8> & cond,
-		const PaddedPODArray<A> & a, B b,
-		Block & block,
-		size_t result)
+	static void vector_constant(const PaddedPODArray<UInt8> & cond, const PaddedPODArray<A> & a, B b, Block & block, size_t result)
 	{
 		size_t size = cond.size();
 		PaddedPODArray<ResultType> & res = result_vector(block, result, size);
@@ -63,11 +56,7 @@ public:
 			res[i] = cond[i] ? static_cast<ResultType>(a[i]) : static_cast<ResultType>(b);
 	}
 
-	static void constant_vector(
-		const PaddedPODArray<UInt8> & cond,
-		A a, const PaddedPODArray<B> & b,
-		Block & block,
-		size_t result)
+	static void constant_vector(const PaddedPODArray<UInt8> & cond, A a, const PaddedPODArray<B> & b, Block & block, size_t result)
 	{
 		size_t size = cond.size();
 		PaddedPODArray<ResultType> & res = result_vector(block, result, size);
@@ -75,11 +64,7 @@ public:
 			res[i] = cond[i] ? static_cast<ResultType>(a) : static_cast<ResultType>(b[i]);
 	}
 
-	static void constant_constant(
-		const PaddedPODArray<UInt8> & cond,
-		A a, B b,
-		Block & block,
-		size_t result)
+	static void constant_constant(const PaddedPODArray<UInt8> & cond, A a, B b, Block & block, size_t result)
 	{
 		size_t size = cond.size();
 		PaddedPODArray<ResultType> & res = result_vector(block, result, size);
@@ -96,39 +81,25 @@ private:
 	{
 		throw Exception("Internal logic error: invalid types of arguments 2 and 3 of if", ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 	}
+
 public:
 	static void vector_vector(
-		const PaddedPODArray<UInt8> & cond,
-		const PaddedPODArray<A> & a, const PaddedPODArray<B> & b,
-		Block & block,
-		size_t result)
+		const PaddedPODArray<UInt8> & cond, const PaddedPODArray<A> & a, const PaddedPODArray<B> & b, Block & block, size_t result)
 	{
 		throw_error();
 	}
 
-	static void vector_constant(
-		const PaddedPODArray<UInt8> & cond,
-		const PaddedPODArray<A> & a, B b,
-		Block & block,
-		size_t result)
+	static void vector_constant(const PaddedPODArray<UInt8> & cond, const PaddedPODArray<A> & a, B b, Block & block, size_t result)
 	{
 		throw_error();
 	}
 
-	static void constant_vector(
-		const PaddedPODArray<UInt8> & cond,
-		A a, const PaddedPODArray<B> & b,
-		Block & block,
-		size_t result)
+	static void constant_vector(const PaddedPODArray<UInt8> & cond, A a, const PaddedPODArray<B> & b, Block & block, size_t result)
 	{
 		throw_error();
 	}
 
-	static void constant_constant(
-		const PaddedPODArray<UInt8> & cond,
-		A a, B b,
-		Block & block,
-		size_t result)
+	static void constant_constant(const PaddedPODArray<UInt8> & cond, A a, B b, Block & block, size_t result)
 	{
 		throw_error();
 	}
@@ -137,11 +108,13 @@ public:
 
 struct StringIfImpl
 {
-	static void vector_vector(
-		const PaddedPODArray<UInt8> & cond,
-		const ColumnString::Chars_t & a_data, const ColumnString::Offsets_t & a_offsets,
-		const ColumnString::Chars_t & b_data, const ColumnString::Offsets_t & b_offsets,
-		ColumnString::Chars_t & c_data, ColumnString::Offsets_t & c_offsets)
+	static void vector_vector(const PaddedPODArray<UInt8> & cond,
+		const ColumnString::Chars_t & a_data,
+		const ColumnString::Offsets_t & a_offsets,
+		const ColumnString::Chars_t & b_data,
+		const ColumnString::Offsets_t & b_offsets,
+		ColumnString::Chars_t & c_data,
+		ColumnString::Offsets_t & c_offsets)
 	{
 		size_t size = cond.size();
 		c_offsets.resize(size);
@@ -175,8 +148,7 @@ struct StringIfImpl
 		}
 	}
 
-	static void vector_fixed_vector_fixed(
-		const PaddedPODArray<UInt8> & cond,
+	static void vector_fixed_vector_fixed(const PaddedPODArray<UInt8> & cond,
 		const ColumnFixedString::Chars_t & a_data,
 		const ColumnFixedString::Chars_t & b_data,
 		const size_t N,
@@ -195,11 +167,13 @@ struct StringIfImpl
 	}
 
 	template <bool negative>
-	static void vector_vector_fixed_impl(
-		const PaddedPODArray<UInt8> & cond,
-		const ColumnString::Chars_t & a_data, const ColumnString::Offsets_t & a_offsets,
-		const ColumnFixedString::Chars_t & b_data, const size_t b_N,
-		ColumnString::Chars_t & c_data, ColumnString::Offsets_t & c_offsets)
+	static void vector_vector_fixed_impl(const PaddedPODArray<UInt8> & cond,
+		const ColumnString::Chars_t & a_data,
+		const ColumnString::Offsets_t & a_offsets,
+		const ColumnFixedString::Chars_t & b_data,
+		const size_t b_N,
+		ColumnString::Chars_t & c_data,
+		ColumnString::Offsets_t & c_offsets)
 	{
 		size_t size = cond.size();
 		c_offsets.resize(size);
@@ -232,30 +206,35 @@ struct StringIfImpl
 		}
 	}
 
-	static void vector_vector_fixed(
-		const PaddedPODArray<UInt8> & cond,
-		const ColumnString::Chars_t & a_data, const ColumnString::Offsets_t & a_offsets,
-		const ColumnFixedString::Chars_t & b_data, const size_t b_N,
-		ColumnString::Chars_t & c_data, ColumnString::Offsets_t & c_offsets)
+	static void vector_vector_fixed(const PaddedPODArray<UInt8> & cond,
+		const ColumnString::Chars_t & a_data,
+		const ColumnString::Offsets_t & a_offsets,
+		const ColumnFixedString::Chars_t & b_data,
+		const size_t b_N,
+		ColumnString::Chars_t & c_data,
+		ColumnString::Offsets_t & c_offsets)
 	{
 		vector_vector_fixed_impl<false>(cond, a_data, a_offsets, b_data, b_N, c_data, c_offsets);
 	}
 
-	static void vector_fixed_vector(
-		const PaddedPODArray<UInt8> & cond,
-		const ColumnFixedString::Chars_t & a_data, const size_t a_N,
-		const ColumnString::Chars_t & b_data, const ColumnString::Offsets_t & b_offsets,
-		ColumnString::Chars_t & c_data, ColumnString::Offsets_t & c_offsets)
+	static void vector_fixed_vector(const PaddedPODArray<UInt8> & cond,
+		const ColumnFixedString::Chars_t & a_data,
+		const size_t a_N,
+		const ColumnString::Chars_t & b_data,
+		const ColumnString::Offsets_t & b_offsets,
+		ColumnString::Chars_t & c_data,
+		ColumnString::Offsets_t & c_offsets)
 	{
 		vector_vector_fixed_impl<true>(cond, b_data, b_offsets, a_data, a_N, c_data, c_offsets);
 	}
 
 	template <bool negative>
-	static void vector_constant_impl(
-		const PaddedPODArray<UInt8> & cond,
-		const ColumnString::Chars_t & a_data, const ColumnString::Offsets_t & a_offsets,
+	static void vector_constant_impl(const PaddedPODArray<UInt8> & cond,
+		const ColumnString::Chars_t & a_data,
+		const ColumnString::Offsets_t & a_offsets,
 		const String & b,
-		ColumnString::Chars_t & c_data, ColumnString::Offsets_t & c_offsets)
+		ColumnString::Chars_t & c_data,
+		ColumnString::Offsets_t & c_offsets)
 	{
 		size_t size = cond.size();
 		c_offsets.resize(size);
@@ -287,30 +266,33 @@ struct StringIfImpl
 		}
 	}
 
-	static void vector_constant(
-		const PaddedPODArray<UInt8> & cond,
-		const ColumnString::Chars_t & a_data, const ColumnString::Offsets_t & a_offsets,
+	static void vector_constant(const PaddedPODArray<UInt8> & cond,
+		const ColumnString::Chars_t & a_data,
+		const ColumnString::Offsets_t & a_offsets,
 		const String & b,
-		ColumnString::Chars_t & c_data, ColumnString::Offsets_t & c_offsets)
+		ColumnString::Chars_t & c_data,
+		ColumnString::Offsets_t & c_offsets)
 	{
 		return vector_constant_impl<false>(cond, a_data, a_offsets, b, c_data, c_offsets);
 	}
 
-	static void constant_vector(
-		const PaddedPODArray<UInt8> & cond,
+	static void constant_vector(const PaddedPODArray<UInt8> & cond,
 		const String & a,
-		const ColumnString::Chars_t & b_data, const ColumnString::Offsets_t & b_offsets,
-		ColumnString::Chars_t & c_data, ColumnString::Offsets_t & c_offsets)
+		const ColumnString::Chars_t & b_data,
+		const ColumnString::Offsets_t & b_offsets,
+		ColumnString::Chars_t & c_data,
+		ColumnString::Offsets_t & c_offsets)
 	{
 		return vector_constant_impl<true>(cond, b_data, b_offsets, a, c_data, c_offsets);
 	}
 
 	template <bool negative>
-	static void vector_fixed_constant_impl(
-		const PaddedPODArray<UInt8> & cond,
-		const ColumnFixedString::Chars_t & a_data, const size_t a_N,
+	static void vector_fixed_constant_impl(const PaddedPODArray<UInt8> & cond,
+		const ColumnFixedString::Chars_t & a_data,
+		const size_t a_N,
 		const String & b,
-		ColumnString::Chars_t & c_data, ColumnString::Offsets_t & c_offsets)
+		ColumnString::Chars_t & c_data,
+		ColumnString::Offsets_t & c_offsets)
 	{
 		size_t size = cond.size();
 		c_offsets.resize(size);
@@ -340,28 +322,31 @@ struct StringIfImpl
 		}
 	}
 
-	static void vector_fixed_constant(
-		const PaddedPODArray<UInt8> & cond,
-		const ColumnFixedString::Chars_t & a_data, const size_t N,
+	static void vector_fixed_constant(const PaddedPODArray<UInt8> & cond,
+		const ColumnFixedString::Chars_t & a_data,
+		const size_t N,
 		const String & b,
-		ColumnString::Chars_t & c_data, ColumnString::Offsets_t & c_offsets)
+		ColumnString::Chars_t & c_data,
+		ColumnString::Offsets_t & c_offsets)
 	{
 		vector_fixed_constant_impl<false>(cond, a_data, N, b, c_data, c_offsets);
 	}
 
-	static void constant_vector_fixed(
-		const PaddedPODArray<UInt8> & cond,
+	static void constant_vector_fixed(const PaddedPODArray<UInt8> & cond,
 		const String & a,
-		const ColumnFixedString::Chars_t & b_data, const size_t N,
-		ColumnString::Chars_t & c_data, ColumnString::Offsets_t & c_offsets)
+		const ColumnFixedString::Chars_t & b_data,
+		const size_t N,
+		ColumnString::Chars_t & c_data,
+		ColumnString::Offsets_t & c_offsets)
 	{
 		vector_fixed_constant_impl<true>(cond, b_data, N, a, c_data, c_offsets);
 	}
 
-	static void constant_constant(
-		const PaddedPODArray<UInt8> & cond,
-		const String & a, const String & b,
-		ColumnString::Chars_t & c_data, ColumnString::Offsets_t & c_offsets)
+	static void constant_constant(const PaddedPODArray<UInt8> & cond,
+		const String & a,
+		const String & b,
+		ColumnString::Chars_t & c_data,
+		ColumnString::Offsets_t & c_offsets)
 	{
 		size_t size = cond.size();
 		c_offsets.resize(size);
@@ -396,10 +381,13 @@ template <typename A, typename B, typename ResultType>
 struct NumArrayIfImpl
 {
 	template <typename FromT>
-	static ALWAYS_INLINE void copy_from_vector(
-		size_t i,
-		const PaddedPODArray<FromT> & from_data, const ColumnArray::Offsets_t & from_offsets, ColumnArray::Offset_t from_prev_offset,
-		PaddedPODArray<ResultType> & to_data, ColumnArray::Offsets_t & to_offsets, ColumnArray::Offset_t & to_prev_offset)
+	static ALWAYS_INLINE void copy_from_vector(size_t i,
+		const PaddedPODArray<FromT> & from_data,
+		const ColumnArray::Offsets_t & from_offsets,
+		ColumnArray::Offset_t from_prev_offset,
+		PaddedPODArray<ResultType> & to_data,
+		ColumnArray::Offsets_t & to_offsets,
+		ColumnArray::Offset_t & to_prev_offset)
 	{
 		size_t size_to_write = from_offsets[i] - from_prev_offset;
 		to_data.resize(to_data.size() + size_to_write);
@@ -411,10 +399,11 @@ struct NumArrayIfImpl
 		to_offsets[i] = to_prev_offset;
 	}
 
-	static ALWAYS_INLINE void copy_from_constant(
-		size_t i,
+	static ALWAYS_INLINE void copy_from_constant(size_t i,
 		const PaddedPODArray<ResultType> & from_data,
-		PaddedPODArray<ResultType> & to_data, ColumnArray::Offsets_t & to_offsets, ColumnArray::Offset_t & to_prev_offset)
+		PaddedPODArray<ResultType> & to_data,
+		ColumnArray::Offsets_t & to_offsets,
+		ColumnArray::Offset_t & to_prev_offset)
 	{
 		size_t size_to_write = from_data.size();
 		to_data.resize(to_data.size() + size_to_write);
@@ -424,8 +413,7 @@ struct NumArrayIfImpl
 	}
 
 	static void create_result_column(
-		Block & block, size_t result,
-		PaddedPODArray<ResultType> ** c_data, ColumnArray::Offsets_t ** c_offsets)
+		Block & block, size_t result, PaddedPODArray<ResultType> ** c_data, ColumnArray::Offsets_t ** c_offsets)
 	{
 		auto col_res_vec = std::make_shared<ColumnVector<ResultType>>();
 		auto col_res_array = std::make_shared<ColumnArray>(col_res_vec);
@@ -436,11 +424,13 @@ struct NumArrayIfImpl
 	}
 
 
-	static void vector_vector(
-		const PaddedPODArray<UInt8> & cond,
-		const PaddedPODArray<A> & a_data, const ColumnArray::Offsets_t & a_offsets,
-		const PaddedPODArray<B> & b_data, const ColumnArray::Offsets_t & b_offsets,
-		Block & block, size_t result)
+	static void vector_vector(const PaddedPODArray<UInt8> & cond,
+		const PaddedPODArray<A> & a_data,
+		const ColumnArray::Offsets_t & a_offsets,
+		const PaddedPODArray<B> & b_data,
+		const ColumnArray::Offsets_t & b_offsets,
+		Block & block,
+		size_t result)
 	{
 		PaddedPODArray<ResultType> * c_data = nullptr;
 		ColumnArray::Offsets_t * c_offsets = nullptr;
@@ -466,11 +456,12 @@ struct NumArrayIfImpl
 		}
 	}
 
-	static void vector_constant(
-		const PaddedPODArray<UInt8> & cond,
-		const PaddedPODArray<A> & a_data, const ColumnArray::Offsets_t & a_offsets,
+	static void vector_constant(const PaddedPODArray<UInt8> & cond,
+		const PaddedPODArray<A> & a_data,
+		const ColumnArray::Offsets_t & a_offsets,
 		const Array & b,
-		Block & block, size_t result)
+		Block & block,
+		size_t result)
 	{
 		PaddedPODArray<ResultType> * c_data = nullptr;
 		ColumnArray::Offsets_t * c_offsets = nullptr;
@@ -498,11 +489,12 @@ struct NumArrayIfImpl
 		}
 	}
 
-	static void constant_vector(
-		const PaddedPODArray<UInt8> & cond,
+	static void constant_vector(const PaddedPODArray<UInt8> & cond,
 		const Array & a,
-		const PaddedPODArray<B> & b_data, const ColumnArray::Offsets_t & b_offsets,
-		Block & block, size_t result)
+		const PaddedPODArray<B> & b_data,
+		const ColumnArray::Offsets_t & b_offsets,
+		Block & block,
+		size_t result)
 	{
 		PaddedPODArray<ResultType> * c_data = nullptr;
 		ColumnArray::Offsets_t * c_offsets = nullptr;
@@ -530,10 +522,7 @@ struct NumArrayIfImpl
 		}
 	}
 
-	static void constant_constant(
-		const PaddedPODArray<UInt8> & cond,
-		const Array & a, const Array & b,
-		Block & block, size_t result)
+	static void constant_constant(const PaddedPODArray<UInt8> & cond, const Array & a, const Array & b, Block & block, size_t result)
 	{
 		PaddedPODArray<ResultType> * c_data = nullptr;
 		ColumnArray::Offsets_t * c_offsets = nullptr;
@@ -571,38 +560,40 @@ private:
 	{
 		throw Exception("Internal logic error: invalid types of arguments 2 and 3 of if", ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 	}
+
 public:
-	static void vector_vector(
-		const PaddedPODArray<UInt8> & cond,
-		const PaddedPODArray<A> & a_data, const ColumnArray::Offsets_t & a_offsets,
-		const PaddedPODArray<B> & b_data, const ColumnArray::Offsets_t & b_offsets,
-		Block & block, size_t result)
+	static void vector_vector(const PaddedPODArray<UInt8> & cond,
+		const PaddedPODArray<A> & a_data,
+		const ColumnArray::Offsets_t & a_offsets,
+		const PaddedPODArray<B> & b_data,
+		const ColumnArray::Offsets_t & b_offsets,
+		Block & block,
+		size_t result)
 	{
 		throw_error();
 	}
 
-	static void vector_constant(
-		const PaddedPODArray<UInt8> & cond,
-		const PaddedPODArray<A> & a_data, const ColumnArray::Offsets_t & a_offsets,
+	static void vector_constant(const PaddedPODArray<UInt8> & cond,
+		const PaddedPODArray<A> & a_data,
+		const ColumnArray::Offsets_t & a_offsets,
 		const Array & b,
-		Block & block, size_t result)
+		Block & block,
+		size_t result)
 	{
 		throw_error();
 	}
 
-	static void constant_vector(
-		const PaddedPODArray<UInt8> & cond,
+	static void constant_vector(const PaddedPODArray<UInt8> & cond,
 		const Array & a,
-		const PaddedPODArray<B> & b_data, const ColumnArray::Offsets_t & b_offsets,
-		Block & block, size_t result)
+		const PaddedPODArray<B> & b_data,
+		const ColumnArray::Offsets_t & b_offsets,
+		Block & block,
+		size_t result)
 	{
 		throw_error();
 	}
 
-	static void constant_constant(
-		const PaddedPODArray<UInt8> & cond,
-		const Array & a, const Array & b,
-		Block & block, size_t result)
+	static void constant_constant(const PaddedPODArray<UInt8> & cond, const Array & a, const Array & b, Block & block, size_t result)
 	{
 		throw_error();
 	}
@@ -615,8 +606,7 @@ public:
   */
 struct StringArrayIfImpl
 {
-	static ALWAYS_INLINE void copy_from_vector(
-		size_t i,
+	static ALWAYS_INLINE void copy_from_vector(size_t i,
 		const ColumnString::Chars_t & from_data,
 		const ColumnString::Offsets_t & from_string_offsets,
 		const ColumnArray::Offsets_t & from_array_offsets,
@@ -651,8 +641,7 @@ struct StringArrayIfImpl
 		to_array_offsets[i] = to_array_prev_offset;
 	}
 
-	static ALWAYS_INLINE void copy_from_constant(
-		size_t i,
+	static ALWAYS_INLINE void copy_from_constant(size_t i,
 		const Array & from_data,
 		ColumnString::Chars_t & to_data,
 		ColumnString::Offsets_t & to_string_offsets,
@@ -665,7 +654,7 @@ struct StringArrayIfImpl
 		for (size_t j = 0; j < array_size; ++j)
 		{
 			const String & str = from_data[j].get<const String &>();
-			size_t string_size = str.size() + 1;	/// Включая 0 на конце.
+			size_t string_size = str.size() + 1; /// Включая 0 на конце.
 
 			to_data.resize(to_string_prev_offset + string_size);
 			memcpy(&to_data[to_string_prev_offset], str.data(), string_size);
@@ -679,11 +668,16 @@ struct StringArrayIfImpl
 	}
 
 
-	static void vector_vector(
-		const PaddedPODArray<UInt8> & cond,
-		const ColumnString::Chars_t & a_data, const ColumnString::Offsets_t & a_string_offsets, const ColumnArray::Offsets_t & a_array_offsets,
-		const ColumnString::Chars_t & b_data, const ColumnString::Offsets_t & b_string_offsets, const ColumnArray::Offsets_t & b_array_offsets,
-		ColumnString::Chars_t & c_data, ColumnString::Offsets_t & c_string_offsets, ColumnArray::Offsets_t & c_array_offsets)
+	static void vector_vector(const PaddedPODArray<UInt8> & cond,
+		const ColumnString::Chars_t & a_data,
+		const ColumnString::Offsets_t & a_string_offsets,
+		const ColumnArray::Offsets_t & a_array_offsets,
+		const ColumnString::Chars_t & b_data,
+		const ColumnString::Offsets_t & b_string_offsets,
+		const ColumnArray::Offsets_t & b_array_offsets,
+		ColumnString::Chars_t & c_data,
+		ColumnString::Offsets_t & c_string_offsets,
+		ColumnArray::Offsets_t & c_array_offsets)
 	{
 		size_t size = cond.size();
 		c_array_offsets.resize(size);
@@ -702,12 +696,28 @@ struct StringArrayIfImpl
 		{
 			if (cond[i])
 				copy_from_vector(i,
-					a_data, a_string_offsets, a_array_offsets, a_array_prev_offset, a_string_prev_offset,
-					c_data, c_string_offsets, c_array_offsets, c_array_prev_offset, c_string_prev_offset);
+					a_data,
+					a_string_offsets,
+					a_array_offsets,
+					a_array_prev_offset,
+					a_string_prev_offset,
+					c_data,
+					c_string_offsets,
+					c_array_offsets,
+					c_array_prev_offset,
+					c_string_prev_offset);
 			else
 				copy_from_vector(i,
-					b_data, b_string_offsets, b_array_offsets, b_array_prev_offset, b_string_prev_offset,
-					c_data, c_string_offsets, c_array_offsets, c_array_prev_offset, c_string_prev_offset);
+					b_data,
+					b_string_offsets,
+					b_array_offsets,
+					b_array_prev_offset,
+					b_string_prev_offset,
+					c_data,
+					c_string_offsets,
+					c_array_offsets,
+					c_array_prev_offset,
+					c_string_prev_offset);
 
 			a_array_prev_offset = a_array_offsets[i];
 			b_array_prev_offset = b_array_offsets[i];
@@ -721,11 +731,14 @@ struct StringArrayIfImpl
 	}
 
 	template <bool reverse>
-	static void vector_constant_impl(
-		const PaddedPODArray<UInt8> & cond,
-		const ColumnString::Chars_t & a_data, const ColumnString::Offsets_t & a_string_offsets, const ColumnArray::Offsets_t & a_array_offsets,
+	static void vector_constant_impl(const PaddedPODArray<UInt8> & cond,
+		const ColumnString::Chars_t & a_data,
+		const ColumnString::Offsets_t & a_string_offsets,
+		const ColumnArray::Offsets_t & a_array_offsets,
 		const Array & b,
-		ColumnString::Chars_t & c_data, ColumnString::Offsets_t & c_string_offsets, ColumnArray::Offsets_t & c_array_offsets)
+		ColumnString::Chars_t & c_data,
+		ColumnString::Offsets_t & c_string_offsets,
+		ColumnArray::Offsets_t & c_array_offsets)
 	{
 		size_t size = cond.size();
 		c_array_offsets.resize(size);
@@ -742,12 +755,18 @@ struct StringArrayIfImpl
 		{
 			if (reverse != cond[i])
 				copy_from_vector(i,
-					a_data, a_string_offsets, a_array_offsets, a_array_prev_offset, a_string_prev_offset,
-					c_data, c_string_offsets, c_array_offsets, c_array_prev_offset, c_string_prev_offset);
+					a_data,
+					a_string_offsets,
+					a_array_offsets,
+					a_array_prev_offset,
+					a_string_prev_offset,
+					c_data,
+					c_string_offsets,
+					c_array_offsets,
+					c_array_prev_offset,
+					c_string_prev_offset);
 			else
-				copy_from_constant(i,
-					 b,
-					 c_data, c_string_offsets, c_array_offsets, c_array_prev_offset, c_string_prev_offset);
+				copy_from_constant(i, b, c_data, c_string_offsets, c_array_offsets, c_array_prev_offset, c_string_prev_offset);
 
 			a_array_prev_offset = a_array_offsets[i];
 
@@ -756,29 +775,36 @@ struct StringArrayIfImpl
 		}
 	}
 
-	static void vector_constant(
-		const PaddedPODArray<UInt8> & cond,
-		const ColumnString::Chars_t & a_data, const ColumnString::Offsets_t & a_string_offsets, const ColumnArray::Offsets_t & a_array_offsets,
+	static void vector_constant(const PaddedPODArray<UInt8> & cond,
+		const ColumnString::Chars_t & a_data,
+		const ColumnString::Offsets_t & a_string_offsets,
+		const ColumnArray::Offsets_t & a_array_offsets,
 		const Array & b,
-		ColumnString::Chars_t & c_data, ColumnString::Offsets_t & c_string_offsets, ColumnArray::Offsets_t & c_array_offsets)
+		ColumnString::Chars_t & c_data,
+		ColumnString::Offsets_t & c_string_offsets,
+		ColumnArray::Offsets_t & c_array_offsets)
 	{
 		vector_constant_impl<false>(cond, a_data, a_string_offsets, a_array_offsets, b, c_data, c_string_offsets, c_array_offsets);
 	}
 
-	static void constant_vector(
-		const PaddedPODArray<UInt8> & cond,
+	static void constant_vector(const PaddedPODArray<UInt8> & cond,
 		const Array & a,
-		const ColumnString::Chars_t & b_data, const ColumnString::Offsets_t & b_string_offsets, const ColumnArray::Offsets_t & b_array_offsets,
-		ColumnString::Chars_t & c_data, ColumnString::Offsets_t & c_string_offsets, ColumnArray::Offsets_t & c_array_offsets)
+		const ColumnString::Chars_t & b_data,
+		const ColumnString::Offsets_t & b_string_offsets,
+		const ColumnArray::Offsets_t & b_array_offsets,
+		ColumnString::Chars_t & c_data,
+		ColumnString::Offsets_t & c_string_offsets,
+		ColumnArray::Offsets_t & c_array_offsets)
 	{
 		vector_constant_impl<true>(cond, b_data, b_string_offsets, b_array_offsets, a, c_data, c_string_offsets, c_array_offsets);
 	}
 
-	static void constant_constant(
-		const PaddedPODArray<UInt8> & cond,
+	static void constant_constant(const PaddedPODArray<UInt8> & cond,
 		const Array & a,
 		const Array & b,
-		ColumnString::Chars_t & c_data, ColumnString::Offsets_t & c_string_offsets, ColumnArray::Offsets_t & c_array_offsets)
+		ColumnString::Chars_t & c_data,
+		ColumnString::Offsets_t & c_string_offsets,
+		ColumnArray::Offsets_t & c_array_offsets)
 	{
 		size_t size = cond.size();
 		c_array_offsets.resize(size);
@@ -800,13 +826,9 @@ struct StringArrayIfImpl
 		for (size_t i = 0; i < size; ++i)
 		{
 			if (cond[i])
-				copy_from_constant(i,
-					a,
-					c_data, c_string_offsets, c_array_offsets, c_array_prev_offset, c_string_prev_offset);
+				copy_from_constant(i, a, c_data, c_string_offsets, c_array_offsets, c_array_prev_offset, c_string_prev_offset);
 			else
-				copy_from_constant(i,
-					b,
-					c_data, c_string_offsets, c_array_offsets, c_array_prev_offset, c_string_prev_offset);
+				copy_from_constant(i, b, c_data, c_string_offsets, c_array_offsets, c_array_prev_offset, c_string_prev_offset);
 		}
 	}
 };
@@ -816,7 +838,10 @@ class FunctionIf : public IFunction
 {
 public:
 	static constexpr auto name = "if";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionIf>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionIf>();
+	}
 
 private:
 	template <typename T0, typename T1>
@@ -827,8 +852,12 @@ private:
 			using ResultType = typename NumberTraits::ResultOfIf<typename T0::FieldType, typename T1::FieldType>::Type;
 			type_res = DataTypeTraits::DataTypeFromFieldTypeOrError<ResultType>::getDataType();
 			if (!type_res)
-				throw Exception("Arguments 2 and 3 of function " + getName() + " are not upscalable to a common type without loss of precision: "
-					+ arguments[1]->getName() + " and " + arguments[2]->getName(), ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+				throw Exception("Arguments 2 and 3 of function " + getName()
+						+ " are not upscalable to a common type without loss of precision: "
+						+ arguments[1]->getName()
+						+ " and "
+						+ arguments[2]->getName(),
+					ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 			return true;
 		}
 		return false;
@@ -839,16 +868,15 @@ private:
 	{
 		if (typeid_cast<const T0 *>(&*arguments[1]))
 		{
-			if (	checkRightType<T0, DataTypeUInt8>(arguments, type_res)
-				||	checkRightType<T0, DataTypeUInt16>(arguments, type_res)
-				||	checkRightType<T0, DataTypeUInt32>(arguments, type_res)
-				||	checkRightType<T0, DataTypeUInt64>(arguments, type_res)
-				||	checkRightType<T0, DataTypeInt8>(arguments, type_res)
-				||	checkRightType<T0, DataTypeInt16>(arguments, type_res)
-				||	checkRightType<T0, DataTypeInt32>(arguments, type_res)
-				||	checkRightType<T0, DataTypeInt64>(arguments, type_res)
-				||	checkRightType<T0, DataTypeFloat32>(arguments, type_res)
-				||	checkRightType<T0, DataTypeFloat64>(arguments, type_res))
+			if (checkRightType<T0, DataTypeUInt8>(arguments, type_res) || checkRightType<T0, DataTypeUInt16>(arguments, type_res)
+				|| checkRightType<T0, DataTypeUInt32>(arguments, type_res)
+				|| checkRightType<T0, DataTypeUInt64>(arguments, type_res)
+				|| checkRightType<T0, DataTypeInt8>(arguments, type_res)
+				|| checkRightType<T0, DataTypeInt16>(arguments, type_res)
+				|| checkRightType<T0, DataTypeInt32>(arguments, type_res)
+				|| checkRightType<T0, DataTypeInt64>(arguments, type_res)
+				|| checkRightType<T0, DataTypeFloat32>(arguments, type_res)
+				|| checkRightType<T0, DataTypeFloat64>(arguments, type_res))
 				return true;
 			else
 				throw Exception("Illegal type " + arguments[2]->getName() + " of third argument of function " + getName(),
@@ -859,11 +887,7 @@ private:
 
 	template <typename T0, typename T1>
 	bool executeRightType(
-		const ColumnUInt8 * cond_col,
-		Block & block,
-		const ColumnNumbers & arguments,
-		size_t result,
-		const ColumnVector<T0> * col_left)
+		const ColumnUInt8 * cond_col, Block & block, const ColumnNumbers & arguments, size_t result, const ColumnVector<T0> * col_left)
 	{
 		const ColumnVector<T1> * col_right_vec = typeid_cast<const ColumnVector<T1> *>(block.safeGetByPosition(arguments[2]).column.get());
 		const ColumnConst<T1> * col_right_const = typeid_cast<const ColumnConst<T1> *>(block.safeGetByPosition(arguments[2]).column.get());
@@ -876,18 +900,15 @@ private:
 		if (col_right_vec)
 			NumIfImpl<T0, T1, ResultType>::vector_vector(cond_col->getData(), col_left->getData(), col_right_vec->getData(), block, result);
 		else
-			NumIfImpl<T0, T1, ResultType>::vector_constant(cond_col->getData(), col_left->getData(), col_right_const->getData(), block, result);
+			NumIfImpl<T0, T1, ResultType>::vector_constant(
+				cond_col->getData(), col_left->getData(), col_right_const->getData(), block, result);
 
 		return true;
 	}
 
 	template <typename T0, typename T1>
 	bool executeConstRightType(
-		const ColumnUInt8 * cond_col,
-		Block & block,
-		const ColumnNumbers & arguments,
-		size_t result,
-		const ColumnConst<T0> * col_left)
+		const ColumnUInt8 * cond_col, Block & block, const ColumnNumbers & arguments, size_t result, const ColumnConst<T0> * col_left)
 	{
 		const ColumnVector<T1> * col_right_vec = typeid_cast<const ColumnVector<T1> *>(block.safeGetByPosition(arguments[2]).column.get());
 		const ColumnConst<T1> * col_right_const = typeid_cast<const ColumnConst<T1> *>(block.safeGetByPosition(arguments[2]).column.get());
@@ -898,16 +919,17 @@ private:
 		using ResultType = typename NumberTraits::ResultOfIf<T0, T1>::Type;
 
 		if (col_right_vec)
-			NumIfImpl<T0, T1, ResultType>::constant_vector(cond_col->getData(), col_left->getData(), col_right_vec->getData(), block, result);
+			NumIfImpl<T0, T1, ResultType>::constant_vector(
+				cond_col->getData(), col_left->getData(), col_right_vec->getData(), block, result);
 		else
-			NumIfImpl<T0, T1, ResultType>::constant_constant(cond_col->getData(), col_left->getData(), col_right_const->getData(), block, result);
+			NumIfImpl<T0, T1, ResultType>::constant_constant(
+				cond_col->getData(), col_left->getData(), col_right_const->getData(), block, result);
 
 		return true;
 	}
 
 	template <typename T0, typename T1>
-	bool executeRightTypeArray(
-		const ColumnUInt8 * cond_col,
+	bool executeRightTypeArray(const ColumnUInt8 * cond_col,
 		Block & block,
 		const ColumnNumbers & arguments,
 		size_t result,
@@ -931,31 +953,29 @@ private:
 			if (!col_right_vec)
 				return false;
 
-			NumArrayIfImpl<T0, T1, ResultType>::vector_vector(
-				cond_col->getData(),
-				col_left->getData(), col_left_array->getOffsets(),
-				col_right_vec->getData(), col_right_array->getOffsets(),
-				block, result);
+			NumArrayIfImpl<T0, T1, ResultType>::vector_vector(cond_col->getData(),
+				col_left->getData(),
+				col_left_array->getOffsets(),
+				col_right_vec->getData(),
+				col_right_array->getOffsets(),
+				block,
+				result);
 		}
 		else
 		{
 			if (!typeid_cast<const typename DataTypeFromFieldType<T1>::Type *>(
-				typeid_cast<const DataTypeArray &>(*col_right_const_array->getDataType()).getNestedType().get()))
+					typeid_cast<const DataTypeArray &>(*col_right_const_array->getDataType()).getNestedType().get()))
 				return false;
 
 			NumArrayIfImpl<T0, T1, ResultType>::vector_constant(
-				cond_col->getData(),
-				col_left->getData(), col_left_array->getOffsets(),
-				col_right_const_array->getData(),
-				block, result);
+				cond_col->getData(), col_left->getData(), col_left_array->getOffsets(), col_right_const_array->getData(), block, result);
 		}
 
 		return true;
 	}
 
 	template <typename T0, typename T1>
-	bool executeConstRightTypeArray(
-		const ColumnUInt8 * cond_col,
+	bool executeConstRightTypeArray(const ColumnUInt8 * cond_col,
 		Block & block,
 		const ColumnNumbers & arguments,
 		size_t result,
@@ -978,23 +998,21 @@ private:
 			if (!col_right_vec)
 				return false;
 
-			NumArrayIfImpl<T0, T1, ResultType>::constant_vector(
-				cond_col->getData(),
+			NumArrayIfImpl<T0, T1, ResultType>::constant_vector(cond_col->getData(),
 				col_left_const_array->getData(),
-				col_right_vec->getData(), col_right_array->getOffsets(),
-				block, result);
+				col_right_vec->getData(),
+				col_right_array->getOffsets(),
+				block,
+				result);
 		}
 		else
 		{
 			if (!typeid_cast<const typename DataTypeFromFieldType<T1>::Type *>(
-				typeid_cast<const DataTypeArray &>(*col_right_const_array->getDataType()).getNestedType().get()))
+					typeid_cast<const DataTypeArray &>(*col_right_const_array->getDataType()).getNestedType().get()))
 				return false;
 
 			NumArrayIfImpl<T0, T1, ResultType>::constant_constant(
-				cond_col->getData(),
-				col_left_const_array->getData(),
-				col_right_const_array->getData(),
-				block, result);
+				cond_col->getData(), col_left_const_array->getData(), col_right_const_array->getData(), block, result);
 		}
 
 		return true;
@@ -1028,76 +1046,79 @@ private:
 
 		if (col_left)
 		{
-			if (	executeRightType<T0, UInt8>(cond_col, block, arguments, result, col_left)
-				||	executeRightType<T0, UInt16>(cond_col, block, arguments, result, col_left)
-				||	executeRightType<T0, UInt32>(cond_col, block, arguments, result, col_left)
-				||	executeRightType<T0, UInt64>(cond_col, block, arguments, result, col_left)
-				||	executeRightType<T0, Int8>(cond_col, block, arguments, result, col_left)
-				||	executeRightType<T0, Int16>(cond_col, block, arguments, result, col_left)
-				||	executeRightType<T0, Int32>(cond_col, block, arguments, result, col_left)
-				||	executeRightType<T0, Int64>(cond_col, block, arguments, result, col_left)
-				||	executeRightType<T0, Float32>(cond_col, block, arguments, result, col_left)
-				||	executeRightType<T0, Float64>(cond_col, block, arguments, result, col_left))
+			if (executeRightType<T0, UInt8>(cond_col, block, arguments, result, col_left)
+				|| executeRightType<T0, UInt16>(cond_col, block, arguments, result, col_left)
+				|| executeRightType<T0, UInt32>(cond_col, block, arguments, result, col_left)
+				|| executeRightType<T0, UInt64>(cond_col, block, arguments, result, col_left)
+				|| executeRightType<T0, Int8>(cond_col, block, arguments, result, col_left)
+				|| executeRightType<T0, Int16>(cond_col, block, arguments, result, col_left)
+				|| executeRightType<T0, Int32>(cond_col, block, arguments, result, col_left)
+				|| executeRightType<T0, Int64>(cond_col, block, arguments, result, col_left)
+				|| executeRightType<T0, Float32>(cond_col, block, arguments, result, col_left)
+				|| executeRightType<T0, Float64>(cond_col, block, arguments, result, col_left))
 				return true;
 			else
 				throw Exception("Illegal column " + block.safeGetByPosition(arguments[2]).column->getName()
-					+ " of third argument of function " + getName(),
+						+ " of third argument of function "
+						+ getName(),
 					ErrorCodes::ILLEGAL_COLUMN);
 		}
 		else if (col_const_left)
 		{
-			if (	executeConstRightType<T0, UInt8>(cond_col, block, arguments, result, col_const_left)
-				||	executeConstRightType<T0, UInt16>(cond_col, block, arguments, result, col_const_left)
-				||	executeConstRightType<T0, UInt32>(cond_col, block, arguments, result, col_const_left)
-				||	executeConstRightType<T0, UInt64>(cond_col, block, arguments, result, col_const_left)
-				||	executeConstRightType<T0, Int8>(cond_col, block, arguments, result, col_const_left)
-				||	executeConstRightType<T0, Int16>(cond_col, block, arguments, result, col_const_left)
-				||	executeConstRightType<T0, Int32>(cond_col, block, arguments, result, col_const_left)
-				||	executeConstRightType<T0, Int64>(cond_col, block, arguments, result, col_const_left)
-				||	executeConstRightType<T0, Float32>(cond_col, block, arguments, result, col_const_left)
-				||	executeConstRightType<T0, Float64>(cond_col, block, arguments, result, col_const_left))
+			if (executeConstRightType<T0, UInt8>(cond_col, block, arguments, result, col_const_left)
+				|| executeConstRightType<T0, UInt16>(cond_col, block, arguments, result, col_const_left)
+				|| executeConstRightType<T0, UInt32>(cond_col, block, arguments, result, col_const_left)
+				|| executeConstRightType<T0, UInt64>(cond_col, block, arguments, result, col_const_left)
+				|| executeConstRightType<T0, Int8>(cond_col, block, arguments, result, col_const_left)
+				|| executeConstRightType<T0, Int16>(cond_col, block, arguments, result, col_const_left)
+				|| executeConstRightType<T0, Int32>(cond_col, block, arguments, result, col_const_left)
+				|| executeConstRightType<T0, Int64>(cond_col, block, arguments, result, col_const_left)
+				|| executeConstRightType<T0, Float32>(cond_col, block, arguments, result, col_const_left)
+				|| executeConstRightType<T0, Float64>(cond_col, block, arguments, result, col_const_left))
 				return true;
 			else
 				throw Exception("Illegal column " + block.safeGetByPosition(arguments[2]).column->getName()
-					+ " of third argument of function " + getName(),
+						+ " of third argument of function "
+						+ getName(),
 					ErrorCodes::ILLEGAL_COLUMN);
 		}
 		else if (col_arr_left && col_arr_left_elems)
 		{
-			if (	executeRightTypeArray<T0, UInt8>(cond_col, block, arguments, result, col_arr_left, col_arr_left_elems)
-				||	executeRightTypeArray<T0, UInt16>(cond_col, block, arguments, result, col_arr_left, col_arr_left_elems)
-				||	executeRightTypeArray<T0, UInt32>(cond_col, block, arguments, result, col_arr_left, col_arr_left_elems)
-				||	executeRightTypeArray<T0, UInt64>(cond_col, block, arguments, result, col_arr_left, col_arr_left_elems)
-				||	executeRightTypeArray<T0, Int8>(cond_col, block, arguments, result, col_arr_left, col_arr_left_elems)
-				||	executeRightTypeArray<T0, Int16>(cond_col, block, arguments, result, col_arr_left, col_arr_left_elems)
-				||	executeRightTypeArray<T0, Int32>(cond_col, block, arguments, result, col_arr_left, col_arr_left_elems)
-				||	executeRightTypeArray<T0, Int64>(cond_col, block, arguments, result, col_arr_left, col_arr_left_elems)
-				||	executeRightTypeArray<T0, Float32>(cond_col, block, arguments, result, col_arr_left, col_arr_left_elems)
-				||	executeRightTypeArray<T0, Float64>(cond_col, block, arguments, result, col_arr_left, col_arr_left_elems))
+			if (executeRightTypeArray<T0, UInt8>(cond_col, block, arguments, result, col_arr_left, col_arr_left_elems)
+				|| executeRightTypeArray<T0, UInt16>(cond_col, block, arguments, result, col_arr_left, col_arr_left_elems)
+				|| executeRightTypeArray<T0, UInt32>(cond_col, block, arguments, result, col_arr_left, col_arr_left_elems)
+				|| executeRightTypeArray<T0, UInt64>(cond_col, block, arguments, result, col_arr_left, col_arr_left_elems)
+				|| executeRightTypeArray<T0, Int8>(cond_col, block, arguments, result, col_arr_left, col_arr_left_elems)
+				|| executeRightTypeArray<T0, Int16>(cond_col, block, arguments, result, col_arr_left, col_arr_left_elems)
+				|| executeRightTypeArray<T0, Int32>(cond_col, block, arguments, result, col_arr_left, col_arr_left_elems)
+				|| executeRightTypeArray<T0, Int64>(cond_col, block, arguments, result, col_arr_left, col_arr_left_elems)
+				|| executeRightTypeArray<T0, Float32>(cond_col, block, arguments, result, col_arr_left, col_arr_left_elems)
+				|| executeRightTypeArray<T0, Float64>(cond_col, block, arguments, result, col_arr_left, col_arr_left_elems))
 				return true;
 			else
 				throw Exception("Illegal column " + block.safeGetByPosition(arguments[2]).column->getName()
-					+ " of third argument of function " + getName(),
+						+ " of third argument of function "
+						+ getName(),
 					ErrorCodes::ILLEGAL_COLUMN);
 		}
-		else if (col_const_arr_left
-			&& typeid_cast<const typename DataTypeFromFieldType<T0>::Type *>(
-				typeid_cast<const DataTypeArray &>(*col_const_arr_left->getDataType()).getNestedType().get()))
+		else if (col_const_arr_left && typeid_cast<const typename DataTypeFromFieldType<T0>::Type *>(
+										   typeid_cast<const DataTypeArray &>(*col_const_arr_left->getDataType()).getNestedType().get()))
 		{
-			if (	executeConstRightTypeArray<T0, UInt8>(cond_col, block, arguments, result, col_const_arr_left)
-				||	executeConstRightTypeArray<T0, UInt16>(cond_col, block, arguments, result, col_const_arr_left)
-				||	executeConstRightTypeArray<T0, UInt32>(cond_col, block, arguments, result, col_const_arr_left)
-				||	executeConstRightTypeArray<T0, UInt64>(cond_col, block, arguments, result, col_const_arr_left)
-				||	executeConstRightTypeArray<T0, Int8>(cond_col, block, arguments, result, col_const_arr_left)
-				||	executeConstRightTypeArray<T0, Int16>(cond_col, block, arguments, result, col_const_arr_left)
-				||	executeConstRightTypeArray<T0, Int32>(cond_col, block, arguments, result, col_const_arr_left)
-				||	executeConstRightTypeArray<T0, Int64>(cond_col, block, arguments, result, col_const_arr_left)
-				||	executeConstRightTypeArray<T0, Float32>(cond_col, block, arguments, result, col_const_arr_left)
-				||	executeConstRightTypeArray<T0, Float64>(cond_col, block, arguments, result, col_const_arr_left))
+			if (executeConstRightTypeArray<T0, UInt8>(cond_col, block, arguments, result, col_const_arr_left)
+				|| executeConstRightTypeArray<T0, UInt16>(cond_col, block, arguments, result, col_const_arr_left)
+				|| executeConstRightTypeArray<T0, UInt32>(cond_col, block, arguments, result, col_const_arr_left)
+				|| executeConstRightTypeArray<T0, UInt64>(cond_col, block, arguments, result, col_const_arr_left)
+				|| executeConstRightTypeArray<T0, Int8>(cond_col, block, arguments, result, col_const_arr_left)
+				|| executeConstRightTypeArray<T0, Int16>(cond_col, block, arguments, result, col_const_arr_left)
+				|| executeConstRightTypeArray<T0, Int32>(cond_col, block, arguments, result, col_const_arr_left)
+				|| executeConstRightTypeArray<T0, Int64>(cond_col, block, arguments, result, col_const_arr_left)
+				|| executeConstRightTypeArray<T0, Float32>(cond_col, block, arguments, result, col_const_arr_left)
+				|| executeConstRightTypeArray<T0, Float64>(cond_col, block, arguments, result, col_const_arr_left))
 				return true;
 			else
 				throw Exception("Illegal column " + block.safeGetByPosition(arguments[2]).column->getName()
-					+ " of third argument of function " + getName(),
+						+ " of third argument of function "
+						+ getName(),
 					ErrorCodes::ILLEGAL_COLUMN);
 		}
 
@@ -1123,7 +1144,8 @@ private:
 				/// Результат - FixedString.
 
 				if (col_then_fixed->getN() != col_else_fixed->getN())
-					throw Exception("FixedString columns as 'then' and 'else' arguments of function 'if' has different sizes", ErrorCodes::ILLEGAL_COLUMN);
+					throw Exception("FixedString columns as 'then' and 'else' arguments of function 'if' has different sizes",
+						ErrorCodes::ILLEGAL_COLUMN);
 
 				size_t N = col_then_fixed->getN();
 
@@ -1133,11 +1155,7 @@ private:
 				ColumnFixedString::Chars_t & res_vec = col_res->getChars();
 
 				StringIfImpl::vector_fixed_vector_fixed(
-					cond_col->getData(),
-					col_then_fixed->getChars(),
-					col_else_fixed->getChars(),
-					N,
-					res_vec);
+					cond_col->getData(), col_then_fixed->getChars(), col_else_fixed->getChars(), N, res_vec);
 			}
 			else
 			{
@@ -1149,53 +1167,52 @@ private:
 				ColumnString::Offsets_t & res_offsets = col_res->getOffsets();
 
 				if (col_then && col_else)
-					StringIfImpl::vector_vector(
-						cond_col->getData(),
-						col_then->getChars(), col_then->getOffsets(),
-						col_else->getChars(), col_else->getOffsets(),
-						res_vec, res_offsets);
+					StringIfImpl::vector_vector(cond_col->getData(),
+						col_then->getChars(),
+						col_then->getOffsets(),
+						col_else->getChars(),
+						col_else->getOffsets(),
+						res_vec,
+						res_offsets);
 				else if (col_then && col_else_const)
 					StringIfImpl::vector_constant(
-						cond_col->getData(),
-						col_then->getChars(), col_then->getOffsets(),
-						col_else_const->getData(),
-						res_vec, res_offsets);
+						cond_col->getData(), col_then->getChars(), col_then->getOffsets(), col_else_const->getData(), res_vec, res_offsets);
 				else if (col_then_const && col_else)
 					StringIfImpl::constant_vector(
-						cond_col->getData(),
-						col_then_const->getData(),
-						col_else->getChars(), col_else->getOffsets(),
-						res_vec, res_offsets);
+						cond_col->getData(), col_then_const->getData(), col_else->getChars(), col_else->getOffsets(), res_vec, res_offsets);
 				else if (col_then_const && col_else_const)
 					StringIfImpl::constant_constant(
-						cond_col->getData(),
-						col_then_const->getData(),
-						col_else_const->getData(),
-						res_vec, res_offsets);
+						cond_col->getData(), col_then_const->getData(), col_else_const->getData(), res_vec, res_offsets);
 				else if (col_then && col_else_fixed)
-					StringIfImpl::vector_vector_fixed(
-						cond_col->getData(),
-						col_then->getChars(), col_then->getOffsets(),
-						col_else_fixed->getChars(), col_else_fixed->getN(),
-						res_vec, res_offsets);
+					StringIfImpl::vector_vector_fixed(cond_col->getData(),
+						col_then->getChars(),
+						col_then->getOffsets(),
+						col_else_fixed->getChars(),
+						col_else_fixed->getN(),
+						res_vec,
+						res_offsets);
 				else if (col_then_fixed && col_else)
-					StringIfImpl::vector_fixed_vector(
-						cond_col->getData(),
-						col_then_fixed->getChars(), col_then_fixed->getN(),
-						col_else->getChars(), col_else->getOffsets(),
-						res_vec, res_offsets);
+					StringIfImpl::vector_fixed_vector(cond_col->getData(),
+						col_then_fixed->getChars(),
+						col_then_fixed->getN(),
+						col_else->getChars(),
+						col_else->getOffsets(),
+						res_vec,
+						res_offsets);
 				else if (col_then_const && col_else_fixed)
-					StringIfImpl::constant_vector_fixed(
-						cond_col->getData(),
+					StringIfImpl::constant_vector_fixed(cond_col->getData(),
 						col_then_const->getData(),
-						col_else_fixed->getChars(), col_else_fixed->getN(),
-						res_vec, res_offsets);
+						col_else_fixed->getChars(),
+						col_else_fixed->getN(),
+						res_vec,
+						res_offsets);
 				else if (col_then_fixed && col_else_const)
-					StringIfImpl::vector_fixed_constant(
-						cond_col->getData(),
-						col_then_fixed->getChars(), col_then_fixed->getN(),
+					StringIfImpl::vector_fixed_constant(cond_col->getData(),
+						col_then_fixed->getChars(),
+						col_then_fixed->getN(),
 						col_else_const->getData(),
-						res_vec, res_offsets);
+						res_vec,
+						res_offsets);
 				else
 					return false;
 			}
@@ -1210,8 +1227,7 @@ private:
 		const ColumnString * col_then_elements = col_arr_then ? typeid_cast<const ColumnString *>(&col_arr_then->getData()) : nullptr;
 		const ColumnString * col_else_elements = col_arr_else ? typeid_cast<const ColumnString *>(&col_arr_else->getData()) : nullptr;
 
-		if (((col_arr_then && col_then_elements) || col_arr_then_const)
-			&& ((col_arr_else && col_else_elements) || col_arr_else_const))
+		if (((col_arr_then && col_then_elements) || col_arr_then_const) && ((col_arr_else && col_else_elements) || col_arr_else_const))
 		{
 			auto col_res_elements = std::make_shared<ColumnString>();
 			auto col_res = std::make_shared<ColumnArray>(col_res_elements);
@@ -1222,29 +1238,41 @@ private:
 			ColumnArray::Offsets_t & res_array_offsets = col_res->getOffsets();
 
 			if (col_then_elements && col_else_elements)
-				StringArrayIfImpl::vector_vector(
-					cond_col->getData(),
-					col_then_elements->getChars(), col_then_elements->getOffsets(), col_arr_then->getOffsets(),
-					col_else_elements->getChars(), col_else_elements->getOffsets(), col_arr_else->getOffsets(),
-					res_chars, res_string_offsets, res_array_offsets);
+				StringArrayIfImpl::vector_vector(cond_col->getData(),
+					col_then_elements->getChars(),
+					col_then_elements->getOffsets(),
+					col_arr_then->getOffsets(),
+					col_else_elements->getChars(),
+					col_else_elements->getOffsets(),
+					col_arr_else->getOffsets(),
+					res_chars,
+					res_string_offsets,
+					res_array_offsets);
 			else if (col_then_elements && col_arr_else_const)
-				StringArrayIfImpl::vector_constant(
-					cond_col->getData(),
-					col_then_elements->getChars(), col_then_elements->getOffsets(), col_arr_then->getOffsets(),
+				StringArrayIfImpl::vector_constant(cond_col->getData(),
+					col_then_elements->getChars(),
+					col_then_elements->getOffsets(),
+					col_arr_then->getOffsets(),
 					col_arr_else_const->getData(),
-					res_chars, res_string_offsets, res_array_offsets);
+					res_chars,
+					res_string_offsets,
+					res_array_offsets);
 			else if (col_arr_then_const && col_else_elements)
-				StringArrayIfImpl::constant_vector(
-					cond_col->getData(),
+				StringArrayIfImpl::constant_vector(cond_col->getData(),
 					col_arr_then_const->getData(),
-					col_else_elements->getChars(), col_else_elements->getOffsets(), col_arr_else->getOffsets(),
-					res_chars, res_string_offsets, res_array_offsets);
+					col_else_elements->getChars(),
+					col_else_elements->getOffsets(),
+					col_arr_else->getOffsets(),
+					res_chars,
+					res_string_offsets,
+					res_array_offsets);
 			else if (col_arr_then_const && col_arr_else_const)
-				StringArrayIfImpl::constant_constant(
-					cond_col->getData(),
+				StringArrayIfImpl::constant_constant(cond_col->getData(),
 					col_arr_then_const->getData(),
 					col_arr_else_const->getData(),
-					res_chars, res_string_offsets, res_array_offsets);
+					res_chars,
+					res_string_offsets,
+					res_array_offsets);
 			else
 				return false;
 
@@ -1291,15 +1319,14 @@ private:
 
 		for (size_t i = 0; i < tuple_size; ++i)
 		{
-			temporary_block.insert({nullptr,
-				getReturnType({std::make_shared<DataTypeUInt8>(), type1.getElements()[i], type2.getElements()[i]}),
-				{}});
+			temporary_block.insert(
+				{ nullptr, getReturnType({ std::make_shared<DataTypeUInt8>(), type1.getElements()[i], type2.getElements()[i] }), {} });
 
-			temporary_block.insert({col1->getData().safeGetByPosition(i).column, type1.getElements()[i], {}});
-			temporary_block.insert({col2->getData().safeGetByPosition(i).column, type2.getElements()[i], {}});
+			temporary_block.insert({ col1->getData().safeGetByPosition(i).column, type1.getElements()[i], {} });
+			temporary_block.insert({ col2->getData().safeGetByPosition(i).column, type2.getElements()[i], {} });
 
 			/// temporary_block will be: cond, res_0, ..., res_i, then_i, else_i
-			execute(temporary_block, {0, i + 2, i + 3}, i + 1);
+			execute(temporary_block, { 0, i + 2, i + 3 }, i + 1);
 			temporary_block.erase(i + 3);
 			temporary_block.erase(i + 2);
 		}
@@ -1318,14 +1345,17 @@ public:
 		return name;
 	}
 
-	size_t getNumberOfArguments() const override { return 3; }
+	size_t getNumberOfArguments() const override
+	{
+		return 3;
+	}
 
 	/// Получить типы результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
 		if (!typeid_cast<const DataTypeUInt8 *>(&*arguments[0]))
-			throw Exception("Illegal type of first argument (condition) of function if. Must be UInt8.",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+			throw Exception(
+				"Illegal type of first argument (condition) of function if. Must be UInt8.", ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 		const DataTypeArray * type_arr1 = typeid_cast<const DataTypeArray *>(arguments[1].get());
 		const DataTypeArray * type_arr2 = typeid_cast<const DataTypeArray *>(arguments[2].get());
@@ -1336,37 +1366,37 @@ public:
 		if (arguments[1]->behavesAsNumber() && arguments[2]->behavesAsNumber())
 		{
 			DataTypePtr type_res;
-			if (!(	checkLeftType<DataTypeUInt8>(arguments, type_res)
-				||	checkLeftType<DataTypeUInt16>(arguments, type_res)
-				||	checkLeftType<DataTypeUInt32>(arguments, type_res)
-				||	checkLeftType<DataTypeUInt64>(arguments, type_res)
-				||	checkLeftType<DataTypeInt8>(arguments, type_res)
-				||	checkLeftType<DataTypeInt16>(arguments, type_res)
-				||	checkLeftType<DataTypeInt32>(arguments, type_res)
-				||	checkLeftType<DataTypeInt64>(arguments, type_res)
-				||	checkLeftType<DataTypeFloat32>(arguments, type_res)
-				||	checkLeftType<DataTypeFloat64>(arguments, type_res)))
-				throw Exception("Internal error: unexpected type " + arguments[1]->getName() + " of first argument of function " + getName(),
+			if (!(checkLeftType<DataTypeUInt8>(arguments, type_res) || checkLeftType<DataTypeUInt16>(arguments, type_res)
+					|| checkLeftType<DataTypeUInt32>(arguments, type_res)
+					|| checkLeftType<DataTypeUInt64>(arguments, type_res)
+					|| checkLeftType<DataTypeInt8>(arguments, type_res)
+					|| checkLeftType<DataTypeInt16>(arguments, type_res)
+					|| checkLeftType<DataTypeInt32>(arguments, type_res)
+					|| checkLeftType<DataTypeInt64>(arguments, type_res)
+					|| checkLeftType<DataTypeFloat32>(arguments, type_res)
+					|| checkLeftType<DataTypeFloat64>(arguments, type_res)))
+				throw Exception(
+					"Internal error: unexpected type " + arguments[1]->getName() + " of first argument of function " + getName(),
 					ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 			return type_res;
 		}
 		else if (type_arr1 && type_arr2)
 		{
 			/// NOTE Сообщения об ошибках будут относится к типам элементов массивов, что немного некорректно.
-			return std::make_shared<DataTypeArray>(getReturnType({arguments[0], type_arr1->getNestedType(), type_arr2->getNestedType()}));
+			return std::make_shared<DataTypeArray>(getReturnType({ arguments[0], type_arr1->getNestedType(), type_arr2->getNestedType() }));
 		}
 		else if (type_tuple1 && type_tuple2)
 		{
 			const size_t tuple_size = type_tuple1->getElements().size();
 
 			if (tuple_size != type_tuple2->getElements().size())
-				throw Exception("Different sizes of tuples in 'then' and 'else' argument of function if",
-					ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+				throw Exception(
+					"Different sizes of tuples in 'then' and 'else' argument of function if", ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 			DataTypes result_tuple(tuple_size);
 
 			for (size_t i = 0; i < tuple_size; ++i)
-				result_tuple[i] = getReturnType({arguments[0], type_tuple1->getElements()[i], type_tuple2->getElements()[i]});
+				result_tuple[i] = getReturnType({ arguments[0], type_tuple1->getElements()[i], type_tuple2->getElements()[i] });
 
 			return std::make_shared<DataTypeTuple>(std::move(result_tuple));
 		}
@@ -1390,11 +1420,9 @@ public:
 				return std::make_shared<DataTypeString>();
 			}
 
-			throw Exception{
-				"Incompatible second and third arguments for function " + getName() + ": " +
-					arguments[1]->getName() + " and " + arguments[2]->getName(),
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT
-			};
+			throw Exception{ "Incompatible second and third arguments for function " + getName() + ": " + arguments[1]->getName() + " and "
+					+ arguments[2]->getName(),
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 		}
 
 		return arguments[1];
@@ -1404,7 +1432,8 @@ public:
 	void executeImpl(Block & block, const ColumnNumbers & arguments, size_t result) override
 	{
 		const ColumnUInt8 * cond_col = typeid_cast<const ColumnUInt8 *>(block.safeGetByPosition(arguments[0]).column.get());
-		const ColumnConst<UInt8> * cond_const_col = typeid_cast<const ColumnConst<UInt8> *>(block.safeGetByPosition(arguments[0]).column.get());
+		const ColumnConst<UInt8> * cond_const_col
+			= typeid_cast<const ColumnConst<UInt8> *>(block.safeGetByPosition(arguments[0]).column.get());
 		ColumnPtr materialized_cond_col;
 
 		const ColumnWithTypeAndName & arg_then = block.safeGetByPosition(arguments[1]);
@@ -1414,9 +1443,7 @@ public:
 		{
 			if (arg_then.type->getName() == arg_else.type->getName())
 			{
-				block.safeGetByPosition(result).column = cond_const_col->getData()
-					? arg_then.column
-					: arg_else.column;
+				block.safeGetByPosition(result).column = cond_const_col->getData() ? arg_then.column : arg_else.column;
 				return;
 			}
 			else
@@ -1428,36 +1455,33 @@ public:
 
 		if (cond_col)
 		{
-			if (!(	executeLeftType<UInt8>(cond_col, block, arguments, result)
-				||	executeLeftType<UInt16>(cond_col, block, arguments, result)
-				||	executeLeftType<UInt32>(cond_col, block, arguments, result)
-				||	executeLeftType<UInt64>(cond_col, block, arguments, result)
-				||	executeLeftType<Int8>(cond_col, block, arguments, result)
-				||	executeLeftType<Int16>(cond_col, block, arguments, result)
-				||	executeLeftType<Int32>(cond_col, block, arguments, result)
-				||	executeLeftType<Int64>(cond_col, block, arguments, result)
-				||	executeLeftType<Float32>(cond_col, block, arguments, result)
-				||	executeLeftType<Float64>(cond_col, block, arguments, result)
-				|| 	executeString(cond_col, block, arguments, result)
-				||  executeTuple(cond_col, block, arguments, result)))
-				throw Exception("Illegal columns " + arg_then.column->getName()
-					+ " and " + arg_else.column->getName()
-					+ " of second (then) and third (else) arguments of function " + getName(),
+			if (!(executeLeftType<UInt8>(cond_col, block, arguments, result) || executeLeftType<UInt16>(cond_col, block, arguments, result)
+					|| executeLeftType<UInt32>(cond_col, block, arguments, result)
+					|| executeLeftType<UInt64>(cond_col, block, arguments, result)
+					|| executeLeftType<Int8>(cond_col, block, arguments, result)
+					|| executeLeftType<Int16>(cond_col, block, arguments, result)
+					|| executeLeftType<Int32>(cond_col, block, arguments, result)
+					|| executeLeftType<Int64>(cond_col, block, arguments, result)
+					|| executeLeftType<Float32>(cond_col, block, arguments, result)
+					|| executeLeftType<Float64>(cond_col, block, arguments, result)
+					|| executeString(cond_col, block, arguments, result)
+					|| executeTuple(cond_col, block, arguments, result)))
+				throw Exception("Illegal columns " + arg_then.column->getName() + " and " + arg_else.column->getName()
+						+ " of second (then) and third (else) arguments of function "
+						+ getName(),
 					ErrorCodes::ILLEGAL_COLUMN);
 		}
 		else
 			throw Exception("Illegal column " + cond_col->getName() + " of first argument of function " + getName()
-				+ ". Must be ColumnUInt8 or ColumnConstUInt8.",
+					+ ". Must be ColumnUInt8 or ColumnConstUInt8.",
 				ErrorCodes::ILLEGAL_COLUMN);
 	}
 };
 
 namespace Conditional
 {
-
-class NullMapBuilder;
-class CondException;
-
+	class NullMapBuilder;
+	class CondException;
 }
 
 /// Function multiIf, which generalizes the function if.
@@ -1483,8 +1507,14 @@ public:
 
 public:
 	String getName() const override;
-	bool isVariadic() const override { return true; }
-	size_t getNumberOfArguments() const override { return 0; }
+	bool isVariadic() const override
+	{
+		return true;
+	}
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 	bool hasSpecialSupportForNulls() const override;
 	DataTypePtr getReturnTypeImpl(const DataTypes & args) const override;
 	void executeImpl(Block & block, const ColumnNumbers & args, size_t result) override;
@@ -1514,8 +1544,14 @@ public:
 
 public:
 	FunctionCaseWithExpr(const Context & context_);
-	bool isVariadic() const override { return true; }
-	size_t getNumberOfArguments() const override { return 0; }
+	bool isVariadic() const override
+	{
+		return true;
+	}
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 	String getName() const override;
 	DataTypePtr getReturnTypeImpl(const DataTypes & args) const override;
 	void executeImpl(Block & block, const ColumnNumbers & args, size_t result) override;
@@ -1534,11 +1570,16 @@ public:
 
 public:
 	String getName() const override;
-	bool isVariadic() const override { return true; }
-	size_t getNumberOfArguments() const override { return 0; }
+	bool isVariadic() const override
+	{
+		return true;
+	}
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 	bool hasSpecialSupportForNulls() const override;
 	DataTypePtr getReturnTypeImpl(const DataTypes & args) const override;
 	void executeImpl(Block & block, const ColumnNumbers & args, size_t result) override;
 };
-
 }

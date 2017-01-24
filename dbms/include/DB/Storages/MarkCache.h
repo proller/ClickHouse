@@ -5,19 +5,18 @@
 #include <DB/Common/LRUCache.h>
 #include <DB/Common/ProfileEvents.h>
 #include <DB/Common/SipHash.h>
-#include <DB/Interpreters/AggregationCommon.h>
 #include <DB/DataStreams/MarkInCompressedFile.h>
+#include <DB/Interpreters/AggregationCommon.h>
 
 
 namespace ProfileEvents
 {
-	extern const Event MarkCacheHits;
-	extern const Event MarkCacheMisses;
+extern const Event MarkCacheHits;
+extern const Event MarkCacheMisses;
 }
 
 namespace DB
 {
-
 /// Estimate of number of bytes in cache for marks.
 struct MarksWeightFunction
 {
@@ -38,8 +37,9 @@ private:
 	using Base = LRUCache<UInt128, MarksInCompressedFile, UInt128TrivialHash, MarksWeightFunction>;
 
 public:
-	MarkCache(size_t max_size_in_bytes, const Delay & expiration_delay)
-		: Base(max_size_in_bytes, expiration_delay) {}
+	MarkCache(size_t max_size_in_bytes, const Delay & expiration_delay) : Base(max_size_in_bytes, expiration_delay)
+	{
+	}
 
 	/// Calculate key from path to file and offset.
 	static UInt128 hash(const String & path_to_file)
@@ -67,5 +67,4 @@ public:
 };
 
 using MarkCachePtr = std::shared_ptr<MarkCache>;
-
 }

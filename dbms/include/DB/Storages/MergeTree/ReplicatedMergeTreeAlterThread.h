@@ -2,13 +2,12 @@
 
 #include <thread>
 #include <zkutil/Types.h>
-#include <DB/Core/Types.h>
 #include <common/logger_useful.h>
+#include <DB/Core/Types.h>
 
 
 namespace DB
 {
-
 class StorageReplicatedMergeTree;
 
 
@@ -36,10 +35,9 @@ private:
 	StorageReplicatedMergeTree & storage;
 	Logger * log;
 
-	zkutil::EventPtr wakeup_event { std::make_shared<Poco::Event>() };
-	std::atomic<bool> need_stop { false };
+	zkutil::EventPtr wakeup_event{ std::make_shared<Poco::Event>() };
+	std::atomic<bool> need_stop{ false };
 
 	std::thread thread;
 };
-
 }

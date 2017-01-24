@@ -1,13 +1,12 @@
 #pragma once
 
 #include <DB/Core/Block.h>
-#include <DB/IO/WriteBuffer.h>
 #include <DB/DataStreams/IRowOutputStream.h>
+#include <DB/IO/WriteBuffer.h>
 
 
 namespace DB
 {
-
 /** Поток для вывода данных в формате JSON, по объекту на каждую строчку.
   * Не валидирует UTF-8.
   */
@@ -32,6 +31,4 @@ private:
 	Names fields;
 	bool force_quoting_64bit_integers;
 };
-
 }
-

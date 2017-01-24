@@ -6,43 +6,62 @@
 
 namespace DB
 {
-
-
 /** CREATE TABLE или ATTACH TABLE запрос
   */
 class ASTCreateQuery : public IAST
 {
 public:
-	bool attach{false};	/// Запрос ATTACH TABLE, а не CREATE TABLE.
-	bool if_not_exists{false};
-	bool is_view{false};
-	bool is_materialized_view{false};
-	bool is_populate{false};
-	bool is_temporary{false};
+	bool attach{ false }; /// Запрос ATTACH TABLE, а не CREATE TABLE.
+	bool if_not_exists{ false };
+	bool is_view{ false };
+	bool is_materialized_view{ false };
+	bool is_populate{ false };
+	bool is_temporary{ false };
 	String database;
 	String table;
 	ASTPtr columns;
 	ASTPtr storage;
-	ASTPtr inner_storage;	/// Внутренний engine для запроса CREATE MATERIALIZED VIEW
+	ASTPtr inner_storage; /// Внутренний engine для запроса CREATE MATERIALIZED VIEW
 	String as_database;
 	String as_table;
 	ASTPtr select;
 
 	ASTCreateQuery() = default;
-	ASTCreateQuery(const StringRange range_) : IAST(range_) {}
+	ASTCreateQuery(const StringRange range_) : IAST(range_)
+	{
+	}
 
 	/** Получить текст, который идентифицирует этот элемент. */
-	String getID() const override { return (attach ? "AttachQuery_" : "CreateQuery_") + database + "_" + table; };
+	String getID() const override
+	{
+		return (attach ? "AttachQuery_" : "CreateQuery_") + database + "_" + table;
+	};
 
 	ASTPtr clone() const override
 	{
 		auto res = std::make_shared<ASTCreateQuery>(*this);
 		res->children.clear();
 
-		if (columns) 	{ res->columns = columns->clone(); 	res->children.push_back(res->columns); }
-		if (storage) 	{ res->storage = storage->clone(); 	res->children.push_back(res->storage); }
-		if (select) 	{ res->select = select->clone(); 	res->children.push_back(res->select); }
-		if (inner_storage) 	{ res->inner_storage = inner_storage->clone(); 	res->children.push_back(res->inner_storage); }
+		if (columns)
+		{
+			res->columns = columns->clone();
+			res->children.push_back(res->columns);
+		}
+		if (storage)
+		{
+			res->storage = storage->clone();
+			res->children.push_back(res->storage);
+		}
+		if (select)
+		{
+			res->select = select->clone();
+			res->children.push_back(res->select);
+		}
+		if (inner_storage)
+		{
+			res->inner_storage = inner_storage->clone();
+			res->children.push_back(res->inner_storage);
+		}
 
 		return res;
 	}
@@ -54,11 +73,8 @@ protected:
 
 		if (!database.empty() && table.empty())
 		{
-			settings.ostr << (settings.hilite ? hilite_keyword : "")
-				<< (attach ? "ATTACH DATABASE " : "CREATE DATABASE ")
-				<< (if_not_exists ? "IF NOT EXISTS " : "")
-				<< (settings.hilite ? hilite_none : "")
-				<< backQuoteIfNeed(database);
+			settings.ostr << (settings.hilite ? hilite_keyword : "") << (attach ? "ATTACH DATABASE " : "CREATE DATABASE ")
+						  << (if_not_exists ? "IF NOT EXISTS " : "") << (settings.hilite ? hilite_none : "") << backQuoteIfNeed(database);
 
 			if (storage)
 			{
@@ -76,20 +92,16 @@ protected:
 			if (is_materialized_view)
 				what = "MATERIALIZED VIEW";
 
-			settings.ostr
-				<< (settings.hilite ? hilite_keyword : "")
-					<< (attach ? "ATTACH " : "CREATE ")
-					<< (is_temporary ? "TEMPORARY " : "")
-					<< what
-					<< " " << (if_not_exists ? "IF NOT EXISTS " : "")
-				<< (settings.hilite ? hilite_none : "")
-				<< (!database.empty() ? backQuoteIfNeed(database) + "." : "") << backQuoteIfNeed(table);
+			settings.ostr << (settings.hilite ? hilite_keyword : "") << (attach ? "ATTACH " : "CREATE ")
+						  << (is_temporary ? "TEMPORARY " : "") << what << " " << (if_not_exists ? "IF NOT EXISTS " : "")
+						  << (settings.hilite ? hilite_none : "") << (!database.empty() ? backQuoteIfNeed(database) + "." : "")
+						  << backQuoteIfNeed(table);
 		}
 
 		if (!as_table.empty())
 		{
 			settings.ostr << (settings.hilite ? hilite_keyword : "") << " AS " << (settings.hilite ? hilite_none : "")
-			<< (!as_database.empty() ? backQuoteIfNeed(as_database) + "." : "") << backQuoteIfNeed(as_table);
+						  << (!as_database.empty() ? backQuoteIfNeed(as_database) + "." : "") << backQuoteIfNeed(as_table);
 		}
 
 		if (columns)
@@ -125,5 +137,4 @@ protected:
 		}
 	}
 };
-
 }

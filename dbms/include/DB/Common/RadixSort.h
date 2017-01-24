@@ -4,13 +4,13 @@
 #if !defined(__APPLE__) && !defined(__FreeBSD__)
 #include <malloc.h>
 #endif
-#include <cstdlib>
 #include <cstdint>
+#include <cstdlib>
 #include <type_traits>
 
 #include <ext/bit_cast.hpp>
-#include <DB/Core/Types.h>
 #include <DB/Core/Defines.h>
+#include <DB/Core/Types.h>
 
 
 /** Поразрядная сортировка, обладает следующей функциональностью:
@@ -67,14 +67,15 @@ struct RadixSortFloatTransform
 template <typename Float>
 struct RadixSortFloatTraits
 {
-	using Element = Float;		/// Тип элемента. Это может быть структура с ключём и ещё каким-то payload-ом. Либо просто ключ.
-	using Key = Float;			/// Ключ, по которому нужно сортировать.
-	using CountType = uint32_t;	/// Тип для подсчёта гистограмм. В случае заведомо маленького количества элементов, может быть меньше чем size_t.
+	using Element = Float; /// Тип элемента. Это может быть структура с ключём и ещё каким-то payload-ом. Либо просто ключ.
+	using Key = Float; /// Ключ, по которому нужно сортировать.
+	using CountType
+		= uint32_t; /// Тип для подсчёта гистограмм. В случае заведомо маленького количества элементов, может быть меньше чем size_t.
 
 	/// Тип, в который переводится ключ, чтобы делать битовые операции. Это UInt такого же размера, как ключ.
 	using KeyBits = typename std::conditional<sizeof(Float) == 8, uint64_t, uint32_t>::type;
 
-	static constexpr size_t PART_SIZE_BITS = 8;	/// Какими кусочками ключа в количестве бит делать один проход - перестановку массива.
+	static constexpr size_t PART_SIZE_BITS = 8; /// Какими кусочками ключа в количестве бит делать один проход - перестановку массива.
 
 	/// Преобразования ключа в KeyBits такое, что отношение порядка над ключём соответствует отношению порядка над KeyBits.
 	using Transform = RadixSortFloatTransform<KeyBits>;
@@ -85,7 +86,10 @@ struct RadixSortFloatTraits
 	using Allocator = RadixSortMallocAllocator;
 
 	/// Функция получения ключа из элемента массива.
-	static Key & extractKey(Element & elem) { return elem; }
+	static Key & extractKey(Element & elem)
+	{
+		return elem;
+	}
 };
 
 
@@ -94,8 +98,14 @@ struct RadixSortIdentityTransform
 {
 	static constexpr bool transform_is_simple = true;
 
-	static KeyBits forward(KeyBits x) 	{ return x; }
-	static KeyBits backward(KeyBits x) 	{ return x; }
+	static KeyBits forward(KeyBits x)
+	{
+		return x;
+	}
+	static KeyBits backward(KeyBits x)
+	{
+		return x;
+	}
 };
 
 
@@ -104,8 +114,14 @@ struct RadixSortSignedTransform
 {
 	static constexpr bool transform_is_simple = true;
 
-	static KeyBits forward(KeyBits x) 	{ return x ^ (KeyBits(1) << (sizeof(KeyBits) * 8 - 1)); }
-	static KeyBits backward(KeyBits x) 	{ return x ^ (KeyBits(1) << (sizeof(KeyBits) * 8 - 1)); }
+	static KeyBits forward(KeyBits x)
+	{
+		return x ^ (KeyBits(1) << (sizeof(KeyBits) * 8 - 1));
+	}
+	static KeyBits backward(KeyBits x)
+	{
+		return x ^ (KeyBits(1) << (sizeof(KeyBits) * 8 - 1));
+	}
 };
 
 
@@ -123,7 +139,10 @@ struct RadixSortUIntTraits
 	using Allocator = RadixSortMallocAllocator;
 
 	/// Функция получения ключа из элемента массива.
-	static Key & extractKey(Element & elem) { return elem; }
+	static Key & extractKey(Element & elem)
+	{
+		return elem;
+	}
 };
 
 template <typename Int>
@@ -140,7 +159,10 @@ struct RadixSortIntTraits
 	using Allocator = RadixSortMallocAllocator;
 
 	/// Функция получения ключа из элемента массива.
-	static Key & extractKey(Element & elem) { return elem; }
+	static Key & extractKey(Element & elem)
+	{
+		return elem;
+	}
 };
 
 
@@ -148,10 +170,10 @@ template <typename Traits>
 struct RadixSort
 {
 private:
-	using Element 	= typename Traits::Element;
-	using Key 		= typename Traits::Key;
+	using Element = typename Traits::Element;
+	using Key = typename Traits::Key;
 	using CountType = typename Traits::CountType;
-	using KeyBits 	= typename Traits::KeyBits;
+	using KeyBits = typename Traits::KeyBits;
 
 	static constexpr size_t HISTOGRAM_SIZE = 1 << Traits::PART_SIZE_BITS;
 	static constexpr size_t PART_BITMASK = HISTOGRAM_SIZE - 1;
@@ -166,8 +188,14 @@ private:
 		return (x >> (N * Traits::PART_SIZE_BITS)) & PART_BITMASK;
 	}
 
-	static KeyBits keyToBits(Key x) { return ext::bit_cast<KeyBits>(x); }
-	static Key bitsToKey(KeyBits x) { return ext::bit_cast<Key>(x); }
+	static KeyBits keyToBits(Key x)
+	{
+		return ext::bit_cast<KeyBits>(x);
+	}
+	static Key bitsToKey(KeyBits x)
+	{
+		return ext::bit_cast<Key>(x);
+	}
 
 public:
 	static void execute(Element * arr, size_t size)
@@ -177,7 +205,7 @@ public:
 		/// Здесь есть циклы по NUM_PASSES. Очень важно, что они разворачиваются в compile-time.
 
 		/// Для каждого из NUM_PASSES кусков бит ключа, считаем, сколько раз каждое значение этого куска встретилось.
-		CountType histograms[HISTOGRAM_SIZE * NUM_PASSES] = {0};
+		CountType histograms[HISTOGRAM_SIZE * NUM_PASSES] = { 0 };
 
 		typename Traits::Allocator allocator;
 
@@ -196,7 +224,7 @@ public:
 
 		{
 			/// Заменяем гистограммы на суммы с накоплением: значение в позиции i равно сумме в предыдущих позициях минус один.
-			size_t sums[NUM_PASSES] = {0};
+			size_t sums[NUM_PASSES] = { 0 };
 
 			for (size_t i = 0; i < HISTOGRAM_SIZE; ++i)
 			{
@@ -239,23 +267,19 @@ public:
 
 
 template <typename T>
-typename std::enable_if<std::is_unsigned<T>::value && std::is_integral<T>::value, void>::type
-radixSort(T * arr, size_t size)
+typename std::enable_if<std::is_unsigned<T>::value && std::is_integral<T>::value, void>::type radixSort(T * arr, size_t size)
 {
 	return RadixSort<RadixSortUIntTraits<T>>::execute(arr, size);
 }
 
 template <typename T>
-typename std::enable_if<std::is_signed<T>::value && std::is_integral<T>::value, void>::type
-radixSort(T * arr, size_t size)
+typename std::enable_if<std::is_signed<T>::value && std::is_integral<T>::value, void>::type radixSort(T * arr, size_t size)
 {
 	return RadixSort<RadixSortIntTraits<T>>::execute(arr, size);
 }
 
 template <typename T>
-typename std::enable_if<std::is_floating_point<T>::value, void>::type
-radixSort(T * arr, size_t size)
+typename std::enable_if<std::is_floating_point<T>::value, void>::type radixSort(T * arr, size_t size)
 {
 	return RadixSort<RadixSortFloatTraits<T>>::execute(arr, size);
 }
-

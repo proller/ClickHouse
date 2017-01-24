@@ -1,13 +1,12 @@
-#include <DB/IO/CompressedStream.h>
-#include <DB/IO/ReadHelpers.h>
+#include <Poco/Util/AbstractConfiguration.h>
 #include <DB/Common/Exception.h>
 #include <DB/Common/StringUtils.h>
-#include <Poco/Util/AbstractConfiguration.h>
+#include <DB/IO/CompressedStream.h>
+#include <DB/IO/ReadHelpers.h>
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int UNKNOWN_COMPRESSION_METHOD;
@@ -65,15 +64,16 @@ private:
 
 		bool check(size_t part_size, double part_size_ratio) const
 		{
-			return part_size >= min_part_size
-				&& part_size_ratio >= min_part_size_ratio;
+			return part_size >= min_part_size && part_size_ratio >= min_part_size_ratio;
 		}
 	};
 
 	std::vector<Element> elements;
 
 public:
-	CompressionMethodSelector() {}	/// Всегда возвращает метод по-умолчанию.
+	CompressionMethodSelector()
+	{
+	} /// Всегда возвращает метод по-умолчанию.
 
 	CompressionMethodSelector(Poco::Util::AbstractConfiguration & config, const std::string & config_prefix)
 	{
@@ -83,7 +83,8 @@ public:
 		for (const auto & name : keys)
 		{
 			if (!startsWith(name.data(), "case"))
-				throw Exception("Unknown element in config: " + config_prefix + "." + name + ", must be 'case'", ErrorCodes::UNKNOWN_ELEMENT_IN_CONFIG);
+				throw Exception(
+					"Unknown element in config: " + config_prefix + "." + name + ", must be 'case'", ErrorCodes::UNKNOWN_ELEMENT_IN_CONFIG);
 
 			elements.emplace_back(config, config_prefix + "." + name);
 		}
@@ -100,5 +101,4 @@ public:
 		return res;
 	}
 };
-
 }

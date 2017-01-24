@@ -4,11 +4,11 @@
 #include <DB/Common/HashTable/HashTable.h>
 #include <DB/Common/HashTable/HashTableAllocator.h>
 
-#include <DB/IO/WriteBuffer.h>
-#include <DB/IO/WriteHelpers.h>
 #include <DB/IO/ReadBuffer.h>
 #include <DB/IO/ReadHelpers.h>
 #include <DB/IO/VarInt.h>
+#include <DB/IO/WriteBuffer.h>
+#include <DB/IO/WriteHelpers.h>
 
 /** NOTE HashSet could only be used for memmoveable (position independent) types.
   * Example: std::string is not position independent in libstdc++ with C++11 ABI or in libc++.
@@ -16,14 +16,11 @@
   */
 
 
-template
-<
-	typename Key,
+template <typename Key,
 	typename TCell,
 	typename Hash = DefaultHash<Key>,
 	typename Grower = HashTableGrower<>,
-	typename Allocator = HashTableAllocator
->
+	typename Allocator = HashTableAllocator>
 class HashSetTable : public HashTable<Key, TCell, Hash, Grower, Allocator>
 {
 public:
@@ -70,32 +67,36 @@ struct HashSetCellWithSavedHash : public HashTableCell<Key, Hash, TState>
 
 	size_t saved_hash;
 
-	HashSetCellWithSavedHash() : Base() {}
-	HashSetCellWithSavedHash(const Key & key_, const typename Base::State & state) : Base(key_, state) {}
+	HashSetCellWithSavedHash() : Base()
+	{
+	}
+	HashSetCellWithSavedHash(const Key & key_, const typename Base::State & state) : Base(key_, state)
+	{
+	}
 
-	bool keyEquals(const Key & key_) const { return this->key == key_; }
-	bool keyEquals(const Key & key_, size_t hash_) const { return saved_hash == hash_ && this->key == key_; }
+	bool keyEquals(const Key & key_) const
+	{
+		return this->key == key_;
+	}
+	bool keyEquals(const Key & key_, size_t hash_) const
+	{
+		return saved_hash == hash_ && this->key == key_;
+	}
 
-	void setHash(size_t hash_value) { saved_hash = hash_value; }
-	size_t getHash(const Hash & hash) const { return saved_hash; }
+	void setHash(size_t hash_value)
+	{
+		saved_hash = hash_value;
+	}
+	size_t getHash(const Hash & hash) const
+	{
+		return saved_hash;
+	}
 };
 
 
-template
-<
-	typename Key,
-	typename Hash = DefaultHash<Key>,
-	typename Grower = HashTableGrower<>,
-	typename Allocator = HashTableAllocator
->
+template <typename Key, typename Hash = DefaultHash<Key>, typename Grower = HashTableGrower<>, typename Allocator = HashTableAllocator>
 using HashSet = HashSetTable<Key, HashTableCell<Key, Hash>, Hash, Grower, Allocator>;
 
 
-template
-<
-	typename Key,
-	typename Hash = DefaultHash<Key>,
-	typename Grower = HashTableGrower<>,
-	typename Allocator = HashTableAllocator
->
+template <typename Key, typename Hash = DefaultHash<Key>, typename Grower = HashTableGrower<>, typename Allocator = HashTableAllocator>
 using HashSetWithSavedHash = HashSetTable<Key, HashSetCellWithSavedHash<Key, Hash>, Hash, Grower, Allocator>;

@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 /** Поток блоков, из которого можно прочитать следующий блок из явно предоставленного списка.
   * Также смотрите OneBlockInputStream.
   */
@@ -13,14 +12,19 @@ class BlocksListBlockInputStream : public IProfilingBlockInputStream
 {
 public:
 	/// Захватывает владение списком блоков.
-	BlocksListBlockInputStream(BlocksList && list_)
-		: list(std::move(list_)), it(list.begin()), end(list.end()) {}
+	BlocksListBlockInputStream(BlocksList && list_) : list(std::move(list_)), it(list.begin()), end(list.end())
+	{
+	}
 
 	/// Использует лежащий где-то ещё список блоков.
-	BlocksListBlockInputStream(BlocksList::iterator & begin_, BlocksList::iterator & end_)
-		: it(begin_), end(end_) {}
+	BlocksListBlockInputStream(BlocksList::iterator & begin_, BlocksList::iterator & end_) : it(begin_), end(end_)
+	{
+	}
 
-	String getName() const override { return "BlocksList"; }
+	String getName() const override
+	{
+		return "BlocksList";
+	}
 
 	String getID() const override
 	{
@@ -45,5 +49,4 @@ private:
 	BlocksList::iterator it;
 	const BlocksList::iterator end;
 };
-
 }

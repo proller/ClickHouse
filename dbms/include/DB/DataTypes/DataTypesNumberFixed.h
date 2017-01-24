@@ -1,29 +1,35 @@
 #pragma once
 
 #include <DB/Columns/ColumnsNumber.h>
-#include <DB/DataTypes/IDataTypeNumberFixed.h>
 #include <DB/DataTypes/DataTypeNull.h>
+#include <DB/DataTypes/IDataTypeNumberFixed.h>
 
 
 namespace DB
 {
-
 /** Типы столбцов для чисел фиксированной ширины. */
 
 template <typename T>
 struct DataTypeFromFieldType;
 
-#define DEFINE_DATA_TYPE_NUMBER_FIXED(TYPE) 										\
-	class DataType ## TYPE final : public IDataTypeNumberFixed<TYPE, Column ## TYPE> \
-	{																				\
-	public:																			\
-		std::string getName() const override { return #TYPE; }						\
-		DataTypePtr clone() const override { return std::make_shared<DataType ## TYPE>(); } \
-	};																				\
-																					\
-	template <> struct DataTypeFromFieldType<TYPE>									\
-	{																				\
-		using Type = DataType ## TYPE;												\
+#define DEFINE_DATA_TYPE_NUMBER_FIXED(TYPE)                                                                                                \
+	class DataType##TYPE final : public IDataTypeNumberFixed<TYPE, Column##TYPE>                                                           \
+	{                                                                                                                                      \
+	public:                                                                                                                                \
+		std::string getName() const override                                                                                               \
+		{                                                                                                                                  \
+			return #TYPE;                                                                                                                  \
+		}                                                                                                                                  \
+		DataTypePtr clone() const override                                                                                                 \
+		{                                                                                                                                  \
+			return std::make_shared<DataType##TYPE>();                                                                                     \
+		}                                                                                                                                  \
+	};                                                                                                                                     \
+                                                                                                                                           \
+	template <>                                                                                                                            \
+	struct DataTypeFromFieldType<TYPE>                                                                                                     \
+	{                                                                                                                                      \
+		using Type = DataType##TYPE;                                                                                                       \
 	};
 
 DEFINE_DATA_TYPE_NUMBER_FIXED(UInt8);
@@ -45,18 +51,25 @@ class DataTypeVoid : public IDataTypeNumberFixed<void, void>
 {
 public:
 	DataTypeVoid() = default;
-	std::string getName() const override { return "void"; }
-	DataTypePtr clone() const override { return std::make_shared<DataTypeVoid>(); }
+	std::string getName() const override
+	{
+		return "void";
+	}
+	DataTypePtr clone() const override
+	{
+		return std::make_shared<DataTypeVoid>();
+	}
 };
 
-template <> struct DataTypeFromFieldType<void>
+template <>
+struct DataTypeFromFieldType<void>
 {
 	using Type = DataTypeVoid;
 };
 
-template <> struct DataTypeFromFieldType<Null>
+template <>
+struct DataTypeFromFieldType<Null>
 {
 	using Type = DataTypeNull;
 };
-
 }

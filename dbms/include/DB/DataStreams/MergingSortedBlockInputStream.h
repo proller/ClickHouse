@@ -8,13 +8,12 @@
 #include <DB/Core/Row.h>
 #include <DB/Core/SortDescription.h>
 
-#include <DB/DataStreams/IProfilingBlockInputStream.h>
 #include <DB/DataStreams/ColumnGathererStream.h>
+#include <DB/DataStreams/IProfilingBlockInputStream.h>
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int CORRUPTED_DATA;
@@ -33,8 +32,7 @@ namespace detail
 	{
 		int refcount = 0;
 
-		SharedBlock(Block && value_)
-			: Block(std::move(value_)) {};
+		SharedBlock(Block && value_) : Block(std::move(value_)){};
 	};
 }
 
@@ -61,10 +59,17 @@ public:
 	  * out_row_sources - if isn't nullptr, then at the end of execution it should contain part numbers of each readed row (and needed flag)
 	  * quiet - don't log profiling info
 	  */
-	MergingSortedBlockInputStream(BlockInputStreams & inputs_, const SortDescription & description_, size_t max_block_size_,
-								  size_t limit_ = 0, MergedRowSources * out_row_sources_ = nullptr, bool quiet_ = false);
+	MergingSortedBlockInputStream(BlockInputStreams & inputs_,
+		const SortDescription & description_,
+		size_t max_block_size_,
+		size_t limit_ = 0,
+		MergedRowSources * out_row_sources_ = nullptr,
+		bool quiet_ = false);
 
-	String getName() const override { return "MergingSorted"; }
+	String getName() const override
+	{
+		return "MergingSorted";
+	}
 
 	String getID() const override;
 
@@ -97,8 +102,14 @@ protected:
 			return !(*this == other);
 		}
 
-		bool empty() const { return columns.empty(); }
-		size_t size() const { return columns.size(); }
+		bool empty() const
+		{
+			return columns.empty();
+		}
+		size_t size() const
+		{
+			return columns.size();
+		}
 	};
 
 
@@ -172,8 +183,8 @@ protected:
 					}
 				}
 
-				throw Exception("MergingSortedBlockInputStream failed to read row " + toString(cursor->pos)
-					+ " of column " + toString(i) + (column_name.empty() ? "" : " (" + column_name + ")"),
+				throw Exception("MergingSortedBlockInputStream failed to read row " + toString(cursor->pos) + " of column " + toString(i)
+						+ (column_name.empty() ? "" : " (" + column_name + ")"),
 					ErrorCodes::CORRUPTED_DATA);
 			}
 		}
@@ -200,7 +211,6 @@ protected:
 	}
 
 private:
-
 	/** Делаем поддержку двух разных курсоров - с Collation и без.
 	 *  Шаблоны используем вместо полиморфных SortCursor'ов и вызовов виртуальных функций.
 	 */
@@ -215,5 +225,4 @@ private:
 	/// Прочитали до конца.
 	bool finished = false;
 };
-
 }

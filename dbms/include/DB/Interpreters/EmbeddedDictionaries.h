@@ -1,11 +1,14 @@
 #pragma once
 
 #include <thread>
-#include <common/MultiVersion.h>
 #include <Poco/Event.h>
+#include <common/MultiVersion.h>
 
 
-namespace Poco { class Logger; }
+namespace Poco
+{
+class Logger;
+}
 
 class RegionsHierarchies;
 class TechDataHierarchy;
@@ -14,7 +17,6 @@ class RegionsNames;
 
 namespace DB
 {
-
 class Context;
 
 
@@ -76,5 +78,4 @@ public:
 		return regions_names.get();
 	}
 };
-
 }

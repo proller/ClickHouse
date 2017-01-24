@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 class InterpreterCheckQuery : public IInterpreter
 {
 public:
@@ -20,5 +19,4 @@ private:
 	Context context;
 	Block result;
 };
-
 }

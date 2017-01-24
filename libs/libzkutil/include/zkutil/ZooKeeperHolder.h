@@ -1,8 +1,8 @@
 #pragma once
 
-#include <zkutil/ZooKeeper.h>
 #include <mutex>
 #include <boost/noncopyable.hpp>
+#include <zkutil/ZooKeeper.h>
 
 namespace zkutil
 {
@@ -20,9 +20,12 @@ public:
 
 	/// вызывать из одного потока - не thread safe
 	template <class... Args>
-	void init(Args&&... args);
+	void init(Args &&... args);
 	/// был ли класс инициализирован
-	bool isInitialized() const { return ptr != nullptr; }
+	bool isInitialized() const
+	{
+		return ptr != nullptr;
+	}
 
 	UnstorableZookeeperHandler getZooKeeper();
 	bool replaceZooKeeperSessionToNewOne();
@@ -48,9 +51,18 @@ protected:
 	public:
 		UnstorableZookeeperHandler(ZooKeeper::Ptr zk_ptr_);
 
-		explicit operator bool() const { return bool(zk_ptr); }
-		bool operator==(std::nullptr_t) const { return zk_ptr == nullptr; }
-		bool operator!=(std::nullptr_t) const { return !(*this == nullptr); }
+		explicit operator bool() const
+		{
+			return bool(zk_ptr);
+		}
+		bool operator==(std::nullptr_t) const
+		{
+			return zk_ptr == nullptr;
+		}
+		bool operator!=(std::nullptr_t) const
+		{
+			return !(*this == nullptr);
+		}
 
 		/// в случае nullptr методы разыменования кидают исключение,
 		/// с более подробным текстом, чем просто nullptr
@@ -73,11 +85,10 @@ private:
 };
 
 template <class... Args>
-void ZooKeeperHolder::init(Args&&... args)
+void ZooKeeperHolder::init(Args &&... args)
 {
 	ptr = std::make_shared<ZooKeeper>(std::forward<Args>(args)...);
 }
 
 using ZooKeeperHolderPtr = std::shared_ptr<ZooKeeperHolder>;
-
 };

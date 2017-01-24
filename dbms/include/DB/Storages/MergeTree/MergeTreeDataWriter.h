@@ -1,7 +1,7 @@
 #pragma once
 
-#include <DB/IO/WriteBufferFromFile.h>
 #include <DB/IO/CompressedWriteBuffer.h>
+#include <DB/IO/WriteBufferFromFile.h>
 
 #include <DB/Columns/ColumnsNumber.h>
 
@@ -12,7 +12,6 @@
 
 namespace DB
 {
-
 struct BlockWithDateInterval
 {
 	Block block;
@@ -21,7 +20,9 @@ struct BlockWithDateInterval
 
 	BlockWithDateInterval() = default;
 	BlockWithDateInterval(const Block & block_, UInt16 min_date_, UInt16 max_date_)
-		: block(block_), min_date(min_date_), max_date(max_date_) {}
+		: block(block_), min_date(min_date_), max_date(max_date_)
+	{
+	}
 
 	void updateDates(UInt16 date)
 	{
@@ -40,7 +41,9 @@ using BlocksWithDateIntervals = std::list<BlockWithDateInterval>;
 class MergeTreeDataWriter
 {
 public:
-	MergeTreeDataWriter(MergeTreeData & data_) : data(data_), log(&Logger::get(data.getLogName() + " (Writer)")) {}
+	MergeTreeDataWriter(MergeTreeData & data_) : data(data_), log(&Logger::get(data.getLogName() + " (Writer)"))
+	{
+	}
 
 	/** Split the block to blocks, each of them must be written as separate part.
 	  *  (split rows by months)
@@ -59,5 +62,4 @@ private:
 
 	Logger * log;
 };
-
 }

@@ -4,25 +4,26 @@
 #include <DB/DataStreams/IProfilingBlockInputStream.h>
 #include <DB/Dictionaries/ExternalResultDescription.h>
 
+#include <Poco/Data/RecordSet.h>
 #include <Poco/Data/Session.h>
 #include <Poco/Data/Statement.h>
-#include <Poco/Data/RecordSet.h>
 
 #include <string>
 
 
 namespace DB
 {
-
 /// Allows processing results of a query to ODBC source as a sequence of Blocks, simplifies chaining
 class ODBCBlockInputStream final : public IProfilingBlockInputStream
 {
 public:
 	ODBCBlockInputStream(
-		Poco::Data::Session && session, const std::string & query_str, const Block & sample_block,
-		const std::size_t max_block_size);
+		Poco::Data::Session && session, const std::string & query_str, const Block & sample_block, const std::size_t max_block_size);
 
-	String getName() const override { return "ODBC"; }
+	String getName() const override
+	{
+		return "ODBC";
+	}
 
 	String getID() const override;
 
@@ -42,5 +43,4 @@ private:
 	const std::size_t max_block_size;
 	ExternalResultDescription description;
 };
-
 }

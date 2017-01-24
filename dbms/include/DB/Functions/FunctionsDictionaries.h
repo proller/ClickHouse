@@ -1,39 +1,38 @@
 #pragma once
 
-#include <DB/DataTypes/DataTypesNumberFixed.h>
 #include <DB/DataTypes/DataTypeArray.h>
-#include <DB/DataTypes/DataTypeString.h>
 #include <DB/DataTypes/DataTypeDate.h>
 #include <DB/DataTypes/DataTypeDateTime.h>
+#include <DB/DataTypes/DataTypeString.h>
 #include <DB/DataTypes/DataTypeTuple.h>
+#include <DB/DataTypes/DataTypesNumberFixed.h>
 
-#include <DB/Columns/ColumnVector.h>
 #include <DB/Columns/ColumnArray.h>
 #include <DB/Columns/ColumnString.h>
 #include <DB/Columns/ColumnTuple.h>
+#include <DB/Columns/ColumnVector.h>
 
 #include <DB/Interpreters/Context.h>
 #include <DB/Interpreters/EmbeddedDictionaries.h>
 #include <DB/Interpreters/ExternalDictionaries.h>
 
-#include <DB/Functions/IFunction.h>
-#include <DB/Dictionaries/Embedded/RegionsHierarchy.h>
+#include <DB/Dictionaries/CacheDictionary.h>
+#include <DB/Dictionaries/ComplexKeyCacheDictionary.h>
+#include <DB/Dictionaries/ComplexKeyHashedDictionary.h>
 #include <DB/Dictionaries/Embedded/RegionsHierarchies.h>
+#include <DB/Dictionaries/Embedded/RegionsHierarchy.h>
 #include <DB/Dictionaries/Embedded/RegionsNames.h>
 #include <DB/Dictionaries/Embedded/TechDataHierarchy.h>
 #include <DB/Dictionaries/FlatDictionary.h>
 #include <DB/Dictionaries/HashedDictionary.h>
-#include <DB/Dictionaries/CacheDictionary.h>
-#include <DB/Dictionaries/ComplexKeyHashedDictionary.h>
-#include <DB/Dictionaries/ComplexKeyCacheDictionary.h>
 #include <DB/Dictionaries/RangeHashedDictionary.h>
+#include <DB/Functions/IFunction.h>
 
 #include <ext/range.hpp>
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int DICTIONARIES_WAS_NOT_LOADED;
@@ -75,77 +74,122 @@ namespace ErrorCodes
 
 struct RegionToCityImpl
 {
-	static UInt32 apply(UInt32 x, const RegionsHierarchy & hierarchy) { return hierarchy.toCity(x); }
+	static UInt32 apply(UInt32 x, const RegionsHierarchy & hierarchy)
+	{
+		return hierarchy.toCity(x);
+	}
 };
 
 struct RegionToAreaImpl
 {
-	static UInt32 apply(UInt32 x, const RegionsHierarchy & hierarchy) { return hierarchy.toArea(x); }
+	static UInt32 apply(UInt32 x, const RegionsHierarchy & hierarchy)
+	{
+		return hierarchy.toArea(x);
+	}
 };
 
 struct RegionToDistrictImpl
 {
-	static UInt32 apply(UInt32 x, const RegionsHierarchy & hierarchy) { return hierarchy.toDistrict(x); }
+	static UInt32 apply(UInt32 x, const RegionsHierarchy & hierarchy)
+	{
+		return hierarchy.toDistrict(x);
+	}
 };
 
 struct RegionToCountryImpl
 {
-	static UInt32 apply(UInt32 x, const RegionsHierarchy & hierarchy) { return hierarchy.toCountry(x); }
+	static UInt32 apply(UInt32 x, const RegionsHierarchy & hierarchy)
+	{
+		return hierarchy.toCountry(x);
+	}
 };
 
 struct RegionToContinentImpl
 {
-	static UInt32 apply(UInt32 x, const RegionsHierarchy & hierarchy) { return hierarchy.toContinent(x); }
+	static UInt32 apply(UInt32 x, const RegionsHierarchy & hierarchy)
+	{
+		return hierarchy.toContinent(x);
+	}
 };
 
 struct RegionToTopContinentImpl
 {
-	static UInt32 apply(UInt32 x, const RegionsHierarchy & hierarchy) { return hierarchy.toTopContinent(x); }
+	static UInt32 apply(UInt32 x, const RegionsHierarchy & hierarchy)
+	{
+		return hierarchy.toTopContinent(x);
+	}
 };
 
 struct RegionToPopulationImpl
 {
-	static UInt32 apply(UInt32 x, const RegionsHierarchy & hierarchy) { return hierarchy.getPopulation(x); }
+	static UInt32 apply(UInt32 x, const RegionsHierarchy & hierarchy)
+	{
+		return hierarchy.getPopulation(x);
+	}
 };
 
 struct OSToRootImpl
 {
-	static UInt8 apply(UInt8 x, const TechDataHierarchy & hierarchy) { return hierarchy.OSToMostAncestor(x); }
+	static UInt8 apply(UInt8 x, const TechDataHierarchy & hierarchy)
+	{
+		return hierarchy.OSToMostAncestor(x);
+	}
 };
 
 struct SEToRootImpl
 {
-	static UInt8 apply(UInt8 x, const TechDataHierarchy & hierarchy) { return hierarchy.SEToMostAncestor(x); }
+	static UInt8 apply(UInt8 x, const TechDataHierarchy & hierarchy)
+	{
+		return hierarchy.SEToMostAncestor(x);
+	}
 };
 
 struct RegionInImpl
 {
-	static bool apply(UInt32 x, UInt32 y, const RegionsHierarchy & hierarchy) { return hierarchy.in(x, y); }
+	static bool apply(UInt32 x, UInt32 y, const RegionsHierarchy & hierarchy)
+	{
+		return hierarchy.in(x, y);
+	}
 };
 
 struct OSInImpl
 {
-	static bool apply(UInt32 x, UInt32 y, const TechDataHierarchy & hierarchy) { return hierarchy.isOSIn(x, y); }
+	static bool apply(UInt32 x, UInt32 y, const TechDataHierarchy & hierarchy)
+	{
+		return hierarchy.isOSIn(x, y);
+	}
 };
 
 struct SEInImpl
 {
-	static bool apply(UInt32 x, UInt32 y, const TechDataHierarchy & hierarchy) { return hierarchy.isSEIn(x, y); }
+	static bool apply(UInt32 x, UInt32 y, const TechDataHierarchy & hierarchy)
+	{
+		return hierarchy.isSEIn(x, y);
+	}
 };
 
 struct RegionHierarchyImpl
 {
-	static UInt32 toParent(UInt32 x, const RegionsHierarchy & hierarchy) { return hierarchy.toParent(x); }
+	static UInt32 toParent(UInt32 x, const RegionsHierarchy & hierarchy)
+	{
+		return hierarchy.toParent(x);
+	}
 };
 
 struct OSHierarchyImpl
 {
-	static UInt8 toParent(UInt8 x, const TechDataHierarchy & hierarchy) { return hierarchy.OSToParent(x); }
+	static UInt8 toParent(UInt8 x, const TechDataHierarchy & hierarchy)
+	{
+		return hierarchy.OSToParent(x);
+	}
 };
 
 struct SEHierarchyImpl
 {
-	static UInt8 toParent(UInt8 x, const TechDataHierarchy & hierarchy) { return hierarchy.SEToParent(x); }
+	static UInt8 toParent(UInt8 x, const TechDataHierarchy & hierarchy)
+	{
+		return hierarchy.SEToParent(x);
+	}
 };
 
 
@@ -194,8 +238,7 @@ private:
 	const std::shared_ptr<typename DictGetter::Src> owned_dict;
 
 public:
-	FunctionTransformWithDictionary(const std::shared_ptr<typename DictGetter::Src> & owned_dict_)
-		: owned_dict(owned_dict_)
+	FunctionTransformWithDictionary(const std::shared_ptr<typename DictGetter::Src> & owned_dict_) : owned_dict(owned_dict_)
 	{
 		if (!owned_dict)
 			throw Exception("Dictionaries was not loaded. You need to check configuration file.", ErrorCodes::DICTIONARIES_WAS_NOT_LOADED);
@@ -207,25 +250,34 @@ public:
 		return name;
 	}
 
-	bool isVariadic() const override { return true; }
-	size_t getNumberOfArguments() const override { return 0; }
+	bool isVariadic() const override
+	{
+		return true;
+	}
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
 		if (arguments.size() != 1 && arguments.size() != 2)
-			throw Exception("Number of arguments for function " + getName() + " doesn't match: passed "
-				+ toString(arguments.size()) + ", should be 1 or 2.",
+			throw Exception("Number of arguments for function " + getName() + " doesn't match: passed " + toString(arguments.size())
+					+ ", should be 1 or 2.",
 				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
 		if (arguments[0]->getName() != TypeName<T>::get())
-			throw Exception("Illegal type " + arguments[0]->getName() + " of argument of function " + getName()
-				+ " (must be " + TypeName<T>::get() + ")",
+			throw Exception("Illegal type " + arguments[0]->getName() + " of argument of function " + getName() + " (must be "
+					+ TypeName<T>::get()
+					+ ")",
 				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 		if (arguments.size() == 2 && arguments[1]->getName() != TypeName<String>::get())
 			throw Exception("Illegal type " + arguments[1]->getName() + " of the second ('point of view') argument of function " + getName()
-				+ " (must be " + TypeName<String>::get() + ")",
+					+ " (must be "
+					+ TypeName<String>::get()
+					+ ")",
 				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 		return arguments[0];
@@ -243,8 +295,9 @@ public:
 
 			if (!key_col)
 				throw Exception("Illegal column " + block.safeGetByPosition(arguments[1]).column->getName()
-					+ " of second ('point of view') argument of function " + name
-					+ ". Must be constant string.",
+						+ " of second ('point of view') argument of function "
+						+ name
+						+ ". Must be constant string.",
 					ErrorCodes::ILLEGAL_COLUMN);
 
 			dict_key = key_col->getData();
@@ -267,12 +320,12 @@ public:
 		}
 		else if (const ColumnConst<T> * col_from = typeid_cast<const ColumnConst<T> *>(block.safeGetByPosition(arguments[0]).column.get()))
 		{
-			block.safeGetByPosition(result).column = std::make_shared<ColumnConst<T>>(
-				col_from->size(), Transform::apply(col_from->getData(), dict));
+			block.safeGetByPosition(result).column
+				= std::make_shared<ColumnConst<T>>(col_from->size(), Transform::apply(col_from->getData(), dict));
 		}
 		else
-			throw Exception("Illegal column " + block.safeGetByPosition(arguments[0]).column->getName()
-					+ " of first argument of function " + name,
+			throw Exception(
+				"Illegal column " + block.safeGetByPosition(arguments[0]).column->getName() + " of first argument of function " + name,
 				ErrorCodes::ILLEGAL_COLUMN);
 	}
 };
@@ -290,8 +343,7 @@ private:
 	const std::shared_ptr<typename DictGetter::Src> owned_dict;
 
 public:
-	FunctionIsInWithDictionary(const std::shared_ptr<typename DictGetter::Src> & owned_dict_)
-		: owned_dict(owned_dict_)
+	FunctionIsInWithDictionary(const std::shared_ptr<typename DictGetter::Src> & owned_dict_) : owned_dict(owned_dict_)
 	{
 		if (!owned_dict)
 			throw Exception("Dictionaries was not loaded. You need to check configuration file.", ErrorCodes::DICTIONARIES_WAS_NOT_LOADED);
@@ -303,30 +355,40 @@ public:
 		return name;
 	}
 
-	bool isVariadic() const override { return true; }
-	size_t getNumberOfArguments() const override { return 0; }
+	bool isVariadic() const override
+	{
+		return true;
+	}
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
 		if (arguments.size() != 2 && arguments.size() != 3)
-			throw Exception("Number of arguments for function " + getName() + " doesn't match: passed "
-				+ toString(arguments.size()) + ", should be 2 or 3.",
+			throw Exception("Number of arguments for function " + getName() + " doesn't match: passed " + toString(arguments.size())
+					+ ", should be 2 or 3.",
 				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
 		if (arguments[0]->getName() != TypeName<T>::get())
-			throw Exception("Illegal type " + arguments[0]->getName() + " of first argument of function " + getName()
-				+ " (must be " + TypeName<T>::get() + ")",
+			throw Exception("Illegal type " + arguments[0]->getName() + " of first argument of function " + getName() + " (must be "
+					+ TypeName<T>::get()
+					+ ")",
 				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 		if (arguments[1]->getName() != TypeName<T>::get())
-			throw Exception("Illegal type " + arguments[1]->getName() + " of second argument of function " + getName()
-				+ " (must be " + TypeName<T>::get() + ")",
+			throw Exception("Illegal type " + arguments[1]->getName() + " of second argument of function " + getName() + " (must be "
+					+ TypeName<T>::get()
+					+ ")",
 				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 		if (arguments.size() == 3 && arguments[2]->getName() != TypeName<String>::get())
 			throw Exception("Illegal type " + arguments[2]->getName() + " of the third ('point of view') argument of function " + getName()
-				+ " (must be " + TypeName<String>::get() + ")",
+					+ " (must be "
+					+ TypeName<String>::get()
+					+ ")",
 				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 		return std::make_shared<DataTypeUInt8>();
@@ -344,9 +406,10 @@ public:
 
 			if (!key_col)
 				throw Exception("Illegal column " + block.safeGetByPosition(arguments[2]).column->getName()
-				+ " of third ('point of view') argument of function " + name
-				+ ". Must be constant string.",
-				ErrorCodes::ILLEGAL_COLUMN);
+						+ " of third ('point of view') argument of function "
+						+ name
+						+ ". Must be constant string.",
+					ErrorCodes::ILLEGAL_COLUMN);
 
 			dict_key = key_col->getData();
 		}
@@ -402,13 +465,14 @@ public:
 		}
 		else if (col_const1 && col_const2)
 		{
-			block.safeGetByPosition(result).column = std::make_shared<ColumnConst<UInt8>>(col_const1->size(),
-				Transform::apply(col_const1->getData(), col_const2->getData(), dict));
+			block.safeGetByPosition(result).column = std::make_shared<ColumnConst<UInt8>>(
+				col_const1->size(), Transform::apply(col_const1->getData(), col_const2->getData(), dict));
 		}
 		else
-			throw Exception("Illegal columns " + block.safeGetByPosition(arguments[0]).column->getName()
-					+ " and " + block.safeGetByPosition(arguments[1]).column->getName()
-					+ " of arguments of function " + name,
+			throw Exception("Illegal columns " + block.safeGetByPosition(arguments[0]).column->getName() + " and "
+					+ block.safeGetByPosition(arguments[1]).column->getName()
+					+ " of arguments of function "
+					+ name,
 				ErrorCodes::ILLEGAL_COLUMN);
 	}
 };
@@ -426,8 +490,7 @@ private:
 	const std::shared_ptr<typename DictGetter::Src> owned_dict;
 
 public:
-	FunctionHierarchyWithDictionary(const std::shared_ptr<typename DictGetter::Src> & owned_dict_)
-	: owned_dict(owned_dict_)
+	FunctionHierarchyWithDictionary(const std::shared_ptr<typename DictGetter::Src> & owned_dict_) : owned_dict(owned_dict_)
 	{
 		if (!owned_dict)
 			throw Exception("Dictionaries was not loaded. You need to check configuration file.", ErrorCodes::DICTIONARIES_WAS_NOT_LOADED);
@@ -439,25 +502,34 @@ public:
 		return name;
 	}
 
-	bool isVariadic() const override { return true; }
-	size_t getNumberOfArguments() const override { return 0; }
+	bool isVariadic() const override
+	{
+		return true;
+	}
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
 		if (arguments.size() != 1 && arguments.size() != 2)
-			throw Exception("Number of arguments for function " + getName() + " doesn't match: passed "
-				+ toString(arguments.size()) + ", should be 1 or 2.",
+			throw Exception("Number of arguments for function " + getName() + " doesn't match: passed " + toString(arguments.size())
+					+ ", should be 1 or 2.",
 				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
 		if (arguments[0]->getName() != TypeName<T>::get())
-			throw Exception("Illegal type " + arguments[0]->getName() + " of argument of function " + getName()
-			+ " (must be " + TypeName<T>::get() + ")",
-			ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+			throw Exception("Illegal type " + arguments[0]->getName() + " of argument of function " + getName() + " (must be "
+					+ TypeName<T>::get()
+					+ ")",
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 		if (arguments.size() == 2 && arguments[1]->getName() != TypeName<String>::get())
 			throw Exception("Illegal type " + arguments[1]->getName() + " of the second ('point of view') argument of function " + getName()
-				+ " (must be " + TypeName<String>::get() + ")",
+					+ " (must be "
+					+ TypeName<String>::get()
+					+ ")",
 				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 		return std::make_shared<DataTypeArray>(arguments[0]);
@@ -475,9 +547,10 @@ public:
 
 			if (!key_col)
 				throw Exception("Illegal column " + block.safeGetByPosition(arguments[1]).column->getName()
-				+ " of second ('point of view') argument of function " + name
-				+ ". Must be constant string.",
-				ErrorCodes::ILLEGAL_COLUMN);
+						+ " of second ('point of view') argument of function "
+						+ name
+						+ ". Must be constant string.",
+					ErrorCodes::ILLEGAL_COLUMN);
 
 			dict_key = key_col->getData();
 		}
@@ -521,39 +594,81 @@ public:
 			}
 
 			block.safeGetByPosition(result).column = std::make_shared<ColumnConstArray>(
-				col_from->size(),
-				res,
-				std::make_shared<DataTypeArray>(std::make_shared<typename DataTypeFromFieldType<T>::Type>()));
+				col_from->size(), res, std::make_shared<DataTypeArray>(std::make_shared<typename DataTypeFromFieldType<T>::Type>()));
 		}
 		else
-			throw Exception("Illegal column " + block.safeGetByPosition(arguments[0]).column->getName()
-			+ " of first argument of function " + name,
-							ErrorCodes::ILLEGAL_COLUMN);
+			throw Exception(
+				"Illegal column " + block.safeGetByPosition(arguments[0]).column->getName() + " of first argument of function " + name,
+				ErrorCodes::ILLEGAL_COLUMN);
 	}
 };
 
 
-struct NameRegionToCity				{ static constexpr auto name = "regionToCity"; };
-struct NameRegionToArea				{ static constexpr auto name = "regionToArea"; };
-struct NameRegionToDistrict			{ static constexpr auto name = "regionToDistrict"; };
-struct NameRegionToCountry			{ static constexpr auto name = "regionToCountry"; };
-struct NameRegionToContinent		{ static constexpr auto name = "regionToContinent"; };
-struct NameRegionToTopContinent		{ static constexpr auto name = "regionToTopContinent"; };
-struct NameRegionToPopulation		{ static constexpr auto name = "regionToPopulation"; };
-struct NameOSToRoot					{ static constexpr auto name = "OSToRoot"; };
-struct NameSEToRoot					{ static constexpr auto name = "SEToRoot"; };
+struct NameRegionToCity
+{
+	static constexpr auto name = "regionToCity";
+};
+struct NameRegionToArea
+{
+	static constexpr auto name = "regionToArea";
+};
+struct NameRegionToDistrict
+{
+	static constexpr auto name = "regionToDistrict";
+};
+struct NameRegionToCountry
+{
+	static constexpr auto name = "regionToCountry";
+};
+struct NameRegionToContinent
+{
+	static constexpr auto name = "regionToContinent";
+};
+struct NameRegionToTopContinent
+{
+	static constexpr auto name = "regionToTopContinent";
+};
+struct NameRegionToPopulation
+{
+	static constexpr auto name = "regionToPopulation";
+};
+struct NameOSToRoot
+{
+	static constexpr auto name = "OSToRoot";
+};
+struct NameSEToRoot
+{
+	static constexpr auto name = "SEToRoot";
+};
 
-struct NameRegionIn					{ static constexpr auto name = "regionIn"; };
-struct NameOSIn						{ static constexpr auto name = "OSIn"; };
-struct NameSEIn						{ static constexpr auto name = "SEIn"; };
+struct NameRegionIn
+{
+	static constexpr auto name = "regionIn";
+};
+struct NameOSIn
+{
+	static constexpr auto name = "OSIn";
+};
+struct NameSEIn
+{
+	static constexpr auto name = "SEIn";
+};
 
-struct NameRegionHierarchy			{ static constexpr auto name = "regionHierarchy"; };
-struct NameOSHierarchy				{ static constexpr auto name = "OSHierarchy"; };
-struct NameSEHierarchy				{ static constexpr auto name = "SEHierarchy"; };
+struct NameRegionHierarchy
+{
+	static constexpr auto name = "regionHierarchy";
+};
+struct NameOSHierarchy
+{
+	static constexpr auto name = "OSHierarchy";
+};
+struct NameSEHierarchy
+{
+	static constexpr auto name = "SEHierarchy";
+};
 
 
-struct FunctionRegionToCity :
-	public FunctionTransformWithDictionary<UInt32, RegionToCityImpl,	RegionsHierarchyGetter,	NameRegionToCity>
+struct FunctionRegionToCity : public FunctionTransformWithDictionary<UInt32, RegionToCityImpl, RegionsHierarchyGetter, NameRegionToCity>
 {
 	static FunctionPtr create(const Context & context)
 	{
@@ -561,8 +676,7 @@ struct FunctionRegionToCity :
 	}
 };
 
-struct FunctionRegionToArea :
-	public FunctionTransformWithDictionary<UInt32, RegionToAreaImpl,	RegionsHierarchyGetter,	NameRegionToArea>
+struct FunctionRegionToArea : public FunctionTransformWithDictionary<UInt32, RegionToAreaImpl, RegionsHierarchyGetter, NameRegionToArea>
 {
 	static FunctionPtr create(const Context & context)
 	{
@@ -570,8 +684,8 @@ struct FunctionRegionToArea :
 	}
 };
 
-struct FunctionRegionToDistrict :
-	public FunctionTransformWithDictionary<UInt32, RegionToDistrictImpl, RegionsHierarchyGetter, NameRegionToDistrict>
+struct FunctionRegionToDistrict
+	: public FunctionTransformWithDictionary<UInt32, RegionToDistrictImpl, RegionsHierarchyGetter, NameRegionToDistrict>
 {
 	static FunctionPtr create(const Context & context)
 	{
@@ -579,8 +693,8 @@ struct FunctionRegionToDistrict :
 	}
 };
 
-struct FunctionRegionToCountry :
-	public FunctionTransformWithDictionary<UInt32, RegionToCountryImpl, RegionsHierarchyGetter, NameRegionToCountry>
+struct FunctionRegionToCountry
+	: public FunctionTransformWithDictionary<UInt32, RegionToCountryImpl, RegionsHierarchyGetter, NameRegionToCountry>
 {
 	static FunctionPtr create(const Context & context)
 	{
@@ -588,8 +702,8 @@ struct FunctionRegionToCountry :
 	}
 };
 
-struct FunctionRegionToContinent :
-	public FunctionTransformWithDictionary<UInt32, RegionToContinentImpl, RegionsHierarchyGetter, NameRegionToContinent>
+struct FunctionRegionToContinent
+	: public FunctionTransformWithDictionary<UInt32, RegionToContinentImpl, RegionsHierarchyGetter, NameRegionToContinent>
 {
 	static FunctionPtr create(const Context & context)
 	{
@@ -597,8 +711,8 @@ struct FunctionRegionToContinent :
 	}
 };
 
-struct FunctionRegionToTopContinent :
-	public FunctionTransformWithDictionary<UInt32, RegionToTopContinentImpl, RegionsHierarchyGetter, NameRegionToTopContinent>
+struct FunctionRegionToTopContinent
+	: public FunctionTransformWithDictionary<UInt32, RegionToTopContinentImpl, RegionsHierarchyGetter, NameRegionToTopContinent>
 {
 	static FunctionPtr create(const Context & context)
 	{
@@ -606,8 +720,8 @@ struct FunctionRegionToTopContinent :
 	}
 };
 
-struct FunctionRegionToPopulation :
-	public FunctionTransformWithDictionary<UInt32, RegionToPopulationImpl, RegionsHierarchyGetter, NameRegionToPopulation>
+struct FunctionRegionToPopulation
+	: public FunctionTransformWithDictionary<UInt32, RegionToPopulationImpl, RegionsHierarchyGetter, NameRegionToPopulation>
 {
 	static FunctionPtr create(const Context & context)
 	{
@@ -615,8 +729,8 @@ struct FunctionRegionToPopulation :
 	}
 };
 
-struct FunctionOSToRoot :
-	public FunctionTransformWithDictionary<UInt8, OSToRootImpl, IdentityDictionaryGetter<TechDataHierarchy>, NameOSToRoot>
+struct FunctionOSToRoot
+	: public FunctionTransformWithDictionary<UInt8, OSToRootImpl, IdentityDictionaryGetter<TechDataHierarchy>, NameOSToRoot>
 {
 	static FunctionPtr create(const Context & context)
 	{
@@ -624,8 +738,8 @@ struct FunctionOSToRoot :
 	}
 };
 
-struct FunctionSEToRoot :
-	public FunctionTransformWithDictionary<UInt8, SEToRootImpl, IdentityDictionaryGetter<TechDataHierarchy>, NameSEToRoot>
+struct FunctionSEToRoot
+	: public FunctionTransformWithDictionary<UInt8, SEToRootImpl, IdentityDictionaryGetter<TechDataHierarchy>, NameSEToRoot>
 {
 	static FunctionPtr create(const Context & context)
 	{
@@ -633,8 +747,7 @@ struct FunctionSEToRoot :
 	}
 };
 
-struct FunctionRegionIn :
-	public FunctionIsInWithDictionary<UInt32, RegionInImpl, RegionsHierarchyGetter,	NameRegionIn>
+struct FunctionRegionIn : public FunctionIsInWithDictionary<UInt32, RegionInImpl, RegionsHierarchyGetter, NameRegionIn>
 {
 	static FunctionPtr create(const Context & context)
 	{
@@ -642,8 +755,7 @@ struct FunctionRegionIn :
 	}
 };
 
-struct FunctionOSIn :
-	public FunctionIsInWithDictionary<UInt8,	OSInImpl, IdentityDictionaryGetter<TechDataHierarchy>, NameOSIn>
+struct FunctionOSIn : public FunctionIsInWithDictionary<UInt8, OSInImpl, IdentityDictionaryGetter<TechDataHierarchy>, NameOSIn>
 {
 	static FunctionPtr create(const Context & context)
 	{
@@ -651,8 +763,7 @@ struct FunctionOSIn :
 	}
 };
 
-struct FunctionSEIn :
-	public FunctionIsInWithDictionary<UInt8,	SEInImpl, IdentityDictionaryGetter<TechDataHierarchy>, NameSEIn>
+struct FunctionSEIn : public FunctionIsInWithDictionary<UInt8, SEInImpl, IdentityDictionaryGetter<TechDataHierarchy>, NameSEIn>
 {
 	static FunctionPtr create(const Context & context)
 	{
@@ -660,8 +771,8 @@ struct FunctionSEIn :
 	}
 };
 
-struct FunctionRegionHierarchy :
-	public FunctionHierarchyWithDictionary<UInt32, RegionHierarchyImpl, RegionsHierarchyGetter, NameRegionHierarchy>
+struct FunctionRegionHierarchy
+	: public FunctionHierarchyWithDictionary<UInt32, RegionHierarchyImpl, RegionsHierarchyGetter, NameRegionHierarchy>
 {
 	static FunctionPtr create(const Context & context)
 	{
@@ -669,8 +780,8 @@ struct FunctionRegionHierarchy :
 	}
 };
 
-struct FunctionOSHierarchy :
-	public FunctionHierarchyWithDictionary<UInt8, OSHierarchyImpl, IdentityDictionaryGetter<TechDataHierarchy>, NameOSHierarchy>
+struct FunctionOSHierarchy
+	: public FunctionHierarchyWithDictionary<UInt8, OSHierarchyImpl, IdentityDictionaryGetter<TechDataHierarchy>, NameOSHierarchy>
 {
 	static FunctionPtr create(const Context & context)
 	{
@@ -678,8 +789,8 @@ struct FunctionOSHierarchy :
 	}
 };
 
-struct FunctionSEHierarchy :
-	public FunctionHierarchyWithDictionary<UInt8, SEHierarchyImpl, IdentityDictionaryGetter<TechDataHierarchy>, NameSEHierarchy>
+struct FunctionSEHierarchy
+	: public FunctionHierarchyWithDictionary<UInt8, SEHierarchyImpl, IdentityDictionaryGetter<TechDataHierarchy>, NameSEHierarchy>
 {
 	static FunctionPtr create(const Context & context)
 	{
@@ -702,8 +813,7 @@ private:
 	const std::shared_ptr<RegionsNames> owned_dict;
 
 public:
-	FunctionRegionToName(const std::shared_ptr<RegionsNames> & owned_dict_)
-		: owned_dict(owned_dict_)
+	FunctionRegionToName(const std::shared_ptr<RegionsNames> & owned_dict_) : owned_dict(owned_dict_)
 	{
 		if (!owned_dict)
 			throw Exception("Dictionaries was not loaded. You need to check configuration file.", ErrorCodes::DICTIONARIES_WAS_NOT_LOADED);
@@ -715,29 +825,40 @@ public:
 		return name;
 	}
 
-	bool isVariadic() const override { return true; }
-	size_t getNumberOfArguments() const override { return 0; }
+	bool isVariadic() const override
+	{
+		return true;
+	}
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 
 	/// For the purpose of query optimization, we assume this function to be injective
 	///  even in face of fact that there are many different cities named Moscow.
-	bool isInjective(const Block &) override { return true; }
+	bool isInjective(const Block &) override
+	{
+		return true;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
 		if (arguments.size() != 1 && arguments.size() != 2)
-			throw Exception("Number of arguments for function " + getName() + " doesn't match: passed "
-				+ toString(arguments.size()) + ", should be 1 or 2.",
+			throw Exception("Number of arguments for function " + getName() + " doesn't match: passed " + toString(arguments.size())
+					+ ", should be 1 or 2.",
 				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
 		if (arguments[0]->getName() != TypeName<UInt32>::get())
-			throw Exception("Illegal type " + arguments[0]->getName() + " of the first argument of function " + getName()
-				+ " (must be " + TypeName<UInt32>::get() + ")",
+			throw Exception("Illegal type " + arguments[0]->getName() + " of the first argument of function " + getName() + " (must be "
+					+ TypeName<UInt32>::get()
+					+ ")",
 				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 		if (arguments.size() == 2 && arguments[1]->getName() != TypeName<String>::get())
-			throw Exception("Illegal type " + arguments[0]->getName() + " of the second argument of function " + getName()
-				+ " (must be " + TypeName<String>::get() + ")",
+			throw Exception("Illegal type " + arguments[0]->getName() + " of the second argument of function " + getName() + " (must be "
+					+ TypeName<String>::get()
+					+ ")",
 				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 		return std::make_shared<DataTypeString>();
@@ -751,11 +872,13 @@ public:
 		/// Если указан язык результата
 		if (arguments.size() == 2)
 		{
-			if (const ColumnConstString * col_language = typeid_cast<const ColumnConstString *>(block.safeGetByPosition(arguments[1]).column.get()))
+			if (const ColumnConstString * col_language
+				= typeid_cast<const ColumnConstString *>(block.safeGetByPosition(arguments[1]).column.get()))
 				language = RegionsNames::getLanguageEnum(col_language->getData());
 			else
 				throw Exception("Illegal column " + block.safeGetByPosition(arguments[1]).column->getName()
-						+ " of the second argument of function " + getName(),
+						+ " of the second argument of function "
+						+ getName(),
 					ErrorCodes::ILLEGAL_COLUMN);
 		}
 
@@ -774,7 +897,8 @@ public:
 				col_to->insertDataWithTerminatingZero(name_ref.data, name_ref.size + 1);
 			}
 		}
-		else if (const ColumnConst<UInt32> * col_from = typeid_cast<const ColumnConst<UInt32> *>(block.safeGetByPosition(arguments[0]).column.get()))
+		else if (const ColumnConst<UInt32> * col_from
+			= typeid_cast<const ColumnConst<UInt32> *>(block.safeGetByPosition(arguments[0]).column.get()))
 		{
 			UInt32 region_id = col_from->getData();
 			const StringRef & name_ref = dict.getRegionName(region_id, language);
@@ -783,7 +907,8 @@ public:
 		}
 		else
 			throw Exception("Illegal column " + block.safeGetByPosition(arguments[0]).column->getName()
-					+ " of the first argument of function " + getName(),
+					+ " of the first argument of function "
+					+ getName(),
 				ErrorCodes::ILLEGAL_COLUMN);
 	}
 };
@@ -799,27 +924,32 @@ public:
 		return std::make_shared<FunctionDictHas>(context.getExternalDictionaries());
 	}
 
-	FunctionDictHas(const ExternalDictionaries & dictionaries) : dictionaries(dictionaries) {}
+	FunctionDictHas(const ExternalDictionaries & dictionaries) : dictionaries(dictionaries)
+	{
+	}
 
-	String getName() const override { return name; }
+	String getName() const override
+	{
+		return name;
+	}
 
 private:
-	size_t getNumberOfArguments() const override { return 2; }
+	size_t getNumberOfArguments() const override
+	{
+		return 2;
+	}
 
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
 		if (!typeid_cast<const DataTypeString *>(arguments[0].get()))
-			throw Exception{
-				"Illegal type " + arguments[0]->getName() + " of first argument of function " + getName()
+			throw Exception{ "Illegal type " + arguments[0]->getName() + " of first argument of function " + getName()
 					+ ", expected a string.",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 
-		if (!typeid_cast<const DataTypeUInt64 *>(arguments[1].get()) &&
-			!typeid_cast<const DataTypeTuple *>(arguments[1].get()))
-			throw Exception{
-				"Illegal type " + arguments[1]->getName() + " of second argument of function " + getName()
+		if (!typeid_cast<const DataTypeUInt64 *>(arguments[1].get()) && !typeid_cast<const DataTypeTuple *>(arguments[1].get()))
+			throw Exception{ "Illegal type " + arguments[1]->getName() + " of second argument of function " + getName()
 					+ ", must be UInt64 or tuple(...).",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 
 		return std::make_shared<DataTypeUInt8>();
 	}
@@ -828,21 +958,17 @@ private:
 	{
 		const auto dict_name_col = typeid_cast<const ColumnConst<String> *>(block.safeGetByPosition(arguments[0]).column.get());
 		if (!dict_name_col)
-			throw Exception{
-				"First argument of function " + getName() + " must be a constant string",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "First argument of function " + getName() + " must be a constant string", ErrorCodes::ILLEGAL_COLUMN };
 
 		auto dict = dictionaries.getDictionary(dict_name_col->getData());
 		const auto dict_ptr = dict.get();
 
-		if (!executeDispatchSimple<FlatDictionary>(block, arguments, result, dict_ptr) &&
-			!executeDispatchSimple<HashedDictionary>(block, arguments, result, dict_ptr) &&
-			!executeDispatchSimple<CacheDictionary>(block, arguments, result, dict_ptr) &&
-			!executeDispatchComplex<ComplexKeyHashedDictionary>(block, arguments, result, dict_ptr) &&
-			!executeDispatchComplex<ComplexKeyCacheDictionary>(block, arguments, result, dict_ptr))
-			throw Exception{
-				"Unsupported dictionary type " + dict_ptr->getTypeName(),
-				ErrorCodes::UNKNOWN_TYPE};
+		if (!executeDispatchSimple<FlatDictionary>(block, arguments, result, dict_ptr)
+			&& !executeDispatchSimple<HashedDictionary>(block, arguments, result, dict_ptr)
+			&& !executeDispatchSimple<CacheDictionary>(block, arguments, result, dict_ptr)
+			&& !executeDispatchComplex<ComplexKeyHashedDictionary>(block, arguments, result, dict_ptr)
+			&& !executeDispatchComplex<ComplexKeyCacheDictionary>(block, arguments, result, dict_ptr))
+			throw Exception{ "Unsupported dictionary type " + dict_ptr->getTypeName(), ErrorCodes::UNKNOWN_TYPE };
 	}
 
 	template <typename DictionaryType>
@@ -873,9 +999,7 @@ private:
 			block.safeGetByPosition(result).column = std::make_shared<ColumnConst<UInt8>>(id_col->size(), out.front());
 		}
 		else
-			throw Exception{
-				"Second argument of function " + getName() + " must be UInt64",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Second argument of function " + getName() + " must be UInt64", ErrorCodes::ILLEGAL_COLUMN };
 
 		return true;
 	}
@@ -895,9 +1019,9 @@ private:
 			/// Функции у внешних словарей поддерживают только полноценные (не константные) столбцы с ключами.
 			const ColumnPtr key_col_materialized = key_col_with_type.column->convertToFullColumnIfConst();
 
-			const auto key_columns = ext::map<ConstColumnPlainPtrs>(
-				static_cast<const ColumnTuple &>(*key_col_materialized.get()).getColumns(),
-				[](const ColumnPtr & ptr) { return ptr.get(); });
+			const auto key_columns
+				= ext::map<ConstColumnPlainPtrs>(static_cast<const ColumnTuple &>(*key_col_materialized.get()).getColumns(),
+					[](const ColumnPtr & ptr) { return ptr.get(); });
 
 			const auto & key_types = static_cast<const DataTypeTuple &>(*key_col_with_type.type).getElements();
 
@@ -907,9 +1031,8 @@ private:
 			dict->has(key_columns, key_types, out->getData());
 		}
 		else
-			throw Exception{
-				"Second argument of function " + getName() + " must be " + dict->getKeyDescription(),
-				ErrorCodes::TYPE_MISMATCH};
+			throw Exception{ "Second argument of function " + getName() + " must be " + dict->getKeyDescription(),
+				ErrorCodes::TYPE_MISMATCH };
 
 		return true;
 	}
@@ -921,19 +1044,15 @@ private:
 static bool isDictGetFunctionInjective(const ExternalDictionaries & dictionaries, const Block & sample_block)
 {
 	if (sample_block.columns() != 3 && sample_block.columns() != 4)
-		throw Exception{"Function dictGet... takes 3 or 4 arguments", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH};
+		throw Exception{ "Function dictGet... takes 3 or 4 arguments", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH };
 
 	const auto dict_name_col = typeid_cast<const ColumnConst<String> *>(sample_block.getByPosition(0).column.get());
 	if (!dict_name_col)
-		throw Exception{
-			"First argument of function dictGet... must be a constant string",
-			ErrorCodes::ILLEGAL_COLUMN};
+		throw Exception{ "First argument of function dictGet... must be a constant string", ErrorCodes::ILLEGAL_COLUMN };
 
 	const auto attr_name_col = typeid_cast<const ColumnConst<String> *>(sample_block.getByPosition(1).column.get());
 	if (!attr_name_col)
-		throw Exception{
-			"Second argument of function dictGet... must be a constant string",
-			ErrorCodes::ILLEGAL_COLUMN};
+		throw Exception{ "Second argument of function dictGet... must be a constant string", ErrorCodes::ILLEGAL_COLUMN };
 
 	return dictionaries.getDictionary(dict_name_col->getData())->isInjective(attr_name_col->getData());
 }
@@ -949,13 +1068,24 @@ public:
 		return std::make_shared<FunctionDictGetString>(context.getExternalDictionaries());
 	}
 
-	FunctionDictGetString(const ExternalDictionaries & dictionaries) : dictionaries(dictionaries) {}
+	FunctionDictGetString(const ExternalDictionaries & dictionaries) : dictionaries(dictionaries)
+	{
+	}
 
-	String getName() const override { return name; }
+	String getName() const override
+	{
+		return name;
+	}
 
 private:
-	bool isVariadic() const override { return true; }
-	size_t getNumberOfArguments() const override { return 0; }
+	bool isVariadic() const override
+	{
+		return true;
+	}
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 
 	bool isInjective(const Block & sample_block) override
 	{
@@ -965,42 +1095,35 @@ private:
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
 		if (arguments.size() != 3 && arguments.size() != 4)
-			throw Exception{
-				"Number of arguments for function " + getName() + " doesn't match: passed "
-					+ toString(arguments.size()) + ", should be 3 or 4.",
-				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH};
+			throw Exception{ "Number of arguments for function " + getName() + " doesn't match: passed " + toString(arguments.size())
+					+ ", should be 3 or 4.",
+				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH };
 
 		if (!typeid_cast<const DataTypeString *>(arguments[0].get()))
 		{
-			throw Exception{
-				"Illegal type " + arguments[0]->getName() + " of first argument of function " + getName()
+			throw Exception{ "Illegal type " + arguments[0]->getName() + " of first argument of function " + getName()
 					+ ", expected a string.",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 		}
 
 		if (!typeid_cast<const DataTypeString *>(arguments[1].get()))
 		{
-			throw Exception{
-				"Illegal type " + arguments[1]->getName() + " of second argument of function " + getName()
+			throw Exception{ "Illegal type " + arguments[1]->getName() + " of second argument of function " + getName()
 					+ ", expected a string.",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 		}
 
-		if (!typeid_cast<const DataTypeUInt64 *>(arguments[2].get()) &&
-			!typeid_cast<const DataTypeTuple *>(arguments[2].get()))
+		if (!typeid_cast<const DataTypeUInt64 *>(arguments[2].get()) && !typeid_cast<const DataTypeTuple *>(arguments[2].get()))
 		{
-			throw Exception{
-				"Illegal type " + arguments[2]->getName() + " of third argument of function " + getName()
+			throw Exception{ "Illegal type " + arguments[2]->getName() + " of third argument of function " + getName()
 					+ ", must be UInt64 or tuple(...).",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 		}
 
 		if (arguments.size() == 4 && !typeid_cast<const DataTypeDate *>(arguments[3].get()))
 		{
-			throw Exception{
-				"Illegal type " + arguments[3]->getName() + " of fourth argument of function " + getName()
-					+ ", must be Date.",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
+			throw Exception{ "Illegal type " + arguments[3]->getName() + " of fourth argument of function " + getName() + ", must be Date.",
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 		}
 
 		return std::make_shared<DataTypeString>();
@@ -1010,43 +1133,34 @@ private:
 	{
 		const auto dict_name_col = typeid_cast<const ColumnConst<String> *>(block.safeGetByPosition(arguments[0]).column.get());
 		if (!dict_name_col)
-			throw Exception{
-				"First argument of function " + getName() + " must be a constant string",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "First argument of function " + getName() + " must be a constant string", ErrorCodes::ILLEGAL_COLUMN };
 
 		auto dict = dictionaries.getDictionary(dict_name_col->getData());
 		const auto dict_ptr = dict.get();
 
-		if (!executeDispatch<FlatDictionary>(block, arguments, result, dict_ptr) &&
-			!executeDispatch<HashedDictionary>(block, arguments, result, dict_ptr) &&
-			!executeDispatch<CacheDictionary>(block, arguments, result, dict_ptr) &&
-			!executeDispatchComplex<ComplexKeyHashedDictionary>(block, arguments, result, dict_ptr) &&
-			!executeDispatchComplex<ComplexKeyCacheDictionary>(block, arguments, result, dict_ptr) &&
-			!executeDispatchRange<RangeHashedDictionary>(block, arguments, result, dict_ptr))
-			throw Exception{
-				"Unsupported dictionary type " + dict_ptr->getTypeName(),
-				ErrorCodes::UNKNOWN_TYPE};
+		if (!executeDispatch<FlatDictionary>(block, arguments, result, dict_ptr)
+			&& !executeDispatch<HashedDictionary>(block, arguments, result, dict_ptr)
+			&& !executeDispatch<CacheDictionary>(block, arguments, result, dict_ptr)
+			&& !executeDispatchComplex<ComplexKeyHashedDictionary>(block, arguments, result, dict_ptr)
+			&& !executeDispatchComplex<ComplexKeyCacheDictionary>(block, arguments, result, dict_ptr)
+			&& !executeDispatchRange<RangeHashedDictionary>(block, arguments, result, dict_ptr))
+			throw Exception{ "Unsupported dictionary type " + dict_ptr->getTypeName(), ErrorCodes::UNKNOWN_TYPE };
 	}
 
 	template <typename DictionaryType>
-	bool executeDispatch(
-		Block & block, const ColumnNumbers & arguments, const size_t result, const IDictionaryBase * const dictionary)
+	bool executeDispatch(Block & block, const ColumnNumbers & arguments, const size_t result, const IDictionaryBase * const dictionary)
 	{
 		const auto dict = typeid_cast<const DictionaryType *>(dictionary);
 		if (!dict)
 			return false;
 
 		if (arguments.size() != 3)
-			throw Exception{
-				"Function " + getName() + " for dictionary of type " + dict->getTypeName() +
-				" requires exactly 3 arguments",
-				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH};
+			throw Exception{ "Function " + getName() + " for dictionary of type " + dict->getTypeName() + " requires exactly 3 arguments",
+				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH };
 
 		const auto attr_name_col = typeid_cast<const ColumnConst<String> *>(block.safeGetByPosition(arguments[1]).column.get());
 		if (!attr_name_col)
-			throw Exception{
-				"Second argument of function " + getName() + " must be a constant string",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Second argument of function " + getName() + " must be a constant string", ErrorCodes::ILLEGAL_COLUMN };
 
 		const auto & attr_name = attr_name_col->getData();
 
@@ -1063,14 +1177,11 @@ private:
 			auto out = std::make_unique<ColumnString>();
 			dict->getString(attr_name, ids, out.get());
 
-			block.safeGetByPosition(result).column = std::make_shared<ColumnConst<String>>(
-				id_col->size(), out->getDataAt(0).toString());
+			block.safeGetByPosition(result).column = std::make_shared<ColumnConst<String>>(id_col->size(), out->getDataAt(0).toString());
 		}
 		else
 		{
-			throw Exception{
-				"Third argument of function " + getName() + " must be UInt64",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Third argument of function " + getName() + " must be UInt64", ErrorCodes::ILLEGAL_COLUMN };
 		}
 
 		return true;
@@ -1085,16 +1196,12 @@ private:
 			return false;
 
 		if (arguments.size() != 3)
-			throw Exception{
-				"Function " + getName() + " for dictionary of type " + dict->getTypeName() +
-					" requires exactly 3 arguments",
-				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH};
+			throw Exception{ "Function " + getName() + " for dictionary of type " + dict->getTypeName() + " requires exactly 3 arguments",
+				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH };
 
 		const auto attr_name_col = typeid_cast<const ColumnConst<String> *>(block.safeGetByPosition(arguments[1]).column.get());
 		if (!attr_name_col)
-			throw Exception{
-				"Second argument of function " + getName() + " must be a constant string",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Second argument of function " + getName() + " must be a constant string", ErrorCodes::ILLEGAL_COLUMN };
 
 		const auto & attr_name = attr_name_col->getData();
 
@@ -1104,9 +1211,9 @@ private:
 		{
 			const ColumnPtr key_col_materialized = key_col_with_type.column->convertToFullColumnIfConst();
 
-			const auto key_columns = ext::map<ConstColumnPlainPtrs>(
-				static_cast<const ColumnTuple &>(*key_col_materialized.get()).getColumns(),
-				[](const ColumnPtr & ptr) { return ptr.get(); });
+			const auto key_columns
+				= ext::map<ConstColumnPlainPtrs>(static_cast<const ColumnTuple &>(*key_col_materialized.get()).getColumns(),
+					[](const ColumnPtr & ptr) { return ptr.get(); });
 
 			const auto & key_types = static_cast<const DataTypeTuple &>(*key_col_with_type.type).getElements();
 
@@ -1116,32 +1223,26 @@ private:
 			dict->getString(attr_name, key_columns, key_types, out.get());
 		}
 		else
-			throw Exception{
-				"Third argument of function " + getName() + " must be " + dict->getKeyDescription(),
-				ErrorCodes::TYPE_MISMATCH};
+			throw Exception{ "Third argument of function " + getName() + " must be " + dict->getKeyDescription(),
+				ErrorCodes::TYPE_MISMATCH };
 
 		return true;
 	}
 
 	template <typename DictionaryType>
-	bool executeDispatchRange(
-		Block & block, const ColumnNumbers & arguments, const size_t result, const IDictionaryBase * const dictionary)
+	bool executeDispatchRange(Block & block, const ColumnNumbers & arguments, const size_t result, const IDictionaryBase * const dictionary)
 	{
 		const auto dict = typeid_cast<const DictionaryType *>(dictionary);
 		if (!dict)
 			return false;
 
 		if (arguments.size() != 4)
-			throw Exception{
-				"Function " + getName() + " for dictionary of type " + dict->getTypeName() +
-				" requires exactly 4 arguments",
-				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH};
+			throw Exception{ "Function " + getName() + " for dictionary of type " + dict->getTypeName() + " requires exactly 4 arguments",
+				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH };
 
 		const auto attr_name_col = typeid_cast<const ColumnConst<String> *>(block.safeGetByPosition(arguments[1]).column.get());
 		if (!attr_name_col)
-			throw Exception{
-				"Second argument of function " + getName() + " must be a constant string",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Second argument of function " + getName() + " must be a constant string", ErrorCodes::ILLEGAL_COLUMN };
 
 		const auto & attr_name = attr_name_col->getData();
 
@@ -1153,18 +1254,19 @@ private:
 			executeRange(block, result, dict, attr_name, id_col, date_col_untyped);
 		else
 		{
-			throw Exception{
-				"Third argument of function " + getName() + " must be UInt64",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Third argument of function " + getName() + " must be UInt64", ErrorCodes::ILLEGAL_COLUMN };
 		}
 
 		return true;
 	}
 
 	template <typename DictionaryType>
-	void executeRange(
-		Block & block, const size_t result, const DictionaryType * const dictionary, const std::string & attr_name,
-		const ColumnUInt64 * const id_col, const IColumn * const date_col_untyped)
+	void executeRange(Block & block,
+		const size_t result,
+		const DictionaryType * const dictionary,
+		const std::string & attr_name,
+		const ColumnUInt64 * const id_col,
+		const IColumn * const date_col_untyped)
 	{
 		if (const auto date_col = typeid_cast<const ColumnUInt16 *>(date_col_untyped))
 		{
@@ -1182,16 +1284,17 @@ private:
 		}
 		else
 		{
-			throw Exception{
-				"Fourth argument of function " + getName() + " must be Date",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Fourth argument of function " + getName() + " must be Date", ErrorCodes::ILLEGAL_COLUMN };
 		}
 	}
 
 	template <typename DictionaryType>
-	void executeRange(
-		Block & block, const size_t result, const DictionaryType * const dictionary, const std::string & attr_name,
-		const ColumnConst<UInt64> * const id_col, const IColumn * const date_col_untyped)
+	void executeRange(Block & block,
+		const size_t result,
+		const DictionaryType * const dictionary,
+		const std::string & attr_name,
+		const ColumnConst<UInt64> * const id_col,
+		const IColumn * const date_col_untyped)
 	{
 		if (const auto date_col = typeid_cast<const ColumnUInt16 *>(date_col_untyped))
 		{
@@ -1209,14 +1312,11 @@ private:
 			auto out = std::make_unique<ColumnString>();
 			dictionary->getString(attr_name, ids, dates, out.get());
 
-			block.safeGetByPosition(result).column = std::make_shared<ColumnConst<String>>(
-				id_col->size(), out->getDataAt(0).toString());
+			block.safeGetByPosition(result).column = std::make_shared<ColumnConst<String>>(id_col->size(), out->getDataAt(0).toString());
 		}
 		else
 		{
-			throw Exception{
-				"Fourth argument of function " + getName() + " must be Date",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Fourth argument of function " + getName() + " must be Date", ErrorCodes::ILLEGAL_COLUMN };
 		}
 	}
 
@@ -1234,41 +1334,44 @@ public:
 		return std::make_shared<FunctionDictGetStringOrDefault>(context.getExternalDictionaries());
 	}
 
-	FunctionDictGetStringOrDefault(const ExternalDictionaries & dictionaries) : dictionaries(dictionaries) {}
+	FunctionDictGetStringOrDefault(const ExternalDictionaries & dictionaries) : dictionaries(dictionaries)
+	{
+	}
 
-	String getName() const override { return name; }
+	String getName() const override
+	{
+		return name;
+	}
 
 private:
-	size_t getNumberOfArguments() const override { return 4; }
+	size_t getNumberOfArguments() const override
+	{
+		return 4;
+	}
 
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
 		if (!typeid_cast<const DataTypeString *>(arguments[0].get()))
-			throw Exception{
-				"Illegal type " + arguments[0]->getName() + " of first argument of function " + getName() +
-					", expected a string.",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
+			throw Exception{ "Illegal type " + arguments[0]->getName() + " of first argument of function " + getName()
+					+ ", expected a string.",
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 
 		if (!typeid_cast<const DataTypeString *>(arguments[1].get()))
-			throw Exception{
-				"Illegal type " + arguments[1]->getName() + " of second argument of function " + getName() +
-					", expected a string.",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
+			throw Exception{ "Illegal type " + arguments[1]->getName() + " of second argument of function " + getName()
+					+ ", expected a string.",
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 
-		if (!typeid_cast<const DataTypeUInt64 *>(arguments[2].get()) &&
-			!typeid_cast<const DataTypeTuple *>(arguments[2].get()))
+		if (!typeid_cast<const DataTypeUInt64 *>(arguments[2].get()) && !typeid_cast<const DataTypeTuple *>(arguments[2].get()))
 		{
-			throw Exception{
-				"Illegal type " + arguments[2]->getName() + " of third argument of function " + getName()
+			throw Exception{ "Illegal type " + arguments[2]->getName() + " of third argument of function " + getName()
 					+ ", must be UInt64 or tuple(...).",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 		}
 
 		if (!typeid_cast<const DataTypeString *>(arguments[3].get()))
-			throw Exception{
-				"Illegal type " + arguments[3]->getName() + " of fourth argument of function " + getName() +
-					", must be String.",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
+			throw Exception{ "Illegal type " + arguments[3]->getName() + " of fourth argument of function " + getName()
+					+ ", must be String.",
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 
 		return std::make_shared<DataTypeString>();
 	}
@@ -1277,26 +1380,21 @@ private:
 	{
 		const auto dict_name_col = typeid_cast<const ColumnConst<String> *>(block.safeGetByPosition(arguments[0]).column.get());
 		if (!dict_name_col)
-			throw Exception{
-				"First argument of function " + getName() + " must be a constant string",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "First argument of function " + getName() + " must be a constant string", ErrorCodes::ILLEGAL_COLUMN };
 
 		auto dict = dictionaries.getDictionary(dict_name_col->getData());
 		const auto dict_ptr = dict.get();
 
-		if (!executeDispatch<FlatDictionary>(block, arguments, result, dict_ptr) &&
-			!executeDispatch<HashedDictionary>(block, arguments, result, dict_ptr) &&
-			!executeDispatch<CacheDictionary>(block, arguments, result, dict_ptr) &&
-			!executeDispatchComplex<ComplexKeyHashedDictionary>(block, arguments, result, dict_ptr) &&
-			!executeDispatchComplex<ComplexKeyCacheDictionary>(block, arguments, result, dict_ptr))
-			throw Exception{
-				"Unsupported dictionary type " + dict_ptr->getTypeName(),
-				ErrorCodes::UNKNOWN_TYPE};
+		if (!executeDispatch<FlatDictionary>(block, arguments, result, dict_ptr)
+			&& !executeDispatch<HashedDictionary>(block, arguments, result, dict_ptr)
+			&& !executeDispatch<CacheDictionary>(block, arguments, result, dict_ptr)
+			&& !executeDispatchComplex<ComplexKeyHashedDictionary>(block, arguments, result, dict_ptr)
+			&& !executeDispatchComplex<ComplexKeyCacheDictionary>(block, arguments, result, dict_ptr))
+			throw Exception{ "Unsupported dictionary type " + dict_ptr->getTypeName(), ErrorCodes::UNKNOWN_TYPE };
 	}
 
 	template <typename DictionaryType>
-	bool executeDispatch(
-		Block & block, const ColumnNumbers & arguments, const size_t result, const IDictionaryBase * const dictionary)
+	bool executeDispatch(Block & block, const ColumnNumbers & arguments, const size_t result, const IDictionaryBase * const dictionary)
 	{
 		const auto dict = typeid_cast<const DictionaryType *>(dictionary);
 		if (!dict)
@@ -1304,9 +1402,7 @@ private:
 
 		const auto attr_name_col = typeid_cast<const ColumnConst<String> *>(block.safeGetByPosition(arguments[1]).column.get());
 		if (!attr_name_col)
-			throw Exception{
-				"Second argument of function " + getName() + " must be a constant string",
-					ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Second argument of function " + getName() + " must be a constant string", ErrorCodes::ILLEGAL_COLUMN };
 
 		const auto & attr_name = attr_name_col->getData();
 
@@ -1316,17 +1412,18 @@ private:
 		else if (const auto id_col = typeid_cast<const ColumnConst<UInt64> *>(id_col_untyped))
 			executeDispatch(block, arguments, result, dict, attr_name, id_col);
 		else
-			throw Exception{
-				"Third argument of function " + getName() + " must be UInt64",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Third argument of function " + getName() + " must be UInt64", ErrorCodes::ILLEGAL_COLUMN };
 
 		return true;
 	}
 
 	template <typename DictionaryType>
-	void executeDispatch(
-		Block & block, const ColumnNumbers & arguments, const size_t result, const DictionaryType * const dictionary,
-		const std::string & attr_name, const ColumnUInt64 * const id_col)
+	void executeDispatch(Block & block,
+		const ColumnNumbers & arguments,
+		const size_t result,
+		const DictionaryType * const dictionary,
+		const std::string & attr_name,
+		const ColumnUInt64 * const id_col)
 	{
 		const auto default_col_untyped = block.safeGetByPosition(arguments[3]).column.get();
 
@@ -1352,15 +1449,16 @@ private:
 			dictionary->getString(attr_name, ids, def, out.get());
 		}
 		else
-			throw Exception{
-				"Fourth argument of function " + getName() + " must be String",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Fourth argument of function " + getName() + " must be String", ErrorCodes::ILLEGAL_COLUMN };
 	}
 
 	template <typename DictionaryType>
-	void executeDispatch(
-		Block & block, const ColumnNumbers & arguments, const size_t result, const DictionaryType * const dictionary,
-		const std::string & attr_name, const ColumnConst<UInt64> * const id_col)
+	void executeDispatch(Block & block,
+		const ColumnNumbers & arguments,
+		const size_t result,
+		const DictionaryType * const dictionary,
+		const std::string & attr_name,
+		const ColumnConst<UInt64> * const id_col)
 	{
 		const auto default_col_untyped = block.safeGetByPosition(arguments[3]).column.get();
 
@@ -1384,13 +1482,10 @@ private:
 
 			dictionary->getString(attr_name, ids, def, out.get());
 
-			block.safeGetByPosition(result).column = std::make_shared<ColumnConst<String>>(
-				id_col->size(), out->getDataAt(0).toString());
+			block.safeGetByPosition(result).column = std::make_shared<ColumnConst<String>>(id_col->size(), out->getDataAt(0).toString());
 		}
 		else
-			throw Exception{
-				"Fourth argument of function " + getName() + " must be String",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Fourth argument of function " + getName() + " must be String", ErrorCodes::ILLEGAL_COLUMN };
 	}
 
 	template <typename DictionaryType>
@@ -1403,9 +1498,7 @@ private:
 
 		const auto attr_name_col = typeid_cast<const ColumnConst<String> *>(block.safeGetByPosition(arguments[1]).column.get());
 		if (!attr_name_col)
-			throw Exception{
-				"Second argument of function " + getName() + " must be a constant string",
-					ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Second argument of function " + getName() + " must be a constant string", ErrorCodes::ILLEGAL_COLUMN };
 
 		const auto & attr_name = attr_name_col->getData();
 
@@ -1433,9 +1526,7 @@ private:
 			dict->getString(attr_name, key_columns, key_types, def, out.get());
 		}
 		else
-			throw Exception{
-				"Fourth argument of function " + getName() + " must be String",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Fourth argument of function " + getName() + " must be String", ErrorCodes::ILLEGAL_COLUMN };
 
 		return true;
 	}
@@ -1444,46 +1535,56 @@ private:
 };
 
 
-template <typename DataType> struct DictGetTraits;
-#define DECLARE_DICT_GET_TRAITS(TYPE, DATA_TYPE) \
-template <> struct DictGetTraits<DATA_TYPE>\
-{\
-	template <typename DictionaryType>\
-	static void get(\
-		const DictionaryType * const dict, const std::string & name, const PaddedPODArray<UInt64> & ids,\
-		PaddedPODArray<TYPE> & out)\
-	{\
-		dict->get##TYPE(name, ids, out);\
-	}\
-	template <typename DictionaryType>\
-	static void get(\
-		const DictionaryType * const dict, const std::string & name, const ConstColumnPlainPtrs & key_columns,\
-		const DataTypes & key_types, PaddedPODArray<TYPE> & out)\
-	{\
-		dict->get##TYPE(name, key_columns, key_types, out);\
-	}\
-	template <typename DictionaryType>\
-	static void get(\
-		const DictionaryType * const dict, const std::string & name, const PaddedPODArray<UInt64> & ids,\
-		const PaddedPODArray<UInt16> & dates, PaddedPODArray<TYPE> & out)\
-	{\
-		dict->get##TYPE(name, ids, dates, out);\
-	}\
-	template <typename DictionaryType, typename DefaultsType>\
-	static void getOrDefault(\
-		const DictionaryType * const dict, const std::string & name, const PaddedPODArray<UInt64> & ids,\
-		const DefaultsType & def, PaddedPODArray<TYPE> & out)\
-	{\
-		dict->get##TYPE(name, ids, def, out);\
-	}\
-	template <typename DictionaryType, typename DefaultsType>\
-	static void getOrDefault(\
-		const DictionaryType * const dict, const std::string & name, const ConstColumnPlainPtrs & key_columns,\
-		const DataTypes & key_types, const DefaultsType & def, PaddedPODArray<TYPE> & out)\
-	{\
-		dict->get##TYPE(name, key_columns, key_types, def, out);\
-	}\
-};
+template <typename DataType>
+struct DictGetTraits;
+#define DECLARE_DICT_GET_TRAITS(TYPE, DATA_TYPE)                                                                                           \
+	template <>                                                                                                                            \
+	struct DictGetTraits<DATA_TYPE>                                                                                                        \
+	{                                                                                                                                      \
+		template <typename DictionaryType>                                                                                                 \
+		static void get(                                                                                                                   \
+			const DictionaryType * const dict, const std::string & name, const PaddedPODArray<UInt64> & ids, PaddedPODArray<TYPE> & out)   \
+		{                                                                                                                                  \
+			dict->get##TYPE(name, ids, out);                                                                                               \
+		}                                                                                                                                  \
+		template <typename DictionaryType>                                                                                                 \
+		static void get(const DictionaryType * const dict,                                                                                 \
+			const std::string & name,                                                                                                      \
+			const ConstColumnPlainPtrs & key_columns,                                                                                      \
+			const DataTypes & key_types,                                                                                                   \
+			PaddedPODArray<TYPE> & out)                                                                                                    \
+		{                                                                                                                                  \
+			dict->get##TYPE(name, key_columns, key_types, out);                                                                            \
+		}                                                                                                                                  \
+		template <typename DictionaryType>                                                                                                 \
+		static void get(const DictionaryType * const dict,                                                                                 \
+			const std::string & name,                                                                                                      \
+			const PaddedPODArray<UInt64> & ids,                                                                                            \
+			const PaddedPODArray<UInt16> & dates,                                                                                          \
+			PaddedPODArray<TYPE> & out)                                                                                                    \
+		{                                                                                                                                  \
+			dict->get##TYPE(name, ids, dates, out);                                                                                        \
+		}                                                                                                                                  \
+		template <typename DictionaryType, typename DefaultsType>                                                                          \
+		static void getOrDefault(const DictionaryType * const dict,                                                                        \
+			const std::string & name,                                                                                                      \
+			const PaddedPODArray<UInt64> & ids,                                                                                            \
+			const DefaultsType & def,                                                                                                      \
+			PaddedPODArray<TYPE> & out)                                                                                                    \
+		{                                                                                                                                  \
+			dict->get##TYPE(name, ids, def, out);                                                                                          \
+		}                                                                                                                                  \
+		template <typename DictionaryType, typename DefaultsType>                                                                          \
+		static void getOrDefault(const DictionaryType * const dict,                                                                        \
+			const std::string & name,                                                                                                      \
+			const ConstColumnPlainPtrs & key_columns,                                                                                      \
+			const DataTypes & key_types,                                                                                                   \
+			const DefaultsType & def,                                                                                                      \
+			PaddedPODArray<TYPE> & out)                                                                                                    \
+		{                                                                                                                                  \
+			dict->get##TYPE(name, key_columns, key_types, def, out);                                                                       \
+		}                                                                                                                                  \
+	};
 DECLARE_DICT_GET_TRAITS(UInt8, DataTypeUInt8)
 DECLARE_DICT_GET_TRAITS(UInt16, DataTypeUInt16)
 DECLARE_DICT_GET_TRAITS(UInt32, DataTypeUInt32)
@@ -1511,13 +1612,24 @@ public:
 		return std::make_shared<FunctionDictGet>(context.getExternalDictionaries());
 	}
 
-	FunctionDictGet(const ExternalDictionaries & dictionaries) : dictionaries(dictionaries) {}
+	FunctionDictGet(const ExternalDictionaries & dictionaries) : dictionaries(dictionaries)
+	{
+	}
 
-	String getName() const override { return name; }
+	String getName() const override
+	{
+		return name;
+	}
 
 private:
-	bool isVariadic() const override { return true; }
-	size_t getNumberOfArguments() const override { return 0; }
+	bool isVariadic() const override
+	{
+		return true;
+	}
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 
 	bool isInjective(const Block & sample_block) override
 	{
@@ -1527,39 +1639,33 @@ private:
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
 		if (arguments.size() != 3 && arguments.size() != 4)
-			throw Exception{"Function " + getName() + " takes 3 or 4 arguments", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH};
+			throw Exception{ "Function " + getName() + " takes 3 or 4 arguments", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH };
 
 		if (!typeid_cast<const DataTypeString *>(arguments[0].get()))
 		{
-			throw Exception{
-				"Illegal type " + arguments[0]->getName() + " of first argument of function " + getName()
+			throw Exception{ "Illegal type " + arguments[0]->getName() + " of first argument of function " + getName()
 					+ ", expected a string.",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 		}
 
 		if (!typeid_cast<const DataTypeString *>(arguments[1].get()))
 		{
-			throw Exception{
-				"Illegal type " + arguments[1]->getName() + " of second argument of function " + getName()
+			throw Exception{ "Illegal type " + arguments[1]->getName() + " of second argument of function " + getName()
 					+ ", expected a string.",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 		}
 
-		if (!typeid_cast<const DataTypeUInt64 *>(arguments[2].get()) &&
-			!typeid_cast<const DataTypeTuple *>(arguments[2].get()))
+		if (!typeid_cast<const DataTypeUInt64 *>(arguments[2].get()) && !typeid_cast<const DataTypeTuple *>(arguments[2].get()))
 		{
-			throw Exception{
-				"Illegal type " + arguments[2]->getName() + " of third argument of function " + getName()
+			throw Exception{ "Illegal type " + arguments[2]->getName() + " of third argument of function " + getName()
 					+ ", must be UInt64 or tuple(...).",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 		}
 
 		if (arguments.size() == 4 && !typeid_cast<const DataTypeDate *>(arguments[3].get()))
 		{
-			throw Exception{
-				"Illegal type " + arguments[3]->getName() + " of fourth argument of function " + getName()
-				+ ", must be Date.",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
+			throw Exception{ "Illegal type " + arguments[3]->getName() + " of fourth argument of function " + getName() + ", must be Date.",
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 		}
 
 		return std::make_shared<DataType>();
@@ -1569,43 +1675,34 @@ private:
 	{
 		const auto dict_name_col = typeid_cast<const ColumnConst<String> *>(block.safeGetByPosition(arguments[0]).column.get());
 		if (!dict_name_col)
-			throw Exception{
-				"First argument of function " + getName() + " must be a constant string",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "First argument of function " + getName() + " must be a constant string", ErrorCodes::ILLEGAL_COLUMN };
 
 		auto dict = dictionaries.getDictionary(dict_name_col->getData());
 		const auto dict_ptr = dict.get();
 
-		if (!executeDispatch<FlatDictionary>(block, arguments, result, dict_ptr) &&
-			!executeDispatch<HashedDictionary>(block, arguments, result, dict_ptr) &&
-			!executeDispatch<CacheDictionary>(block, arguments, result, dict_ptr) &&
-			!executeDispatchComplex<ComplexKeyHashedDictionary>(block, arguments, result, dict_ptr) &&
-			!executeDispatchComplex<ComplexKeyCacheDictionary>(block, arguments, result, dict_ptr) &&
-			!executeDispatchRange<RangeHashedDictionary>(block, arguments, result, dict_ptr))
-			throw Exception{
-				"Unsupported dictionary type " + dict_ptr->getTypeName(),
-				ErrorCodes::UNKNOWN_TYPE};
+		if (!executeDispatch<FlatDictionary>(block, arguments, result, dict_ptr)
+			&& !executeDispatch<HashedDictionary>(block, arguments, result, dict_ptr)
+			&& !executeDispatch<CacheDictionary>(block, arguments, result, dict_ptr)
+			&& !executeDispatchComplex<ComplexKeyHashedDictionary>(block, arguments, result, dict_ptr)
+			&& !executeDispatchComplex<ComplexKeyCacheDictionary>(block, arguments, result, dict_ptr)
+			&& !executeDispatchRange<RangeHashedDictionary>(block, arguments, result, dict_ptr))
+			throw Exception{ "Unsupported dictionary type " + dict_ptr->getTypeName(), ErrorCodes::UNKNOWN_TYPE };
 	}
 
 	template <typename DictionaryType>
-	bool executeDispatch(Block & block, const ColumnNumbers & arguments, const size_t result,
-		const IDictionaryBase * const dictionary)
+	bool executeDispatch(Block & block, const ColumnNumbers & arguments, const size_t result, const IDictionaryBase * const dictionary)
 	{
 		const auto dict = typeid_cast<const DictionaryType *>(dictionary);
 		if (!dict)
 			return false;
 
 		if (arguments.size() != 3)
-			throw Exception{
-				"Function " + getName() + " for dictionary of type " + dict->getTypeName() +
-				" requires exactly 3 arguments.",
-				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH};
+			throw Exception{ "Function " + getName() + " for dictionary of type " + dict->getTypeName() + " requires exactly 3 arguments.",
+				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH };
 
 		const auto attr_name_col = typeid_cast<const ColumnConst<String> *>(block.safeGetByPosition(arguments[1]).column.get());
 		if (!attr_name_col)
-			throw Exception{
-				"Second argument of function " + getName() + " must be a constant string",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Second argument of function " + getName() + " must be a constant string", ErrorCodes::ILLEGAL_COLUMN };
 
 		const auto & attr_name = attr_name_col->getData();
 
@@ -1630,9 +1727,7 @@ private:
 		}
 		else
 		{
-			throw Exception{
-				"Third argument of function " + getName() + " must be UInt64",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Third argument of function " + getName() + " must be UInt64", ErrorCodes::ILLEGAL_COLUMN };
 		}
 
 		return true;
@@ -1647,16 +1742,12 @@ private:
 			return false;
 
 		if (arguments.size() != 3)
-			throw Exception{
-				"Function " + getName() + " for dictionary of type " + dict->getTypeName() +
-					" requires exactly 3 arguments",
-				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH};
+			throw Exception{ "Function " + getName() + " for dictionary of type " + dict->getTypeName() + " requires exactly 3 arguments",
+				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH };
 
 		const auto attr_name_col = typeid_cast<const ColumnConst<String> *>(block.safeGetByPosition(arguments[1]).column.get());
 		if (!attr_name_col)
-			throw Exception{
-				"Second argument of function " + getName() + " must be a constant string",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Second argument of function " + getName() + " must be a constant string", ErrorCodes::ILLEGAL_COLUMN };
 
 		const auto & attr_name = attr_name_col->getData();
 
@@ -1666,9 +1757,9 @@ private:
 		{
 			const ColumnPtr key_col_materialized = key_col_with_type.column->convertToFullColumnIfConst();
 
-			const auto key_columns = ext::map<ConstColumnPlainPtrs>(
-				static_cast<const ColumnTuple &>(*key_col_materialized.get()).getColumns(),
-				[](const ColumnPtr & ptr) { return ptr.get(); });
+			const auto key_columns
+				= ext::map<ConstColumnPlainPtrs>(static_cast<const ColumnTuple &>(*key_col_materialized.get()).getColumns(),
+					[](const ColumnPtr & ptr) { return ptr.get(); });
 
 			const auto & key_types = static_cast<const DataTypeTuple &>(*key_col_with_type.type).getElements();
 
@@ -1680,32 +1771,26 @@ private:
 			DictGetTraits<DataType>::get(dict, attr_name, key_columns, key_types, data);
 		}
 		else
-			throw Exception{
-				"Third argument of function " + getName() + " must be " + dict->getKeyDescription(),
-				ErrorCodes::TYPE_MISMATCH};
+			throw Exception{ "Third argument of function " + getName() + " must be " + dict->getKeyDescription(),
+				ErrorCodes::TYPE_MISMATCH };
 
 		return true;
 	}
 
 	template <typename DictionaryType>
-	bool executeDispatchRange(
-		Block & block, const ColumnNumbers & arguments, const size_t result, const IDictionaryBase * const dictionary)
+	bool executeDispatchRange(Block & block, const ColumnNumbers & arguments, const size_t result, const IDictionaryBase * const dictionary)
 	{
 		const auto dict = typeid_cast<const DictionaryType *>(dictionary);
 		if (!dict)
 			return false;
 
 		if (arguments.size() != 4)
-			throw Exception{
-				"Function " + getName() + " for dictionary of type " + dict->getTypeName() +
-				" requires exactly 4 arguments",
-				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH};
+			throw Exception{ "Function " + getName() + " for dictionary of type " + dict->getTypeName() + " requires exactly 4 arguments",
+				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH };
 
 		const auto attr_name_col = typeid_cast<const ColumnConst<String> *>(block.safeGetByPosition(arguments[1]).column.get());
 		if (!attr_name_col)
-			throw Exception{
-				"Second argument of function " + getName() + " must be a constant string",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Second argument of function " + getName() + " must be a constant string", ErrorCodes::ILLEGAL_COLUMN };
 
 		const auto & attr_name = attr_name_col->getData();
 
@@ -1717,18 +1802,19 @@ private:
 			executeRange(block, result, dict, attr_name, id_col, date_col_untyped);
 		else
 		{
-			throw Exception{
-				"Third argument of function " + getName() + " must be UInt64",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Third argument of function " + getName() + " must be UInt64", ErrorCodes::ILLEGAL_COLUMN };
 		}
 
 		return true;
 	}
 
 	template <typename DictionaryType>
-	void executeRange(
-		Block & block, const size_t result, const DictionaryType * const dictionary, const std::string & attr_name,
-		const ColumnUInt64 * const id_col, const IColumn * const date_col_untyped)
+	void executeRange(Block & block,
+		const size_t result,
+		const DictionaryType * const dictionary,
+		const std::string & attr_name,
+		const ColumnUInt64 * const id_col,
+		const IColumn * const date_col_untyped)
 	{
 		if (const auto date_col = typeid_cast<const ColumnUInt16 *>(date_col_untyped))
 		{
@@ -1756,16 +1842,17 @@ private:
 		}
 		else
 		{
-			throw Exception{
-				"Fourth argument of function " + getName() + " must be Date",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Fourth argument of function " + getName() + " must be Date", ErrorCodes::ILLEGAL_COLUMN };
 		}
 	}
 
 	template <typename DictionaryType>
-	void executeRange(
-		Block & block, const size_t result, const DictionaryType * const dictionary, const std::string & attr_name,
-		const ColumnConst<UInt64> * const id_col, const IColumn * const date_col_untyped)
+	void executeRange(Block & block,
+		const size_t result,
+		const DictionaryType * const dictionary,
+		const std::string & attr_name,
+		const ColumnConst<UInt64> * const id_col,
+		const IColumn * const date_col_untyped)
 	{
 		if (const auto date_col = typeid_cast<const ColumnUInt16 *>(date_col_untyped))
 		{
@@ -1790,9 +1877,7 @@ private:
 		}
 		else
 		{
-			throw Exception{
-				"Fourth argument of function " + getName() + " must be Date",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Fourth argument of function " + getName() + " must be Date", ErrorCodes::ILLEGAL_COLUMN };
 		}
 	}
 
@@ -1830,46 +1915,50 @@ public:
 		return std::make_shared<FunctionDictGetOrDefault>(context.getExternalDictionaries());
 	}
 
-	FunctionDictGetOrDefault(const ExternalDictionaries & dictionaries) : dictionaries(dictionaries) {}
+	FunctionDictGetOrDefault(const ExternalDictionaries & dictionaries) : dictionaries(dictionaries)
+	{
+	}
 
-	String getName() const override { return name; }
+	String getName() const override
+	{
+		return name;
+	}
 
 private:
-	size_t getNumberOfArguments() const override { return 4; }
+	size_t getNumberOfArguments() const override
+	{
+		return 4;
+	}
 
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
 		if (!typeid_cast<const DataTypeString *>(arguments[0].get()))
 		{
-			throw Exception{
-				"Illegal type " + arguments[0]->getName() + " of first argument of function " + getName()
+			throw Exception{ "Illegal type " + arguments[0]->getName() + " of first argument of function " + getName()
 					+ ", expected a string.",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 		}
 
 		if (!typeid_cast<const DataTypeString *>(arguments[1].get()))
 		{
-			throw Exception{
-				"Illegal type " + arguments[1]->getName() + " of second argument of function " + getName()
+			throw Exception{ "Illegal type " + arguments[1]->getName() + " of second argument of function " + getName()
 					+ ", expected a string.",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 		}
 
-		if (!typeid_cast<const DataTypeUInt64 *>(arguments[2].get()) &&
-			!typeid_cast<const DataTypeTuple *>(arguments[2].get()))
+		if (!typeid_cast<const DataTypeUInt64 *>(arguments[2].get()) && !typeid_cast<const DataTypeTuple *>(arguments[2].get()))
 		{
-			throw Exception{
-				"Illegal type " + arguments[2]->getName() + " of third argument of function " + getName()
+			throw Exception{ "Illegal type " + arguments[2]->getName() + " of third argument of function " + getName()
 					+ ", must be UInt64 or tuple(...).",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 		}
 
 		if (!typeid_cast<const DataType *>(arguments[3].get()))
 		{
-			throw Exception{
-				"Illegal type " + arguments[3]->getName() + " of fourth argument of function " + getName()
-					+ ", must be " + DataType{}.getName() + ".",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
+			throw Exception{ "Illegal type " + arguments[3]->getName() + " of fourth argument of function " + getName() + ", must be "
+					+ DataType{}.getName()
+					+ ".",
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 		}
 
 		return std::make_shared<DataType>();
@@ -1879,26 +1968,21 @@ private:
 	{
 		const auto dict_name_col = typeid_cast<const ColumnConst<String> *>(block.safeGetByPosition(arguments[0]).column.get());
 		if (!dict_name_col)
-			throw Exception{
-				"First argument of function " + getName() + " must be a constant string",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "First argument of function " + getName() + " must be a constant string", ErrorCodes::ILLEGAL_COLUMN };
 
 		auto dict = dictionaries.getDictionary(dict_name_col->getData());
 		const auto dict_ptr = dict.get();
 
-		if (!executeDispatch<FlatDictionary>(block, arguments, result, dict_ptr) &&
-			!executeDispatch<HashedDictionary>(block, arguments, result, dict_ptr) &&
-			!executeDispatch<CacheDictionary>(block, arguments, result, dict_ptr) &&
-			!executeDispatchComplex<ComplexKeyHashedDictionary>(block, arguments, result, dict_ptr) &&
-			!executeDispatchComplex<ComplexKeyCacheDictionary>(block, arguments, result, dict_ptr))
-			throw Exception{
-				"Unsupported dictionary type " + dict_ptr->getTypeName(),
-				ErrorCodes::UNKNOWN_TYPE};
+		if (!executeDispatch<FlatDictionary>(block, arguments, result, dict_ptr)
+			&& !executeDispatch<HashedDictionary>(block, arguments, result, dict_ptr)
+			&& !executeDispatch<CacheDictionary>(block, arguments, result, dict_ptr)
+			&& !executeDispatchComplex<ComplexKeyHashedDictionary>(block, arguments, result, dict_ptr)
+			&& !executeDispatchComplex<ComplexKeyCacheDictionary>(block, arguments, result, dict_ptr))
+			throw Exception{ "Unsupported dictionary type " + dict_ptr->getTypeName(), ErrorCodes::UNKNOWN_TYPE };
 	}
 
 	template <typename DictionaryType>
-	bool executeDispatch(Block & block, const ColumnNumbers & arguments, const size_t result,
-		const IDictionaryBase * const dictionary)
+	bool executeDispatch(Block & block, const ColumnNumbers & arguments, const size_t result, const IDictionaryBase * const dictionary)
 	{
 		const auto dict = typeid_cast<const DictionaryType *>(dictionary);
 		if (!dict)
@@ -1906,9 +1990,7 @@ private:
 
 		const auto attr_name_col = typeid_cast<const ColumnConst<String> *>(block.safeGetByPosition(arguments[1]).column.get());
 		if (!attr_name_col)
-			throw Exception{
-				"Second argument of function " + getName() + " must be a constant string",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Second argument of function " + getName() + " must be a constant string", ErrorCodes::ILLEGAL_COLUMN };
 
 		const auto & attr_name = attr_name_col->getData();
 
@@ -1918,17 +2000,18 @@ private:
 		else if (const auto id_col = typeid_cast<const ColumnConst<UInt64> *>(id_col_untyped))
 			executeDispatch(block, arguments, result, dict, attr_name, id_col);
 		else
-			throw Exception{
-				"Third argument of function " + getName() + " must be UInt64",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Third argument of function " + getName() + " must be UInt64", ErrorCodes::ILLEGAL_COLUMN };
 
 		return true;
 	}
 
 	template <typename DictionaryType>
-	void executeDispatch(
-		Block & block, const ColumnNumbers & arguments, const size_t result, const DictionaryType * const dictionary,
-		const std::string & attr_name, const ColumnUInt64 * const id_col)
+	void executeDispatch(Block & block,
+		const ColumnNumbers & arguments,
+		const size_t result,
+		const DictionaryType * const dictionary,
+		const std::string & attr_name,
+		const ColumnUInt64 * const id_col)
 	{
 		const auto default_col_untyped = block.safeGetByPosition(arguments[3]).column.get();
 
@@ -1944,7 +2027,7 @@ private:
 
 			DictGetTraits<DataType>::getOrDefault(dictionary, attr_name, ids, defs, data);
 		}
-		else if (const auto default_col =  typeid_cast<const ColumnConst<Type> *>(default_col_untyped))
+		else if (const auto default_col = typeid_cast<const ColumnConst<Type> *>(default_col_untyped))
 		{
 			/// vector ids, const defaults
 			const auto out = std::make_shared<ColumnVector<Type>>(id_col->size());
@@ -1957,15 +2040,16 @@ private:
 			DictGetTraits<DataType>::getOrDefault(dictionary, attr_name, ids, def, data);
 		}
 		else
-			throw Exception{
-				"Fourth argument of function " + getName() + " must be " + DataType{}.getName(),
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Fourth argument of function " + getName() + " must be " + DataType{}.getName(), ErrorCodes::ILLEGAL_COLUMN };
 	}
 
 	template <typename DictionaryType>
-	void executeDispatch(
-		Block & block, const ColumnNumbers & arguments, const size_t result, const DictionaryType * const dictionary,
-		const std::string & attr_name, const ColumnConst<UInt64> * const id_col)
+	void executeDispatch(Block & block,
+		const ColumnNumbers & arguments,
+		const size_t result,
+		const DictionaryType * const dictionary,
+		const std::string & attr_name,
+		const ColumnConst<UInt64> * const id_col)
 	{
 		const auto default_col_untyped = block.safeGetByPosition(arguments[3]).column.get();
 
@@ -1995,9 +2079,7 @@ private:
 			block.safeGetByPosition(result).column = std::make_shared<ColumnConst<Type>>(id_col->size(), data.front());
 		}
 		else
-			throw Exception{
-				"Fourth argument of function " + getName() + " must be " + DataType{}.getName(),
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Fourth argument of function " + getName() + " must be " + DataType{}.getName(), ErrorCodes::ILLEGAL_COLUMN };
 	}
 
 	template <typename DictionaryType>
@@ -2010,9 +2092,7 @@ private:
 
 		const auto attr_name_col = typeid_cast<const ColumnConst<String> *>(block.safeGetByPosition(arguments[1]).column.get());
 		if (!attr_name_col)
-			throw Exception{
-				"Second argument of function " + getName() + " must be a constant string",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Second argument of function " + getName() + " must be a constant string", ErrorCodes::ILLEGAL_COLUMN };
 
 		const auto & attr_name = attr_name_col->getData();
 
@@ -2047,9 +2127,7 @@ private:
 			DictGetTraits<DataType>::getOrDefault(dict, attr_name, key_columns, key_types, def, data);
 		}
 		else
-			throw Exception{
-				"Fourth argument of function " + getName() + " must be " + DataType{}.getName(),
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Fourth argument of function " + getName() + " must be " + DataType{}.getName(), ErrorCodes::ILLEGAL_COLUMN };
 
 		return true;
 	}
@@ -2085,30 +2163,39 @@ public:
 		return std::make_shared<FunctionDictGetHierarchy>(context.getExternalDictionaries());
 	}
 
-	FunctionDictGetHierarchy(const ExternalDictionaries & dictionaries) : dictionaries(dictionaries) {}
+	FunctionDictGetHierarchy(const ExternalDictionaries & dictionaries) : dictionaries(dictionaries)
+	{
+	}
 
-	String getName() const override { return name; }
+	String getName() const override
+	{
+		return name;
+	}
 
 private:
-	size_t getNumberOfArguments() const override { return 2; }
-	bool isInjective(const Block & sample_block) override { return true; }
+	size_t getNumberOfArguments() const override
+	{
+		return 2;
+	}
+	bool isInjective(const Block & sample_block) override
+	{
+		return true;
+	}
 
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
 		if (!typeid_cast<const DataTypeString *>(arguments[0].get()))
 		{
-			throw Exception{
-				"Illegal type " + arguments[0]->getName() + " of first argument of function " + getName()
+			throw Exception{ "Illegal type " + arguments[0]->getName() + " of first argument of function " + getName()
 					+ ", expected a string.",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 		}
 
 		if (!typeid_cast<const DataTypeUInt64 *>(arguments[1].get()))
 		{
-			throw Exception{
-				"Illegal type " + arguments[1]->getName() + " of second argument of function " + getName()
+			throw Exception{ "Illegal type " + arguments[1]->getName() + " of second argument of function " + getName()
 					+ ", must be UInt64.",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 		}
 
 		return std::make_shared<DataTypeArray>(std::make_shared<DataTypeUInt64>());
@@ -2118,85 +2205,79 @@ private:
 	{
 		const auto dict_name_col = typeid_cast<const ColumnConst<String> *>(block.safeGetByPosition(arguments[0]).column.get());
 		if (!dict_name_col)
-			throw Exception{
-				"First argument of function " + getName() + " must be a constant string",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "First argument of function " + getName() + " must be a constant string", ErrorCodes::ILLEGAL_COLUMN };
 
 		auto dict = dictionaries.getDictionary(dict_name_col->getData());
 		const auto dict_ptr = dict.get();
 
-		if (!executeDispatch<FlatDictionary>(block, arguments, result, dict_ptr) &&
-			!executeDispatch<HashedDictionary>(block, arguments, result, dict_ptr) &&
-			!executeDispatch<CacheDictionary>(block, arguments, result, dict_ptr))
-			throw Exception{
-				"Unsupported dictionary type " + dict_ptr->getTypeName(),
-				ErrorCodes::UNKNOWN_TYPE};
+		if (!executeDispatch<FlatDictionary>(block, arguments, result, dict_ptr)
+			&& !executeDispatch<HashedDictionary>(block, arguments, result, dict_ptr)
+			&& !executeDispatch<CacheDictionary>(block, arguments, result, dict_ptr))
+			throw Exception{ "Unsupported dictionary type " + dict_ptr->getTypeName(), ErrorCodes::UNKNOWN_TYPE };
 	}
 
 	template <typename DictionaryType>
-	bool executeDispatch(Block & block, const ColumnNumbers & arguments, const size_t result,
-		const IDictionaryBase * const dictionary)
+	bool executeDispatch(Block & block, const ColumnNumbers & arguments, const size_t result, const IDictionaryBase * const dictionary)
 	{
 		const auto dict = typeid_cast<const DictionaryType *>(dictionary);
 		if (!dict)
 			return false;
 
 		if (!dict->hasHierarchy())
-			throw Exception{
-				"Dictionary does not have a hierarchy",
-				ErrorCodes::UNSUPPORTED_METHOD};
+			throw Exception{ "Dictionary does not have a hierarchy", ErrorCodes::UNSUPPORTED_METHOD };
 
-		const auto get_hierarchies = [&] (const PaddedPODArray<UInt64> & in, PaddedPODArray<UInt64> & out, PaddedPODArray<UInt64> & offsets) {
-			const auto size = in.size();
+		const auto get_hierarchies
+			= [&](const PaddedPODArray<UInt64> & in, PaddedPODArray<UInt64> & out, PaddedPODArray<UInt64> & offsets) {
+				  const auto size = in.size();
 
-			/// copy of `in` array
-			auto in_array = std::make_unique<PaddedPODArray<UInt64>>(std::begin(in), std::end(in));
-			/// used for storing and handling result of ::toParent call
-			auto out_array = std::make_unique<PaddedPODArray<UInt64>>(size);
-			/// resulting hierarchies
-			std::vector<std::vector<IDictionary::Key>> hierarchies(size);
+				  /// copy of `in` array
+				  auto in_array = std::make_unique<PaddedPODArray<UInt64>>(std::begin(in), std::end(in));
+				  /// used for storing and handling result of ::toParent call
+				  auto out_array = std::make_unique<PaddedPODArray<UInt64>>(size);
+				  /// resulting hierarchies
+				  std::vector<std::vector<IDictionary::Key>> hierarchies(size);
 
-			/// total number of non-zero elements, used for allocating all the required memory upfront
-			std::size_t total_count = 0;
+				  /// total number of non-zero elements, used for allocating all the required memory upfront
+				  std::size_t total_count = 0;
 
-			while (true)
-			{
-				auto all_zeroes = true;
+				  while (true)
+				  {
+					  auto all_zeroes = true;
 
-				/// erase zeroed identifiers, store non-zeroed ones
-				for (const auto i : ext::range(0, size))
-				{
-					const auto id = (*in_array)[i];
-					if (0 == id)
-						continue;
+					  /// erase zeroed identifiers, store non-zeroed ones
+					  for (const auto i : ext::range(0, size))
+					  {
+						  const auto id = (*in_array)[i];
+						  if (0 == id)
+							  continue;
 
-					all_zeroes = false;
-					/// place id at it's corresponding place
-					hierarchies[i].push_back(id);
+						  all_zeroes = false;
+						  /// place id at it's corresponding place
+						  hierarchies[i].push_back(id);
 
-					++total_count;
-				}
+						  ++total_count;
+					  }
 
-				if (all_zeroes)
-					break;
+					  if (all_zeroes)
+						  break;
 
-				/// translate all non-zero identifiers at once
-				dict->toParent(*in_array, *out_array);
+					  /// translate all non-zero identifiers at once
+					  dict->toParent(*in_array, *out_array);
 
-				/// we're going to use the `in_array` from this iteration as `out_array` on the next one
-				std::swap(in_array, out_array);
-			}
+					  /// we're going to use the `in_array` from this iteration as `out_array` on the next one
+					  std::swap(in_array, out_array);
+				  }
 
-			out.reserve(total_count);
-			offsets.resize(size);
+				  out.reserve(total_count);
+				  offsets.resize(size);
 
-			for (const auto i : ext::range(0, size))
-			{
-				const auto & ids = hierarchies[i];
-				out.insert_assume_reserved(std::begin(ids), std::end(ids));
-				offsets[i] = out.size();
-			}
-		};
+				  for (const auto i : ext::range(0, size))
+				  {
+					  const auto & ids = hierarchies[i];
+					  out.insert_assume_reserved(std::begin(ids), std::end(ids));
+					  offsets[i] = out.size();
+				  }
+			  };
 
 		const auto id_col_untyped = block.safeGetByPosition(arguments[1]).column.get();
 		if (const auto id_col = typeid_cast<const ColumnUInt64 *>(id_col_untyped))
@@ -2217,15 +2298,11 @@ private:
 			get_hierarchies(in, backend->getData(), array->getOffsets());
 
 			block.safeGetByPosition(result).column = std::make_shared<ColumnConstArray>(
-				id_col->size(),
-				(*array)[0].get<Array>(),
-				std::make_shared<DataTypeArray>(std::make_shared<DataTypeUInt64>()));
+				id_col->size(), (*array)[0].get<Array>(), std::make_shared<DataTypeArray>(std::make_shared<DataTypeUInt64>()));
 		}
 		else
 		{
-			throw Exception{
-				"Second argument of function " + getName() + " must be UInt64",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Second argument of function " + getName() + " must be UInt64", ErrorCodes::ILLEGAL_COLUMN };
 		}
 
 		return true;
@@ -2245,37 +2322,42 @@ public:
 		return std::make_shared<FunctionDictIsIn>(context.getExternalDictionaries());
 	}
 
-	FunctionDictIsIn(const ExternalDictionaries & dictionaries) : dictionaries(dictionaries) {}
+	FunctionDictIsIn(const ExternalDictionaries & dictionaries) : dictionaries(dictionaries)
+	{
+	}
 
-	String getName() const override { return name; }
+	String getName() const override
+	{
+		return name;
+	}
 
 private:
-	size_t getNumberOfArguments() const override { return 3; }
+	size_t getNumberOfArguments() const override
+	{
+		return 3;
+	}
 
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
 		if (!typeid_cast<const DataTypeString *>(arguments[0].get()))
 		{
-			throw Exception{
-				"Illegal type " + arguments[0]->getName() + " of first argument of function " + getName()
+			throw Exception{ "Illegal type " + arguments[0]->getName() + " of first argument of function " + getName()
 					+ ", expected a string.",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 		}
 
 		if (!typeid_cast<const DataTypeUInt64 *>(arguments[1].get()))
 		{
-			throw Exception{
-				"Illegal type " + arguments[1]->getName() + " of second argument of function " + getName()
+			throw Exception{ "Illegal type " + arguments[1]->getName() + " of second argument of function " + getName()
 					+ ", must be UInt64.",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 		}
 
 		if (!typeid_cast<const DataTypeUInt64 *>(arguments[2].get()))
 		{
-			throw Exception{
-				"Illegal type " + arguments[2]->getName() + " of third argument of function " + getName()
+			throw Exception{ "Illegal type " + arguments[2]->getName() + " of third argument of function " + getName()
 					+ ", must be UInt64.",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 		}
 
 		return std::make_shared<DataTypeUInt8>();
@@ -2285,9 +2367,7 @@ private:
 	{
 		const auto dict_name_col = typeid_cast<const ColumnConst<String> *>(block.safeGetByPosition(arguments[0]).column.get());
 		if (!dict_name_col)
-			throw Exception{
-				"First argument of function " + getName() + " must be a constant string",
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "First argument of function " + getName() + " must be a constant string", ErrorCodes::ILLEGAL_COLUMN };
 
 		auto dict = dictionaries.getDictionary(dict_name_col->getData());
 		const auto dict_ptr = dict.get();
@@ -2295,23 +2375,18 @@ private:
 		if (!executeDispatch<FlatDictionary>(block, arguments, result, dict_ptr)
 			&& !executeDispatch<HashedDictionary>(block, arguments, result, dict_ptr)
 			&& !executeDispatch<CacheDictionary>(block, arguments, result, dict_ptr))
-			throw Exception{
-				"Unsupported dictionary type " + dict_ptr->getTypeName(),
-				ErrorCodes::UNKNOWN_TYPE};
+			throw Exception{ "Unsupported dictionary type " + dict_ptr->getTypeName(), ErrorCodes::UNKNOWN_TYPE };
 	}
 
 	template <typename DictionaryType>
-	bool executeDispatch(Block & block, const ColumnNumbers & arguments, const size_t result,
-		const IDictionaryBase * const dictionary)
+	bool executeDispatch(Block & block, const ColumnNumbers & arguments, const size_t result, const IDictionaryBase * const dictionary)
 	{
 		const auto dict = typeid_cast<const DictionaryType *>(dictionary);
 		if (!dict)
 			return false;
 
 		if (!dict->hasHierarchy())
-			throw Exception{
-				"Dictionary does not have a hierarchy",
-				ErrorCodes::UNSUPPORTED_METHOD};
+			throw Exception{ "Dictionary does not have a hierarchy", ErrorCodes::UNSUPPORTED_METHOD };
 
 		const auto child_id_col_untyped = block.safeGetByPosition(arguments[1]).column.get();
 		const auto ancestor_id_col_untyped = block.safeGetByPosition(arguments[2]).column.get();
@@ -2321,17 +2396,18 @@ private:
 		else if (const auto child_id_col = typeid_cast<const ColumnConst<UInt64> *>(child_id_col_untyped))
 			execute(block, result, dict, child_id_col, ancestor_id_col_untyped);
 		else
-			throw Exception{
-				"Illegal column " + child_id_col_untyped->getName()
-					+ " of second argument of function " + getName(),
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Illegal column " + child_id_col_untyped->getName() + " of second argument of function " + getName(),
+				ErrorCodes::ILLEGAL_COLUMN };
 
 		return true;
 	}
 
 	template <typename DictionaryType>
-	bool execute(Block & block, const size_t result, const DictionaryType * const dictionary,
-		const ColumnUInt64 * const child_id_col, const IColumn * const ancestor_id_col_untyped)
+	bool execute(Block & block,
+		const size_t result,
+		const DictionaryType * const dictionary,
+		const ColumnUInt64 * const child_id_col,
+		const IColumn * const ancestor_id_col_untyped)
 	{
 		if (const auto ancestor_id_col = typeid_cast<const ColumnUInt64 *>(ancestor_id_col_untyped))
 		{
@@ -2363,18 +2439,19 @@ private:
 		}
 		else
 		{
-			throw Exception{
-				"Illegal column " + ancestor_id_col_untyped->getName()
-					+ " of third argument of function " + getName(),
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Illegal column " + ancestor_id_col_untyped->getName() + " of third argument of function " + getName(),
+				ErrorCodes::ILLEGAL_COLUMN };
 		}
 
 		return true;
 	}
 
 	template <typename DictionaryType>
-	bool execute(Block & block, const size_t result, const DictionaryType * const dictionary,
-		const ColumnConst<UInt64> * const child_id_col, const IColumn * const ancestor_id_col_untyped)
+	bool execute(Block & block,
+		const size_t result,
+		const DictionaryType * const dictionary,
+		const ColumnConst<UInt64> * const child_id_col,
+		const IColumn * const ancestor_id_col_untyped)
 	{
 		if (const auto ancestor_id_col = typeid_cast<const ColumnUInt64 *>(ancestor_id_col_untyped))
 		{
@@ -2393,15 +2470,12 @@ private:
 		else if (const auto ancestor_id_col = typeid_cast<const ColumnConst<UInt64> *>(ancestor_id_col_untyped))
 		{
 			block.safeGetByPosition(result).column = std::make_shared<ColumnConst<UInt8>>(
-				child_id_col->size(),
-				dictionary->in(child_id_col->getData(), ancestor_id_col->getData()));
+				child_id_col->size(), dictionary->in(child_id_col->getData(), ancestor_id_col->getData()));
 		}
 		else
 		{
-			throw Exception{
-				"Illegal column " + ancestor_id_col_untyped->getName()
-					+ " of third argument of function " + getName(),
-				ErrorCodes::ILLEGAL_COLUMN};
+			throw Exception{ "Illegal column " + ancestor_id_col_untyped->getName() + " of third argument of function " + getName(),
+				ErrorCodes::ILLEGAL_COLUMN };
 		}
 
 		return true;
@@ -2409,6 +2483,4 @@ private:
 
 	const ExternalDictionaries & dictionaries;
 };
-
-
 };

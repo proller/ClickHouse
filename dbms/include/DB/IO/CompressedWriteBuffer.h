@@ -3,19 +3,18 @@
 #include <memory>
 
 #ifdef USE_QUICKLZ
-	struct qlz_state_compress;
+struct qlz_state_compress;
 #endif
 
 #include <DB/Common/PODArray.h>
 
-#include <DB/IO/WriteBuffer.h>
 #include <DB/IO/BufferWithOwnMemory.h>
 #include <DB/IO/CompressedStream.h>
+#include <DB/IO/WriteBuffer.h>
 
 
 namespace DB
 {
-
 class CompressedWriteBuffer : public BufferWithOwnMemory<WriteBuffer>
 {
 private:
@@ -30,16 +29,17 @@ private:
 	/// ABI compatibility for USE_QUICKLZ
 	void * fixed_size_padding = nullptr;
 	/// Отменяет warning unused-private-field.
-	void * fixed_size_padding_used() const { return fixed_size_padding; }
+	void * fixed_size_padding_used() const
+	{
+		return fixed_size_padding;
+	}
 #endif
 
 	void nextImpl() override;
 
 public:
 	CompressedWriteBuffer(
-		WriteBuffer & out_,
-		CompressionMethod method_ = CompressionMethod::LZ4,
-		size_t buf_size = DBMS_DEFAULT_BUFFER_SIZE);
+		WriteBuffer & out_, CompressionMethod method_ = CompressionMethod::LZ4, size_t buf_size = DBMS_DEFAULT_BUFFER_SIZE);
 
 	/// Объём сжатых данных
 	size_t getCompressedBytes()
@@ -63,5 +63,4 @@ public:
 
 	~CompressedWriteBuffer() override;
 };
-
 }

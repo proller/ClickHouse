@@ -2,17 +2,17 @@
 
 #include <limits>
 
-#include <DB/Common/MemoryTracker.h>
 #include <DB/Common/HashTable/Hash.h>
+#include <DB/Common/MemoryTracker.h>
 
-#include <DB/IO/WriteHelpers.h>
 #include <DB/IO/ReadHelpers.h>
+#include <DB/IO/WriteHelpers.h>
 
-#include <DB/DataTypes/DataTypesNumberFixed.h>
 #include <DB/DataTypes/DataTypeArray.h>
+#include <DB/DataTypes/DataTypesNumberFixed.h>
 
-#include <DB/AggregateFunctions/IUnaryAggregateFunction.h>
 #include <DB/AggregateFunctions/IBinaryAggregateFunction.h>
+#include <DB/AggregateFunctions/IUnaryAggregateFunction.h>
 #include <DB/AggregateFunctions/QuantilesCommon.h>
 
 #include <DB/Columns/ColumnArray.h>
@@ -22,7 +22,6 @@
 
 namespace DB
 {
-
 /** Вычисляет квантиль для времени в миллисекундах, меньшего 30 сек.
   * Если значение больше 30 сек, то значение приравнивается к 30 сек.
   *
@@ -51,7 +50,7 @@ namespace detail
 	  */
 	struct QuantileTimingTiny
 	{
-		mutable UInt16 elems[TINY_MAX_ELEMS];	/// mutable потому что сортировка массива не считается изменением состояния.
+		mutable UInt16 elems[TINY_MAX_ELEMS]; /// mutable потому что сортировка массива не считается изменением состояния.
 		/// Важно, чтобы count был в конце структуры, так как начало структуры будет впоследствии перезатёрто другими объектами.
 		/// Вы должны сами инициализировать его нулём.
 		/// Почему? Поле count переиспользуется и в тех случаях, когда в union-е лежат другие структуры
@@ -98,9 +97,7 @@ namespace detail
 
 		UInt16 get(double level) const
 		{
-			return level != 1
-				? elems[static_cast<size_t>(count * level)]
-				: elems[count - 1];
+			return level != 1 ? elems[static_cast<size_t>(count * level)] : elems[count - 1];
 		}
 
 		template <typename ResultType>
@@ -119,9 +116,7 @@ namespace detail
 		/// То же самое, но в случае пустого состояния возвращается NaN.
 		float getFloat(double level) const
 		{
-			return count
-				? get(level)
-				: std::numeric_limits<float>::quiet_NaN();
+			return count ? get(level) : std::numeric_limits<float>::quiet_NaN();
 		}
 
 		void getManyFloat(const double * levels, size_t size, float * result) const
@@ -142,10 +137,14 @@ namespace detail
 	{
 		/// sizeof - 24 байта.
 		using Array = PODArray<UInt16, 128>;
-		mutable Array elems;	/// mutable потому что сортировка массива не считается изменением состояния.
+		mutable Array elems; /// mutable потому что сортировка массива не считается изменением состояния.
 
-		QuantileTimingMedium() {}
-		QuantileTimingMedium(const UInt16 * begin, const UInt16 * end) : elems(begin, end) {}
+		QuantileTimingMedium()
+		{
+		}
+		QuantileTimingMedium(const UInt16 * begin, const UInt16 * end) : elems(begin, end)
+		{
+		}
 
 		void insert(UInt64 x)
 		{
@@ -180,9 +179,7 @@ namespace detail
 
 			if (!elems.empty())
 			{
-				size_t n = level < 1
-					? level * elems.size()
-					: (elems.size() - 1);
+				size_t n = level < 1 ? level * elems.size() : (elems.size() - 1);
 
 				/// Сортировка массива не будет считаться нарушением константности.
 				auto & array = const_cast<Array &>(elems);
@@ -203,9 +200,7 @@ namespace detail
 				auto level_index = levels_permutation[i];
 				auto level = levels[level_index];
 
-				size_t n = level < 1
-					? level * elems.size()
-					: (elems.size() - 1);
+				size_t n = level < 1 ? level * elems.size() : (elems.size() - 1);
 
 				std::nth_element(array.begin() + prev_n, array.begin() + n, array.end());
 
@@ -217,9 +212,7 @@ namespace detail
 		/// То же самое, но в случае пустого состояния возвращается NaN.
 		float getFloat(double level) const
 		{
-			return !elems.empty()
-				? get(level)
-				: std::numeric_limits<float>::quiet_NaN();
+			return !elems.empty() ? get(level) : std::numeric_limits<float>::quiet_NaN();
 		}
 
 		void getManyFloat(const double * levels, const size_t * levels_permutation, size_t size, float * result) const
@@ -233,11 +226,11 @@ namespace detail
 	};
 
 
-	#define SMALL_THRESHOLD 1024
-	#define BIG_SIZE ((BIG_THRESHOLD - SMALL_THRESHOLD) / BIG_PRECISION)
-	#define BIG_PRECISION 16
+#define SMALL_THRESHOLD 1024
+#define BIG_SIZE ((BIG_THRESHOLD - SMALL_THRESHOLD) / BIG_PRECISION)
+#define BIG_PRECISION 16
 
-	#define SIZE_OF_LARGE_WITHOUT_COUNT ((SMALL_THRESHOLD + BIG_SIZE) * sizeof(UInt64))
+#define SIZE_OF_LARGE_WITHOUT_COUNT ((SMALL_THRESHOLD + BIG_SIZE) * sizeof(UInt64))
 
 
 	/** Для большого количества значений. Размер около 22 680 байт.
@@ -260,7 +253,8 @@ namespace detail
 		static inline UInt16 indexInBigToValue(size_t i)
 		{
 			return (i * BIG_PRECISION) + SMALL_THRESHOLD
-				+ (intHash32<0>(i) % BIG_PRECISION - (BIG_PRECISION / 2));	/// Небольшая рандомизация, чтобы не было заметно, что все значения чётные.
+				+ (intHash32<0>(i) % BIG_PRECISION
+					  - (BIG_PRECISION / 2)); /// Небольшая рандомизация, чтобы не было заметно, что все значения чётные.
 		}
 
 		/// Позволяет перебрать значения гистограммы, пропуская нули.
@@ -278,13 +272,15 @@ namespace detail
 			}
 
 		public:
-			Iterator(const QuantileTimingLarge & parent)
-				: begin(parent.count_small), pos(begin), end(&parent.count_big[BIG_SIZE])
+			Iterator(const QuantileTimingLarge & parent) : begin(parent.count_small), pos(begin), end(&parent.count_big[BIG_SIZE])
 			{
 				adjust();
 			}
 
-			bool isValid() const { return pos < end; }
+			bool isValid() const
+			{
+				return pos < end;
+			}
 
 			void next()
 			{
@@ -292,13 +288,14 @@ namespace detail
 				adjust();
 			}
 
-			UInt64 count() const { return *pos; }
+			UInt64 count() const
+			{
+				return *pos;
+			}
 
 			UInt16 key() const
 			{
-				return pos - begin < SMALL_THRESHOLD
-					? pos - begin
-					: indexInBigToValue(pos - begin - SMALL_THRESHOLD);
+				return pos - begin < SMALL_THRESHOLD ? pos - begin : indexInBigToValue(pos - begin - SMALL_THRESHOLD);
 			}
 		};
 
@@ -461,9 +458,7 @@ namespace detail
 		/// То же самое, но в случае пустого состояния возвращается NaN.
 		float getFloat(double level) const
 		{
-			return count
-				? get(level)
-				: std::numeric_limits<float>::quiet_NaN();
+			return count ? get(level) : std::numeric_limits<float>::quiet_NaN();
 		}
 
 		void getManyFloat(const double * levels, const size_t * levels_permutation, size_t size, float * result) const
@@ -484,8 +479,7 @@ namespace detail
 class QuantileTiming : private boost::noncopyable
 {
 private:
-	union
-	{
+	union {
 		detail::QuantileTimingTiny tiny;
 		detail::QuantileTimingMedium medium;
 		detail::QuantileTimingLarge * large;
@@ -493,9 +487,9 @@ private:
 
 	enum class Kind : UInt8
 	{
-		Tiny 	= 1,
-		Medium 	= 2,
-		Large 	= 3
+		Tiny = 1,
+		Medium = 2,
+		Large = 3
 	};
 
 	Kind which() const
@@ -523,11 +517,11 @@ private:
 		detail::QuantileTimingLarge * tmp_large = new detail::QuantileTimingLarge;
 
 		for (const auto & elem : medium.elems)
-			tmp_large->insert(elem);	/// Cannot throw, so don't worry about new.
+			tmp_large->insert(elem); /// Cannot throw, so don't worry about new.
 
 		medium.~QuantileTimingMedium();
 		large = tmp_large;
-		tiny.count = TINY_MAX_ELEMS + 2;	/// large will be deleted in destructor.
+		tiny.count = TINY_MAX_ELEMS + 2; /// large will be deleted in destructor.
 	}
 
 	void tinyToLarge()
@@ -539,10 +533,10 @@ private:
 		detail::QuantileTimingLarge * tmp_large = new detail::QuantileTimingLarge;
 
 		for (size_t i = 0; i < tiny.count; ++i)
-			tmp_large->insert(tiny.elems[i]);	/// Cannot throw, so don't worry about new.
+			tmp_large->insert(tiny.elems[i]); /// Cannot throw, so don't worry about new.
 
 		large = tmp_large;
-		tiny.count = TINY_MAX_ELEMS + 2;	/// large will be deleted in destructor.
+		tiny.count = TINY_MAX_ELEMS + 2; /// large will be deleted in destructor.
 	}
 
 	bool mediumIsWorthToConvertToLarge() const
@@ -610,7 +604,7 @@ public:
 		else
 		{
 			if (unlikely(tiny.count <= TINY_MAX_ELEMS))
-				tinyToLarge();	/// Для weighted варианта medium не используем - предположительно, нецелесообразно.
+				tinyToLarge(); /// Для weighted варианта medium не используем - предположительно, нецелесообразно.
 
 			large->insertWeighted(x, weight);
 		}
@@ -764,9 +758,7 @@ public:
 	/// То же самое, но в случае пустого состояния возвращается NaN.
 	float getFloat(double level) const
 	{
-		return tiny.count
-			? get(level)
-			: std::numeric_limits<float>::quiet_NaN();
+		return tiny.count ? get(level) : std::numeric_limits<float>::quiet_NaN();
 	}
 
 	void getManyFloat(const double * levels, const size_t * levels_permutation, size_t size, float * result) const
@@ -787,15 +779,21 @@ public:
 
 
 template <typename ArgumentFieldType>
-class AggregateFunctionQuantileTiming final : public IUnaryAggregateFunction<QuantileTiming, AggregateFunctionQuantileTiming<ArgumentFieldType> >
+class AggregateFunctionQuantileTiming final
+	: public IUnaryAggregateFunction<QuantileTiming, AggregateFunctionQuantileTiming<ArgumentFieldType>>
 {
 private:
 	double level;
 
 public:
-	AggregateFunctionQuantileTiming(double level_ = 0.5) : level(level_) {}
+	AggregateFunctionQuantileTiming(double level_ = 0.5) : level(level_)
+	{
+	}
 
-	String getName() const override { return "quantileTiming"; }
+	String getName() const override
+	{
+		return "quantileTiming";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -809,7 +807,8 @@ public:
 	void setParameters(const Array & params) override
 	{
 		if (params.size() != 1)
-			throw Exception("Aggregate function " + getName() + " requires exactly one parameter.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+			throw Exception(
+				"Aggregate function " + getName() + " requires exactly one parameter.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
 		level = applyVisitor(FieldVisitorConvertToNumber<Float64>(), params[0]);
 	}
@@ -852,9 +851,14 @@ private:
 	double level;
 
 public:
-	AggregateFunctionQuantileTimingWeighted(double level_ = 0.5) : level(level_) {}
+	AggregateFunctionQuantileTimingWeighted(double level_ = 0.5) : level(level_)
+	{
+	}
 
-	String getName() const override { return "quantileTimingWeighted"; }
+	String getName() const override
+	{
+		return "quantileTimingWeighted";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -868,15 +872,15 @@ public:
 	void setParameters(const Array & params) override
 	{
 		if (params.size() != 1)
-			throw Exception("Aggregate function " + getName() + " requires exactly one parameter.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+			throw Exception(
+				"Aggregate function " + getName() + " requires exactly one parameter.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
 		level = applyVisitor(FieldVisitorConvertToNumber<Float64>(), params[0]);
 	}
 
 	void addImpl(AggregateDataPtr place, const IColumn & column_value, const IColumn & column_weight, size_t row_num, Arena *) const
 	{
-		this->data(place).insertWeighted(
-			static_cast<const ColumnVector<ArgumentFieldType> &>(column_value).getData()[row_num],
+		this->data(place).insertWeighted(static_cast<const ColumnVector<ArgumentFieldType> &>(column_value).getData()[row_num],
 			static_cast<const ColumnVector<WeightFieldType> &>(column_weight).getData()[row_num]);
 	}
 
@@ -907,13 +911,17 @@ public:
   * Возвращает массив результатов.
   */
 template <typename ArgumentFieldType>
-class AggregateFunctionQuantilesTiming final : public IUnaryAggregateFunction<QuantileTiming, AggregateFunctionQuantilesTiming<ArgumentFieldType> >
+class AggregateFunctionQuantilesTiming final
+	: public IUnaryAggregateFunction<QuantileTiming, AggregateFunctionQuantilesTiming<ArgumentFieldType>>
 {
 private:
 	QuantileLevels<double> levels;
 
 public:
-	String getName() const override { return "quantilesTiming"; }
+	String getName() const override
+	{
+		return "quantilesTiming";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -978,7 +986,10 @@ private:
 	QuantileLevels<double> levels;
 
 public:
-	String getName() const override { return "quantilesTimingWeighted"; }
+	String getName() const override
+	{
+		return "quantilesTimingWeighted";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -996,8 +1007,7 @@ public:
 
 	void addImpl(AggregateDataPtr place, const IColumn & column_value, const IColumn & column_weight, size_t row_num, Arena *) const
 	{
-		this->data(place).insertWeighted(
-			static_cast<const ColumnVector<ArgumentFieldType> &>(column_value).getData()[row_num],
+		this->data(place).insertWeighted(static_cast<const ColumnVector<ArgumentFieldType> &>(column_value).getData()[row_num],
 			static_cast<const ColumnVector<WeightFieldType> &>(column_weight).getData()[row_num]);
 	}
 
@@ -1034,6 +1044,4 @@ public:
 		this->data(place).getManyFloat(&levels.levels[0], &levels.permutation[0], size, &data_to[old_size]);
 	}
 };
-
-
 }

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <stddef.h>
 #include <atomic>
+#include <stddef.h>
 
 
 /** Implements global counters for various events happening in the application
@@ -11,22 +11,22 @@
 
 namespace ProfileEvents
 {
-	/// Event identifier (index in array).
-	using Event = size_t;
-	using Count = size_t;
+/// Event identifier (index in array).
+using Event = size_t;
+using Count = size_t;
 
-	/// Get text description of event by identifier. Returns statically allocated string.
-	const char * getDescription(Event event);
+/// Get text description of event by identifier. Returns statically allocated string.
+const char * getDescription(Event event);
 
-	/// Counters - how many times each event happened.
-	extern std::atomic<Count> counters[];
+/// Counters - how many times each event happened.
+extern std::atomic<Count> counters[];
 
-	/// Increment a counter for event. Thread-safe.
-	inline void increment(Event event, Count amount = 1)
-	{
-		counters[event] += amount;
-	}
+/// Increment a counter for event. Thread-safe.
+inline void increment(Event event, Count amount = 1)
+{
+	counters[event] += amount;
+}
 
-	/// Get index just after last event identifier.
-	Event end();
+/// Get index just after last event identifier.
+Event end();
 }

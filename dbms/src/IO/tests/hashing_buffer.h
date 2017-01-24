@@ -1,7 +1,11 @@
 #include <DB/IO/HashingWriteBuffer.h>
 #include <DB/IO/WriteBufferFromFile.h>
 
-#define FAIL(msg) { std::cout << msg; exit(1); }
+#define FAIL(msg)                                                                                                                          \
+	{                                                                                                                                      \
+		std::cout << msg;                                                                                                                  \
+		exit(1);                                                                                                                           \
+	}
 
 
 uint128 referenceHash(const char * data, size_t len)

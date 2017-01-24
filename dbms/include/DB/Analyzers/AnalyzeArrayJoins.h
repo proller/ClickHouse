@@ -1,13 +1,12 @@
 #pragma once
 
-#include <DB/Parsers/IAST.h>
 #include <unordered_map>
 #include <vector>
+#include <DB/Parsers/IAST.h>
 
 
 namespace DB
 {
-
 class WriteBuffer;
 struct CollectAliases;
 struct CollectTables;
@@ -40,5 +39,4 @@ struct AnalyzeArrayJoins
 	/// Debug output
 	void dump(WriteBuffer & out) const;
 };
-
 }

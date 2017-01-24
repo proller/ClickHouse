@@ -1,11 +1,9 @@
 #pragma once
 
-#include <zkutil/ZooKeeper.h>
 #include <functional>
+#include <zkutil/ZooKeeper.h>
 
 namespace zkutil
 {
-
 using GetZooKeeper = std::function<ZooKeeperPtr()>;
-
 }

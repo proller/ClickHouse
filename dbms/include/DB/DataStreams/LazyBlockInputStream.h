@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 /** Инициализировать другой источник при первом вызове read, и затем использовать его.
   * Это нужно, например, для чтения из таблицы, которая будет заполнена
   *  после создания объекта LazyBlockInputStream, но до первого вызова read.
@@ -15,10 +14,14 @@ class LazyBlockInputStream : public IProfilingBlockInputStream
 public:
 	using Generator = std::function<BlockInputStreamPtr()>;
 
-	LazyBlockInputStream(Generator generator_)
-		: generator(generator_) {}
+	LazyBlockInputStream(Generator generator_) : generator(generator_)
+	{
+	}
 
-	String getName() const override { return "Lazy"; }
+	String getName() const override
+	{
+		return "Lazy";
+	}
 
 	String getID() const override
 	{
@@ -56,5 +59,4 @@ private:
 	Generator generator;
 	BlockInputStreamPtr input;
 };
-
 }

@@ -1,17 +1,16 @@
 #pragma once
 
-#include <set>
 #include <memory>
 #include <ostream>
+#include <set>
 
-#include <DB/Core/Types.h>
 #include <DB/Common/Exception.h>
+#include <DB/Core/Types.h>
 #include <DB/Parsers/StringRange.h>
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int NOT_A_COLUMN;
@@ -40,17 +39,28 @@ public:
 	StringPtr query_string;
 
 	IAST() = default;
-	IAST(const StringRange range_) : range(range_) {}
+	IAST(const StringRange range_) : range(range_)
+	{
+	}
 	virtual ~IAST() = default;
 
 	/** Получить каноническое имя столбца, если элемент является столбцом */
-	virtual String getColumnName() const { throw Exception("Trying to get name of not a column: " + getID(), ErrorCodes::NOT_A_COLUMN); }
+	virtual String getColumnName() const
+	{
+		throw Exception("Trying to get name of not a column: " + getID(), ErrorCodes::NOT_A_COLUMN);
+	}
 
 	/** Получить алиас, если он есть, или каноническое имя столбца, если его нет. */
-	virtual String getAliasOrColumnName() const { return getColumnName(); }
+	virtual String getAliasOrColumnName() const
+	{
+		return getColumnName();
+	}
 
 	/** Получить алиас, если он есть, или пустую строку, если его нет, или если элемент не поддерживает алиасы. */
-	virtual String tryGetAlias() const { return String(); }
+	virtual String tryGetAlias() const
+	{
+		return String();
+	}
 
 	/** Установить алиас. */
 	virtual void setAlias(const String & to)
@@ -110,8 +120,7 @@ public:
 
 		char nl_or_ws;
 
-		FormatSettings(std::ostream & ostr_, bool hilite_, bool one_line_)
-			: ostr(ostr_), hilite(hilite_), one_line(one_line_)
+		FormatSettings(std::ostream & ostr_, bool hilite_, bool one_line_) : ostr(ostr_), hilite(hilite_), one_line(one_line_)
 		{
 			nl_or_ws = one_line ? ' ' : '\n';
 		}
@@ -143,9 +152,7 @@ public:
 	virtual void formatImpl(const FormatSettings & settings, FormatState & state, FormatStateStacked frame) const
 	{
 		throw Exception("Unknown element in AST: " + getID()
-			+ ((range.first && (range.second > range.first))
-				? " '" + std::string(range.first, range.second - range.first) + "'"
-				: ""),
+				+ ((range.first && (range.second > range.first)) ? " '" + std::string(range.first, range.second - range.first) + "'" : ""),
 			ErrorCodes::UNKNOWN_ELEMENT_IN_AST);
 	}
 
@@ -167,6 +174,4 @@ private:
 
 /// Квотировать идентификатор обратными кавычками, если это требуется.
 String backQuoteIfNeed(const String & x);
-
-
 }

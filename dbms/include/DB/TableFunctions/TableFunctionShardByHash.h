@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 /* shardByHash(cluster, 'key', db, table) - создаёт временный StorageDistributed,
  *  используя кластер cluster, и выбирая из него только один шард путём хэширования строки key.
  *
@@ -14,8 +13,10 @@ namespace DB
 class TableFunctionShardByHash : public ITableFunction
 {
 public:
-	std::string getName() const override { return "shardByHash"; }
+	std::string getName() const override
+	{
+		return "shardByHash";
+	}
 	StoragePtr execute(ASTPtr ast_function, Context & context) const override;
 };
-
 }

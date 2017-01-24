@@ -1,25 +1,27 @@
 #pragma once
 
-#include <DB/Parsers/IParserBase.h>
-#include <DB/Parsers/ExpressionElementParsers.h>
-#include <DB/Parsers/ExpressionListParsers.h>
-#include <DB/Parsers/ASTNameTypePair.h>
+#include <Poco/String.h>
+#include <DB/Common/typeid_cast.h>
 #include <DB/Parsers/ASTColumnDeclaration.h>
 #include <DB/Parsers/ASTIdentifier.h>
+#include <DB/Parsers/ASTNameTypePair.h>
 #include <DB/Parsers/CommonParsers.h>
-#include <DB/Common/typeid_cast.h>
-#include <Poco/String.h>
+#include <DB/Parsers/ExpressionElementParsers.h>
+#include <DB/Parsers/ExpressionListParsers.h>
+#include <DB/Parsers/IParserBase.h>
 
 
 namespace DB
 {
-
 /** Вложенная таблица. Например, Nested(UInt32 CounterID, FixedString(2) UserAgentMajor)
   */
 class ParserNestedTable : public IParserBase
 {
 protected:
-	const char * getName() const { return "nested table"; }
+	const char * getName() const
+	{
+		return "nested table";
+	}
 	bool parseImpl(Pos & pos, Pos end, ASTPtr & node, Pos & max_parsed_pos, Expected & expected);
 };
 
@@ -33,7 +35,10 @@ protected:
 class ParserIdentifierWithParameters : public IParserBase
 {
 protected:
-	const char * getName() const { return "identifier with parameters"; }
+	const char * getName() const
+	{
+		return "identifier with parameters";
+	}
 	bool parseImpl(Pos & pos, Pos end, ASTPtr & node, Pos & max_parsed_pos, Expected & expected);
 };
 
@@ -44,14 +49,20 @@ protected:
 class ParserIdentifierWithOptionalParameters : public IParserBase
 {
 protected:
-	const char * getName() const { return "identifier with optional parameters"; }
+	const char * getName() const
+	{
+		return "identifier with optional parameters";
+	}
 	bool parseImpl(Pos & pos, Pos end, ASTPtr & node, Pos & max_parsed_pos, Expected & expected);
 };
 
 class ParserTypeInCastExpression : public ParserIdentifierWithOptionalParameters
 {
 protected:
-	const char * getName() const { return "type in cast expression"; }
+	const char * getName() const
+	{
+		return "type in cast expression";
+	}
 	bool parseImpl(Pos & pos, Pos end, ASTPtr & node, Pos & max_parsed_pos, Expected & expected);
 };
 
@@ -60,7 +71,10 @@ template <class NameParser>
 class IParserNameTypePair : public IParserBase
 {
 protected:
-	const char * getName() const { return "name and type pair"; }
+	const char * getName() const
+	{
+		return "name and type pair";
+	}
 	bool parseImpl(Pos & pos, Pos end, ASTPtr & node, Pos & max_parsed_pos, Expected & expected);
 };
 
@@ -79,8 +93,7 @@ bool IParserNameTypePair<NameParser>::parseImpl(Pos & pos, Pos end, ASTPtr & nod
 	Pos begin = pos;
 
 	ASTPtr name, type;
-	if (name_parser.parse(pos, end, name, max_parsed_pos, expected)
-		&& ws_parser.ignore(pos, end, max_parsed_pos, expected)
+	if (name_parser.parse(pos, end, name, max_parsed_pos, expected) && ws_parser.ignore(pos, end, max_parsed_pos, expected)
 		&& type_parser.parse(pos, end, type, max_parsed_pos, expected))
 	{
 		auto name_type_pair = std::make_shared<ASTNameTypePair>(StringRange(begin, pos));
@@ -98,7 +111,10 @@ bool IParserNameTypePair<NameParser>::parseImpl(Pos & pos, Pos end, ASTPtr & nod
 class ParserNameTypePairList : public IParserBase
 {
 protected:
-	const char * getName() const { return "name and type pair list"; }
+	const char * getName() const
+	{
+		return "name and type pair list";
+	}
 	bool parseImpl(Pos & pos, Pos end, ASTPtr & node, Pos & max_parsed_pos, Expected & expected);
 };
 
@@ -107,7 +123,10 @@ template <class NameParser>
 class IParserColumnDeclaration : public IParserBase
 {
 protected:
-	const char * getName() const { return "column declaration"; }
+	const char * getName() const
+	{
+		return "column declaration";
+	}
 	bool parseImpl(Pos & pos, Pos end, ASTPtr & node, Pos & max_parsed_pos, Expected & expected);
 };
 
@@ -120,9 +139,9 @@ bool IParserColumnDeclaration<NameParser>::parseImpl(Pos & pos, Pos end, ASTPtr 
 	NameParser name_parser;
 	ParserIdentifierWithOptionalParameters type_parser;
 	ParserWhiteSpaceOrComments ws;
-	ParserString s_default{"DEFAULT", true, true};
-	ParserString s_materialized{"MATERIALIZED", true, true};
-	ParserString s_alias{"ALIAS", true, true};
+	ParserString s_default{ "DEFAULT", true, true };
+	ParserString s_materialized{ "MATERIALIZED", true, true };
+	ParserString s_alias{ "ALIAS", true, true };
 	ParserTernaryOperatorExpression expr_parser;
 
 	const auto begin = pos;
@@ -139,9 +158,8 @@ bool IParserColumnDeclaration<NameParser>::parseImpl(Pos & pos, Pos end, ASTPtr 
 	  */
 	ASTPtr type;
 	const auto fallback_pos = pos;
-	if (!s_default.check(pos, end, expected, max_parsed_pos) &&
-		!s_materialized.check(pos, end, expected, max_parsed_pos) &&
-		!s_alias.check(pos, end, expected, max_parsed_pos))
+	if (!s_default.check(pos, end, expected, max_parsed_pos) && !s_materialized.check(pos, end, expected, max_parsed_pos)
+		&& !s_alias.check(pos, end, expected, max_parsed_pos))
 	{
 		if (type_parser.parse(pos, end, type, max_parsed_pos, expected))
 			ws.ignore(pos, end, max_parsed_pos, expected);
@@ -153,11 +171,10 @@ bool IParserColumnDeclaration<NameParser>::parseImpl(Pos & pos, Pos end, ASTPtr 
 	String default_specifier;
 	ASTPtr default_expression;
 	const auto pos_before_specifier = pos;
-	if (s_default.ignore(pos, end, max_parsed_pos, expected) ||
-		s_materialized.ignore(pos, end, max_parsed_pos, expected) ||
-		s_alias.ignore(pos, end, max_parsed_pos, expected))
+	if (s_default.ignore(pos, end, max_parsed_pos, expected) || s_materialized.ignore(pos, end, max_parsed_pos, expected)
+		|| s_alias.ignore(pos, end, max_parsed_pos, expected))
 	{
-		default_specifier = Poco::toUpper(std::string{pos_before_specifier, pos});
+		default_specifier = Poco::toUpper(std::string{ pos_before_specifier, pos });
 
 		/// should be followed by an expression
 		ws.ignore(pos, end, max_parsed_pos, expected);
@@ -168,7 +185,7 @@ bool IParserColumnDeclaration<NameParser>::parseImpl(Pos & pos, Pos end, ASTPtr 
 	else if (!type)
 		return false; /// reject sole column name without type
 
-	const auto column_declaration = std::make_shared<ASTColumnDeclaration>(StringRange{begin, pos});
+	const auto column_declaration = std::make_shared<ASTColumnDeclaration>(StringRange{ begin, pos });
 	node = column_declaration;
 	column_declaration->name = typeid_cast<ASTIdentifier &>(*name).name;
 	if (type)
@@ -190,7 +207,10 @@ bool IParserColumnDeclaration<NameParser>::parseImpl(Pos & pos, Pos end, ASTPtr 
 class ParserColumnDeclarationList : public IParserBase
 {
 protected:
-	const char * getName() const { return "column declaration list"; }
+	const char * getName() const
+	{
+		return "column declaration list";
+	}
 	bool parseImpl(Pos & pos, Pos end, ASTPtr & node, Pos & max_parsed_pos, Expected & expected);
 };
 
@@ -199,7 +219,10 @@ protected:
 class ParserEngine : public IParserBase
 {
 protected:
-	const char * getName() const { return "ENGINE"; }
+	const char * getName() const
+	{
+		return "ENGINE";
+	}
 	bool parseImpl(Pos & pos, Pos end, ASTPtr & node, Pos & max_parsed_pos, Expected & expected);
 };
 
@@ -227,8 +250,10 @@ protected:
 class ParserCreateQuery : public IParserBase
 {
 protected:
-	const char * getName() const { return "CREATE TABLE or ATTACH TABLE query"; }
+	const char * getName() const
+	{
+		return "CREATE TABLE or ATTACH TABLE query";
+	}
 	bool parseImpl(Pos & pos, Pos end, ASTPtr & node, Pos & max_parsed_pos, Expected & expected);
 };
-
 }

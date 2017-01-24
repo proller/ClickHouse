@@ -2,20 +2,19 @@
 
 #include <Poco/Event.h>
 
-#include <DB/DataStreams/IProfilingBlockInputStream.h>
-#include <DB/Common/setThreadName.h>
 #include <DB/Common/CurrentMetrics.h>
 #include <DB/Common/ThreadPool.h>
+#include <DB/Common/setThreadName.h>
+#include <DB/DataStreams/IProfilingBlockInputStream.h>
 
 
 namespace CurrentMetrics
 {
-	extern const Metric QueryThread;
+extern const Metric QueryThread;
 }
 
 namespace DB
 {
-
 /** Выполняет другой BlockInputStream в отдельном потоке.
   * Это служит для двух целей:
   * 1. Позволяет сделать так, чтобы разные стадии конвеьера выполнения запроса работали параллельно.
@@ -31,7 +30,10 @@ public:
 		children.push_back(in_);
 	}
 
-	String getName() const override { return "Asynchronous"; }
+	String getName() const override
+	{
+		return "Asynchronous";
+	}
 
 	String getID() const override
 	{
@@ -78,14 +80,14 @@ public:
 	}
 
 
-    ~AsynchronousBlockInputStream() override
+	~AsynchronousBlockInputStream() override
 	{
 		if (started)
 			pool.wait();
 	}
 
 protected:
-	ThreadPool pool{1};
+	ThreadPool pool{ 1 };
 	Poco::Event ready;
 	bool started = false;
 	bool first = true;
@@ -102,7 +104,7 @@ protected:
 			calculate(current_memory_tracker);
 			started = true;
 		}
-		else	/// Если вычисления уже идут - подождём результата
+		else /// Если вычисления уже идут - подождём результата
 			pool.wait();
 
 		if (exception)
@@ -130,7 +132,7 @@ protected:
 	/// Вычисления, которые могут выполняться в отдельном потоке
 	void calculate(MemoryTracker * memory_tracker)
 	{
-		CurrentMetrics::Increment metric_increment{CurrentMetrics::QueryThread};
+		CurrentMetrics::Increment metric_increment{ CurrentMetrics::QueryThread };
 
 		try
 		{
@@ -152,6 +154,4 @@ protected:
 		ready.set();
 	}
 };
-
 }
-

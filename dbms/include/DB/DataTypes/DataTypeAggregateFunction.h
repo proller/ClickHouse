@@ -7,7 +7,6 @@
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int THERE_IS_NO_DEFAULT_VALUE;
@@ -31,14 +30,26 @@ public:
 	{
 	}
 
-	std::string getFunctionName() const { return function->getName(); }
+	std::string getFunctionName() const
+	{
+		return function->getName();
+	}
 
 	std::string getName() const override;
 
-	DataTypePtr getReturnType() const { return function->getReturnType(); };
-	DataTypes getArgumentsDataTypes() const { return argument_types; }
+	DataTypePtr getReturnType() const
+	{
+		return function->getReturnType();
+	};
+	DataTypes getArgumentsDataTypes() const
+	{
+		return argument_types;
+	}
 
-	DataTypePtr clone() const override { return std::make_shared<DataTypeAggregateFunction>(function, argument_types, parameters); }
+	DataTypePtr clone() const override
+	{
+		return std::make_shared<DataTypeAggregateFunction>(function, argument_types, parameters);
+	}
 
 	/// NOTE Эти две функции сериализации одиночных значений несовместимы с функциями ниже.
 	void serializeBinary(const Field & field, WriteBuffer & ostr) const override;
@@ -67,7 +78,4 @@ public:
 		throw Exception("There is no default value for AggregateFunction data type", ErrorCodes::THERE_IS_NO_DEFAULT_VALUE);
 	}
 };
-
-
 }
-

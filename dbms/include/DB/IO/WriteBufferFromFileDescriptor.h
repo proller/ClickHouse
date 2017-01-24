@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 /** Use ready file descriptor. Does not open or close a file.
   */
 class WriteBufferFromFileDescriptor : public WriteBufferFromFileBase
@@ -20,10 +19,7 @@ protected:
 
 public:
 	WriteBufferFromFileDescriptor(
-		int fd_ = -1,
-		size_t buf_size = DBMS_DEFAULT_BUFFER_SIZE,
-		char * existing_memory = nullptr,
-		size_t alignment = 0);
+		int fd_ = -1, size_t buf_size = DBMS_DEFAULT_BUFFER_SIZE, char * existing_memory = nullptr, size_t alignment = 0);
 
 	/** Could be used before initialization if needed 'fd' was not passed to constructor.
 	  * It's not possible to change 'fd' during work.
@@ -33,7 +29,7 @@ public:
 		fd = fd_;
 	}
 
-    ~WriteBufferFromFileDescriptor() override;
+	~WriteBufferFromFileDescriptor() override;
 
 	int getFD() const override
 	{
@@ -49,5 +45,4 @@ private:
 
 	void doTruncate(off_t length) override;
 };
-
 }

@@ -7,7 +7,6 @@
 
 namespace DB
 {
-
 /** Соединяет несколько сортированных потоков в один.
   * При этом, для каждой группы идущих подряд одинаковых значений первичного ключа (столбцов, по которым сортируются данные),
   *  оставляет
@@ -15,14 +14,16 @@ namespace DB
 class ReplacingSortedBlockInputStream : public MergingSortedBlockInputStream
 {
 public:
-	ReplacingSortedBlockInputStream(BlockInputStreams inputs_, const SortDescription & description_,
-		const String & version_column_, size_t max_block_size_)
-		: MergingSortedBlockInputStream(inputs_, description_, max_block_size_),
-		version_column(version_column_)
+	ReplacingSortedBlockInputStream(
+		BlockInputStreams inputs_, const SortDescription & description_, const String & version_column_, size_t max_block_size_)
+		: MergingSortedBlockInputStream(inputs_, description_, max_block_size_), version_column(version_column_)
 	{
 	}
 
-	String getName() const override { return "ReplacingSorted"; }
+	String getName() const override
+	{
+		return "ReplacingSorted";
+	}
 
 	String getID() const override
 	{
@@ -54,18 +55,17 @@ private:
 	/// Прочитали до конца.
 	bool finished = false;
 
-	RowRef current_key;			/// Текущий первичный ключ.
-	RowRef next_key;			/// Первичный ключ следующей строки.
+	RowRef current_key; /// Текущий первичный ключ.
+	RowRef next_key; /// Первичный ключ следующей строки.
 
-	RowRef selected_row;		/// Последняя строка с максимальной версией для текущего первичного ключа.
+	RowRef selected_row; /// Последняя строка с максимальной версией для текущего первичного ключа.
 
-	UInt64 max_version = 0;		/// Максимальная версия для текущего первичного ключа.
+	UInt64 max_version = 0; /// Максимальная версия для текущего первичного ключа.
 
-	template<class TSortCursor>
+	template <class TSortCursor>
 	void merge(ColumnPlainPtrs & merged_columns, std::priority_queue<TSortCursor> & queue);
 
 	/// Вставить в результат строки для текущего первичного ключа.
 	void insertRow(ColumnPlainPtrs & merged_columns, size_t & merged_rows);
 };
-
 }

@@ -1,21 +1,20 @@
 #pragma once
 
-#include <DB/AggregateFunctions/IAggregateFunction.h>
-#include <DB/DataTypes/DataTypeDateTime.h>
-#include <DB/DataTypes/DataTypesNumberFixed.h>
-#include <DB/Parsers/CommonParsers.h>
-#include <ext/range.hpp>
-#include <boost/range/iterator_range_core.hpp>
-#include <DB/Parsers/ExpressionElementParsers.h>
-#include <DB/Parsers/ASTLiteral.h>
-#include <DB/Common/PODArray.h>
 #include <bitset>
 #include <stack>
+#include <boost/range/iterator_range_core.hpp>
+#include <ext/range.hpp>
+#include <DB/AggregateFunctions/IAggregateFunction.h>
+#include <DB/Common/PODArray.h>
+#include <DB/DataTypes/DataTypeDateTime.h>
+#include <DB/DataTypes/DataTypesNumberFixed.h>
+#include <DB/Parsers/ASTLiteral.h>
+#include <DB/Parsers/CommonParsers.h>
+#include <DB/Parsers/ExpressionElementParsers.h>
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int TOO_SLOW;
@@ -124,7 +123,7 @@ struct AggregateFunctionSequenceMatchData final
 			UInt64 events;
 			readBinary(events, buf);
 
-			eventsList.emplace_back(timestamp, Events{events});
+			eventsList.emplace_back(timestamp, Events{ events });
 		}
 	}
 };
@@ -136,19 +135,26 @@ constexpr auto sequence_match_max_iterations = 1000000;
 class AggregateFunctionSequenceMatch : public IAggregateFunctionHelper<AggregateFunctionSequenceMatchData>
 {
 public:
-	static bool sufficientArgs(const std::size_t arg_count) { return arg_count >= 3; }
+	static bool sufficientArgs(const std::size_t arg_count)
+	{
+		return arg_count >= 3;
+	}
 
-	String getName() const override { return "sequenceMatch"; }
+	String getName() const override
+	{
+		return "sequenceMatch";
+	}
 
-	DataTypePtr getReturnType() const override { return std::make_shared<DataTypeUInt8>(); }
+	DataTypePtr getReturnType() const override
+	{
+		return std::make_shared<DataTypeUInt8>();
+	}
 
 	void setParameters(const Array & params) override
 	{
 		if (params.size() != 1)
-			throw Exception{
-				"Aggregate function " + getName() + " requires exactly one parameter.",
-				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH
-			};
+			throw Exception{ "Aggregate function " + getName() + " requires exactly one parameter.",
+				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH };
 
 		pattern = params.front().safeGet<std::string>();
 	}
@@ -158,35 +164,28 @@ public:
 		arg_count = arguments.size();
 
 		if (!sufficientArgs(arg_count))
-			throw Exception{
-				"Aggregate function " + getName() + " requires at least 3 arguments.",
-				ErrorCodes::TOO_LESS_ARGUMENTS_FOR_FUNCTION
-			};
+			throw Exception{ "Aggregate function " + getName() + " requires at least 3 arguments.",
+				ErrorCodes::TOO_LESS_ARGUMENTS_FOR_FUNCTION };
 
 		if (arg_count - 1 > Data::max_events)
-			throw Exception{
-				"Aggregate function " + getName() + " supports up to " +
-					std::to_string(Data::max_events) + " event arguments.",
-				ErrorCodes::TOO_MUCH_ARGUMENTS_FOR_FUNCTION
-			};
+			throw Exception{ "Aggregate function " + getName() + " supports up to " + std::to_string(Data::max_events)
+					+ " event arguments.",
+				ErrorCodes::TOO_MUCH_ARGUMENTS_FOR_FUNCTION };
 
 		const auto time_arg = arguments.front().get();
 		if (!typeid_cast<const DataTypeDateTime *>(time_arg))
-			throw Exception{
-				"Illegal type " + time_arg->getName() + " of first argument of aggregate function " +
-					getName() + ", must be DateTime",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT
-			};
+			throw Exception{ "Illegal type " + time_arg->getName() + " of first argument of aggregate function " + getName()
+					+ ", must be DateTime",
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 
 		for (const auto i : ext::range(1, arg_count))
 		{
 			const auto cond_arg = arguments[i].get();
 			if (!typeid_cast<const DataTypeUInt8 *>(cond_arg))
-				throw Exception{
-					"Illegal type " + cond_arg->getName() + " of argument " + toString(i + 1) +
-						" of aggregate function " + getName() + ", must be UInt8",
-					ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT
-				};
+				throw Exception{ "Illegal type " + cond_arg->getName() + " of argument " + toString(i + 1) + " of aggregate function "
+						+ getName()
+						+ ", must be UInt8",
+					ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 		}
 
 		parsePattern();
@@ -239,7 +238,10 @@ public:
 		static_cast<const AggregateFunctionSequenceMatch &>(*that).add(place, columns, row_num, arena);
 	}
 
-	IAggregateFunction::AddFunc getAddressOfAddFunction() const override final { return &addFree; }
+	IAggregateFunction::AddFunc getAddressOfAddFunction() const override final
+	{
+		return &addFree;
+	}
 
 private:
 	enum class PatternActionType
@@ -259,7 +261,9 @@ private:
 		std::uint32_t extra;
 
 		PatternAction() = default;
-		PatternAction(const PatternActionType type, const std::uint32_t extra = 0) : type{type}, extra{extra} {}
+		PatternAction(const PatternActionType type, const std::uint32_t extra = 0) : type{ type }, extra{ extra }
+		{
+		}
 	};
 
 	static constexpr size_t bytes_on_stack = 64;
@@ -290,11 +294,9 @@ private:
 		decltype(pos) max_parsed_pos{};
 		Expected expected;
 
-		const auto throw_exception = [&] (const std::string & msg) {
-			throw Exception{
-				msg + " '" + std::string(pos, end) + "' at position " + std::to_string(pos - begin),
-				ErrorCodes::SYNTAX_ERROR
-			};
+		const auto throw_exception = [&](const std::string & msg) {
+			throw Exception{ msg + " '" + std::string(pos, end) + "' at position " + std::to_string(pos - begin),
+				ErrorCodes::SYNTAX_ERROR };
 		};
 
 		while (pos < end)
@@ -319,13 +321,9 @@ private:
 					if (!number_p.parse(pos, end, node, max_parsed_pos, expected))
 						throw_exception("Could not parse number");
 
-					if (actions.back().type != PatternActionType::SpecificEvent &&
-						actions.back().type != PatternActionType::AnyEvent &&
-						actions.back().type != PatternActionType::KleeneStar)
-						throw Exception{
-							"Temporal condition should be preceeded by an event condition",
-							ErrorCodes::BAD_ARGUMENTS
-						};
+					if (actions.back().type != PatternActionType::SpecificEvent && actions.back().type != PatternActionType::AnyEvent
+						&& actions.back().type != PatternActionType::KleeneStar)
+						throw Exception{ "Temporal condition should be preceeded by an event condition", ErrorCodes::BAD_ARGUMENTS };
 
 					actions.emplace_back(type, typeid_cast<const ASTLiteral &>(*node).value.safeGet<UInt64>());
 				}
@@ -333,10 +331,7 @@ private:
 				{
 					const auto event_number = typeid_cast<const ASTLiteral &>(*node).value.safeGet<UInt64>();
 					if (event_number > arg_count - 1)
-						throw Exception{
-							"Event number " + std::to_string(event_number) + " is out of range",
-							ErrorCodes::BAD_ARGUMENTS
-						};
+						throw Exception{ "Event number " + std::to_string(event_number) + " is out of range", ErrorCodes::BAD_ARGUMENTS };
 
 					actions.emplace_back(PatternActionType::SpecificEvent, event_number - 1);
 				}
@@ -345,7 +340,6 @@ private:
 
 				if (!special_close_p.ignore(pos, end))
 					throw_exception("Expected closing parenthesis, found");
-
 			}
 			else if (dot_closure_p.ignore(pos, end))
 				actions.emplace_back(PatternActionType::KleeneStar);
@@ -462,10 +456,7 @@ protected:
 					break;
 			}
 			else
-				throw Exception{
-					"Unknown PatternActionType",
-					ErrorCodes::LOGICAL_ERROR
-				};
+				throw Exception{ "Unknown PatternActionType", ErrorCodes::LOGICAL_ERROR };
 
 			if (++i > sequence_match_max_iterations)
 				throw Exception{
@@ -478,10 +469,9 @@ protected:
 		if (action_it != action_end)
 		{
 			/// match multiple empty strings at end
-			while (action_it->type == PatternActionType::KleeneStar ||
-				   action_it->type == PatternActionType::TimeLessOrEqual ||
-				   action_it->type == PatternActionType::TimeLess ||
-				   (action_it->type == PatternActionType::TimeGreaterOrEqual && action_it->extra == 0))
+			while (action_it->type == PatternActionType::KleeneStar || action_it->type == PatternActionType::TimeLessOrEqual
+				|| action_it->type == PatternActionType::TimeLess
+				|| (action_it->type == PatternActionType::TimeGreaterOrEqual && action_it->extra == 0))
 				++action_it;
 		}
 
@@ -500,9 +490,15 @@ private:
 class AggregateFunctionSequenceCount final : public AggregateFunctionSequenceMatch
 {
 public:
-	String getName() const override { return "sequenceCount"; }
+	String getName() const override
+	{
+		return "sequenceCount";
+	}
 
-	DataTypePtr getReturnType() const override { return std::make_shared<DataTypeUInt64>(); }
+	DataTypePtr getReturnType() const override
+	{
+		return std::make_shared<DataTypeUInt64>();
+	}
 
 	void insertResultInto(ConstAggregateDataPtr place, IColumn & to) const override
 	{
@@ -526,5 +522,4 @@ private:
 		return count;
 	}
 };
-
 }

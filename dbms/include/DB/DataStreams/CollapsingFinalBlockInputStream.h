@@ -1,21 +1,19 @@
 #pragma once
-#include <common/logger_useful.h>
-#include <DB/DataStreams/IProfilingBlockInputStream.h>
-#include <DB/Core/SortDescription.h>
-#include <DB/Columns/ColumnsNumber.h>
 #include <queue>
+#include <common/logger_useful.h>
+#include <DB/Columns/ColumnsNumber.h>
+#include <DB/Core/SortDescription.h>
+#include <DB/DataStreams/IProfilingBlockInputStream.h>
 
 namespace DB
 {
-
 /// Схлопывает одинаковые строки с противоположным знаком примерно как CollapsingSortedBlockInputStream.
 /// Выдает строки в произвольном порядке (входные потоки по-прежнему должны быть упорядочены).
 /// Выдает только строки с положительным знаком.
 class CollapsingFinalBlockInputStream : public IProfilingBlockInputStream
 {
 public:
-	CollapsingFinalBlockInputStream(BlockInputStreams inputs_, const SortDescription & description_,
-									 const String & sign_column_name_)
+	CollapsingFinalBlockInputStream(BlockInputStreams inputs_, const SortDescription & description_, const String & sign_column_name_)
 		: description(description_), sign_column_name(sign_column_name_)
 	{
 		children.insert(children.end(), inputs_.begin(), inputs_.end());
@@ -23,7 +21,10 @@ public:
 
 	~CollapsingFinalBlockInputStream();
 
-	String getName() const override { return "CollapsingFinal"; }
+	String getName() const override
+	{
+		return "CollapsingFinal";
+	}
 
 	String getID() const override
 	{
@@ -47,23 +48,18 @@ protected:
 
 private:
 	struct MergingBlock;
-	using BlockPlainPtrs = std::vector<MergingBlock*>;
+	using BlockPlainPtrs = std::vector<MergingBlock *>;
 
 	struct MergingBlock : boost::noncopyable
 	{
-		MergingBlock(Block block_,
-					 size_t stream_index_,
-					 const SortDescription & desc,
-					 String sign_column_name,
-					 BlockPlainPtrs * output_blocks)
+		MergingBlock(
+			Block block_, size_t stream_index_, const SortDescription & desc, String sign_column_name, BlockPlainPtrs * output_blocks)
 			: block(block_), stream_index(stream_index_), output_blocks(output_blocks)
 		{
 			sort_columns.resize(desc.size());
 			for (size_t i = 0; i < desc.size(); ++i)
 			{
-				size_t column_number = !desc[i].column_name.empty()
-					? block.getPositionByName(desc[i].column_name)
-					: desc[i].column_number;
+				size_t column_number = !desc[i].column_name.empty() ? block.getPositionByName(desc[i].column_name) : desc[i].column_number;
 
 				sort_columns[i] = block.safeGetByPosition(column_number).column.get();
 			}
@@ -104,7 +100,9 @@ private:
 	class MergingBlockPtr
 	{
 	public:
-		MergingBlockPtr() : ptr() {}
+		MergingBlockPtr() : ptr()
+		{
+		}
 
 		explicit MergingBlockPtr(MergingBlock * ptr_) : ptr(ptr_)
 		{
@@ -144,10 +142,22 @@ private:
 			}
 		}
 
-		MergingBlock & operator*() const { return *ptr; }
-		MergingBlock * operator->() const { return ptr; }
-		operator bool() const { return !!ptr; }
-		bool operator!() const { return !ptr; }
+		MergingBlock & operator*() const
+		{
+			return *ptr;
+		}
+		MergingBlock * operator->() const
+		{
+			return ptr;
+		}
+		operator bool() const
+		{
+			return !!ptr;
+		}
+		bool operator!() const
+		{
+			return !ptr;
+		}
 
 	private:
 		MergingBlock * ptr;
@@ -174,10 +184,14 @@ private:
 		MergingBlockPtr block;
 		size_t pos;
 
-		Cursor() {}
-		explicit Cursor(MergingBlockPtr block_, size_t pos_ = 0) : block(block_), pos(pos_) {}
+		Cursor()
+		{
+		}
+		explicit Cursor(MergingBlockPtr block_, size_t pos_ = 0) : block(block_), pos(pos_)
+		{
+		}
 
-		bool operator< (const Cursor & rhs) const
+		bool operator<(const Cursor & rhs) const
 		{
 			for (size_t i = 0; i < block->sort_columns.size(); ++i)
 			{
@@ -242,14 +256,14 @@ private:
 
 	Queue queue;
 
-	Cursor previous;		/// Текущий первичный ключ.
-	Cursor last_positive;	/// Последняя положительная строка для текущего первичного ключа.
+	Cursor previous; /// Текущий первичный ключ.
+	Cursor last_positive; /// Последняя положительная строка для текущего первичного ключа.
 
-	size_t count_positive = 0;		/// Количество положительных строк для текущего первичного ключа.
-	size_t count_negative = 0;		/// Количество отрицательных строк для текущего первичного ключа.
-	bool last_is_positive = false;	/// true, если последняя строка для текущего первичного ключа положительная.
+	size_t count_positive = 0; /// Количество положительных строк для текущего первичного ключа.
+	size_t count_negative = 0; /// Количество отрицательных строк для текущего первичного ключа.
+	bool last_is_positive = false; /// true, если последняя строка для текущего первичного ключа положительная.
 
-	size_t count_incorrect_data = 0;	/// Чтобы не писать в лог слишком много сообщений об ошибке.
+	size_t count_incorrect_data = 0; /// Чтобы не писать в лог слишком много сообщений об ошибке.
 
 	/// Посчитаем, сколько блоков получили на вход и отдали на выход.
 	size_t blocks_fetched = 0;
@@ -261,5 +275,4 @@ private:
 	void reportBadCounts();
 	void reportBadSign(Int8 sign);
 };
-
 }

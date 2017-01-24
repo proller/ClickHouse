@@ -4,8 +4,8 @@
 
 #include <Poco/Net/HTTPClientSession.h>
 
-#include <DB/IO/ReadBuffer.h>
 #include <DB/Core/Types.h>
+#include <DB/IO/ReadBuffer.h>
 
 #define DEFAULT_HTTP_READ_BUFFER_TIMEOUT 1800
 #define DEFAULT_HTTP_READ_BUFFER_CONNECTION_TIMEOUT 1
@@ -13,7 +13,6 @@
 
 namespace DB
 {
-
 /** Perform HTTP-request and provide response to read.
   */
 class ReadBufferFromHTTP : public ReadBuffer
@@ -25,14 +24,13 @@ private:
 	String method;
 
 	Poco::Net::HTTPClientSession session;
-	std::istream * istr;	/// owned by session
+	std::istream * istr; /// owned by session
 	std::unique_ptr<ReadBuffer> impl;
 
 public:
 	using Params = std::vector<std::pair<String, String>>;
 
-	ReadBufferFromHTTP(
-		const String & host_,
+	ReadBufferFromHTTP(const String & host_,
 		int port_,
 		const String & path_,
 		const Params & params,
@@ -44,5 +42,4 @@ public:
 
 	bool nextImpl() override;
 };
-
 }

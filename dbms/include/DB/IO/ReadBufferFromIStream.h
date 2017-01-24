@@ -4,13 +4,12 @@
 
 #include <DB/Common/Exception.h>
 
-#include <DB/IO/ReadBuffer.h>
 #include <DB/IO/BufferWithOwnMemory.h>
+#include <DB/IO/ReadBuffer.h>
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int CANNOT_READ_FROM_ISTREAM;
@@ -41,8 +40,8 @@ private:
 	}
 
 public:
-	ReadBufferFromIStream(std::istream & istr_, size_t size = DBMS_DEFAULT_BUFFER_SIZE)
-		: BufferWithOwnMemory<ReadBuffer>(size), istr(istr_) {}
+	ReadBufferFromIStream(std::istream & istr_, size_t size = DBMS_DEFAULT_BUFFER_SIZE) : BufferWithOwnMemory<ReadBuffer>(size), istr(istr_)
+	{
+	}
 };
-
 }

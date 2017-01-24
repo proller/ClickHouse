@@ -1,20 +1,25 @@
 #pragma once
 
-#include <DB/IO/WriteHelpers.h>
 #include <DB/AggregateFunctions/IAggregateFunction.h>
+#include <DB/IO/WriteHelpers.h>
 
 
 namespace DB
 {
-
 /** Интерфейс для ноль-арных агрегатных функций. Это, например, агрегатная функция count.
   */
 template <typename T, typename Derived>
 class INullaryAggregateFunction : public IAggregateFunctionHelper<T>
 {
 private:
-	Derived & getDerived() { return static_cast<Derived &>(*this); }
-	const Derived & getDerived() const { return static_cast<const Derived &>(*this); }
+	Derived & getDerived()
+	{
+		return static_cast<Derived &>(*this);
+	}
+	const Derived & getDerived() const
+	{
+		return static_cast<const Derived &>(*this);
+	}
 
 public:
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
@@ -36,11 +41,13 @@ public:
 		return static_cast<const Derived &>(*that).addImpl(place);
 	}
 
-	IAggregateFunction::AddFunc getAddressOfAddFunction() const override final { return &addFree; }
+	IAggregateFunction::AddFunc getAddressOfAddFunction() const override final
+	{
+		return &addFree;
+	}
 
 	/** Реализуйте это в классе-наследнике:
 	  * void addImpl(AggregateDataPtr place) const;
 	  */
 };
-
 }

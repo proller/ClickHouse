@@ -4,11 +4,11 @@
 
 #include <DB/Core/FieldVisitors.h>
 
-#include <DB/IO/WriteHelpers.h>
 #include <DB/IO/ReadHelpers.h>
+#include <DB/IO/WriteHelpers.h>
 
-#include <DB/DataTypes/DataTypesNumberFixed.h>
 #include <DB/DataTypes/DataTypeArray.h>
+#include <DB/DataTypes/DataTypesNumberFixed.h>
 
 #include <DB/AggregateFunctions/IBinaryAggregateFunction.h>
 
@@ -17,12 +17,11 @@
 
 namespace DB
 {
-
 template <typename ArgumentFieldType>
 struct AggregateFunctionQuantileDeterministicData
 {
 	using Sample = ReservoirSamplerDeterministic<ArgumentFieldType, ReservoirSamplerDeterministicOnEmpty::RETURN_NAN_OR_ZERO>;
-	Sample sample;	/// TODO Добавить MemoryTracker
+	Sample sample; /// TODO Добавить MemoryTracker
 };
 
 
@@ -33,9 +32,8 @@ struct AggregateFunctionQuantileDeterministicData
   */
 template <typename ArgumentFieldType, bool returns_float = true>
 class AggregateFunctionQuantileDeterministic final
-	: public IBinaryAggregateFunction<
-		AggregateFunctionQuantileDeterministicData<ArgumentFieldType>,
-		AggregateFunctionQuantileDeterministic<ArgumentFieldType, returns_float>>
+	: public IBinaryAggregateFunction<AggregateFunctionQuantileDeterministicData<ArgumentFieldType>,
+		  AggregateFunctionQuantileDeterministic<ArgumentFieldType, returns_float>>
 {
 private:
 	using Sample = typename AggregateFunctionQuantileDeterministicData<ArgumentFieldType>::Sample;
@@ -44,9 +42,14 @@ private:
 	DataTypePtr type;
 
 public:
-	AggregateFunctionQuantileDeterministic(double level_ = 0.5) : level(level_) {}
+	AggregateFunctionQuantileDeterministic(double level_ = 0.5) : level(level_)
+	{
+	}
 
-	String getName() const override { return "quantileDeterministic"; }
+	String getName() const override
+	{
+		return "quantileDeterministic";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -58,17 +61,16 @@ public:
 		type = returns_float ? std::make_shared<DataTypeFloat64>() : arguments[0];
 
 		if (!arguments[1]->isNumeric())
-			throw Exception{
-				"Invalid type of second argument to function " + getName() +
-					", got " + arguments[1]->getName() + ", expected numeric",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT
-			};
+			throw Exception{ "Invalid type of second argument to function " + getName() + ", got " + arguments[1]->getName()
+					+ ", expected numeric",
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 	}
 
 	void setParameters(const Array & params) override
 	{
 		if (params.size() != 1)
-			throw Exception("Aggregate function " + getName() + " requires exactly one parameter.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+			throw Exception(
+				"Aggregate function " + getName() + " requires exactly one parameter.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
 		level = applyVisitor(FieldVisitorConvertToNumber<Float64>(), params[0]);
 	}
@@ -76,8 +78,8 @@ public:
 
 	void addImpl(AggregateDataPtr place, const IColumn & column, const IColumn & determinator, size_t row_num, Arena *) const
 	{
-		this->data(place).sample.insert(static_cast<const ColumnVector<ArgumentFieldType> &>(column).getData()[row_num],
-			determinator.get64(row_num));
+		this->data(place).sample.insert(
+			static_cast<const ColumnVector<ArgumentFieldType> &>(column).getData()[row_num], determinator.get64(row_num));
 	}
 
 	void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena * arena) const override
@@ -114,9 +116,8 @@ public:
   */
 template <typename ArgumentFieldType, bool returns_float = true>
 class AggregateFunctionQuantilesDeterministic final
-	: public IBinaryAggregateFunction<
-		AggregateFunctionQuantileDeterministicData<ArgumentFieldType>,
-		AggregateFunctionQuantilesDeterministic<ArgumentFieldType, returns_float>>
+	: public IBinaryAggregateFunction<AggregateFunctionQuantileDeterministicData<ArgumentFieldType>,
+		  AggregateFunctionQuantilesDeterministic<ArgumentFieldType, returns_float>>
 {
 private:
 	using Sample = typename AggregateFunctionQuantileDeterministicData<ArgumentFieldType>::Sample;
@@ -126,7 +127,10 @@ private:
 	DataTypePtr type;
 
 public:
-	String getName() const override { return "quantilesDeterministic"; }
+	String getName() const override
+	{
+		return "quantilesDeterministic";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -138,17 +142,16 @@ public:
 		type = returns_float ? std::make_shared<DataTypeFloat64>() : arguments[0];
 
 		if (!arguments[1]->isNumeric())
-			throw Exception{
-				"Invalid type of second argument to function " + getName() +
-					", got " + arguments[1]->getName() + ", expected numeric",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT
-			};
+			throw Exception{ "Invalid type of second argument to function " + getName() + ", got " + arguments[1]->getName()
+					+ ", expected numeric",
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 	}
 
 	void setParameters(const Array & params) override
 	{
 		if (params.empty())
-			throw Exception("Aggregate function " + getName() + " requires at least one parameter.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+			throw Exception(
+				"Aggregate function " + getName() + " requires at least one parameter.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
 		size_t size = params.size();
 		levels.resize(size);
@@ -160,8 +163,8 @@ public:
 
 	void addImpl(AggregateDataPtr place, const IColumn & column, const IColumn & determinator, size_t row_num, Arena *) const
 	{
-		this->data(place).sample.insert(static_cast<const ColumnVector<ArgumentFieldType> &>(column).getData()[row_num],
-			determinator.get64(row_num));
+		this->data(place).sample.insert(
+			static_cast<const ColumnVector<ArgumentFieldType> &>(column).getData()[row_num], determinator.get64(row_num));
 	}
 
 	void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena * arena) const override
@@ -199,12 +202,12 @@ public:
 		}
 		else
 		{
-			typename ColumnVector<ArgumentFieldType>::Container_t & data_to = static_cast<ColumnVector<ArgumentFieldType> &>(arr_to.getData()).getData();
+			typename ColumnVector<ArgumentFieldType>::Container_t & data_to
+				= static_cast<ColumnVector<ArgumentFieldType> &>(arr_to.getData()).getData();
 
 			for (size_t i = 0; i < size; ++i)
 				data_to.push_back(sample.quantileInterpolated(levels[i]));
 		}
 	}
 };
-
 }

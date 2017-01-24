@@ -1,13 +1,13 @@
 #pragma once
 
-#include <DB/Common/Stopwatch.h>
+#include <atomic>
+#include <list>
+#include <memory>
+#include <mutex>
 #include <DB/Common/CurrentMetrics.h>
 #include <DB/Common/MemoryTracker.h>
+#include <DB/Common/Stopwatch.h>
 #include <DB/Interpreters/Context.h>
-#include <memory>
-#include <list>
-#include <mutex>
-#include <atomic>
 
 
 /** Maintains a list of currently running merges.
@@ -16,13 +16,11 @@
 
 namespace CurrentMetrics
 {
-	extern const Metric Merge;
+extern const Metric Merge;
 }
 
 namespace DB
 {
-
-
 struct MergeInfo
 {
 	std::string database;
@@ -87,16 +85,21 @@ class MergeListEntry
 	using container_t = std::list<MergeListElement>;
 	container_t::iterator it;
 
-	CurrentMetrics::Increment num_merges {CurrentMetrics::Merge};
+	CurrentMetrics::Increment num_merges{ CurrentMetrics::Merge };
 
 public:
 	MergeListEntry(const MergeListEntry &) = delete;
 	MergeListEntry & operator=(const MergeListEntry &) = delete;
 
-	MergeListEntry(MergeList & list, const container_t::iterator it) : list(list), it{it} {}
+	MergeListEntry(MergeList & list, const container_t::iterator it) : list(list), it{ it }
+	{
+	}
 	~MergeListEntry();
 
-	MergeListElement * operator->() { return &*it; }
+	MergeListElement * operator->()
+	{
+		return &*it;
+	}
 };
 
 
@@ -117,13 +120,13 @@ public:
 	template <typename... Args>
 	EntryPtr insert(Args &&... args)
 	{
-		std::lock_guard<std::mutex> lock{mutex};
+		std::lock_guard<std::mutex> lock{ mutex };
 		return std::make_unique<Entry>(*this, merges.emplace(merges.end(), std::forward<Args>(args)...));
 	}
 
 	info_container_t get() const
 	{
-		std::lock_guard<std::mutex> lock{mutex};
+		std::lock_guard<std::mutex> lock{ mutex };
 		info_container_t res;
 		for (const auto & merge_element : merges)
 			res.emplace_back(merge_element.getInfo());
@@ -134,9 +137,7 @@ public:
 
 inline MergeListEntry::~MergeListEntry()
 {
-	std::lock_guard<std::mutex> lock{list.mutex};
+	std::lock_guard<std::mutex> lock{ list.mutex };
 	list.merges.erase(it);
 }
-
-
 }

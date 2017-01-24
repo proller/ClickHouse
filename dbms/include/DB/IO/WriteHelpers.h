@@ -1,9 +1,9 @@
 #pragma once
 
-#include <cstring>
-#include <cstdio>
-#include <limits>
 #include <algorithm>
+#include <cstdio>
+#include <cstring>
+#include <limits>
 
 #include <common/Common.h>
 #include <common/DateLUT.h>
@@ -11,22 +11,21 @@
 #include <common/LocalDateTime.h>
 #include <common/find_first_symbols.h>
 
-#include <DB/Core/Types.h>
 #include <DB/Common/Exception.h>
 #include <DB/Common/StringUtils.h>
 #include <DB/Core/StringRef.h>
+#include <DB/Core/Types.h>
 
-#include <DB/IO/WriteBuffer.h>
-#include <DB/IO/WriteIntText.h>
-#include <DB/IO/VarInt.h>
-#include <DB/IO/WriteBufferFromString.h>
-#include <DB/IO/DoubleConverter.h>
 #include <city.h>
+#include <DB/IO/DoubleConverter.h>
+#include <DB/IO/VarInt.h>
+#include <DB/IO/WriteBuffer.h>
+#include <DB/IO/WriteBufferFromString.h>
+#include <DB/IO/WriteIntText.h>
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int CANNOT_PRINT_FLOAT_OR_DOUBLE_NUMBER;
@@ -100,7 +99,7 @@ inline void writeBoolText(bool x, WriteBuffer & buf)
 inline void writeFloatText(double x, WriteBuffer & buf)
 {
 	DoubleConverter<false>::BufferType buffer;
-	double_conversion::StringBuilder builder{buffer, sizeof(buffer)};
+	double_conversion::StringBuilder builder{ buffer, sizeof(buffer) };
 
 	const auto result = DoubleConverter<false>::instance().ToShortest(x, &builder);
 
@@ -113,7 +112,7 @@ inline void writeFloatText(double x, WriteBuffer & buf)
 inline void writeFloatText(float x, WriteBuffer & buf)
 {
 	DoubleConverter<false>::BufferType buffer;
-	double_conversion::StringBuilder builder{buffer, sizeof(buffer)};
+	double_conversion::StringBuilder builder{ buffer, sizeof(buffer) };
 
 	const auto result = DoubleConverter<false>::instance().ToShortestSingle(x, &builder);
 
@@ -143,8 +142,7 @@ inline void writeString(const StringRef & ref, WriteBuffer & buf)
 /** Пишет С-строку без создания временного объекта. Если строка - литерал, то strlen выполняется на этапе компиляции.
   * Используйте, когда строка - литерал.
   */
-#define writeCString(s, buf) \
-	(buf).write((s), strlen(s))
+#define writeCString(s, buf) (buf).write((s), strlen(s))
 
 /** Пишет строку для использования в формате JSON:
  *  - строка выводится в двойных кавычках
@@ -161,61 +159,61 @@ inline void writeJSONString(const char * begin, const char * end, WriteBuffer & 
 	{
 		switch (*it)
 		{
-			case '\b':
-				writeChar('\\', buf);
-				writeChar('b', buf);
-				break;
-			case '\f':
-				writeChar('\\', buf);
-				writeChar('f', buf);
-				break;
-			case '\n':
-				writeChar('\\', buf);
-				writeChar('n', buf);
-				break;
-			case '\r':
-				writeChar('\\', buf);
-				writeChar('r', buf);
-				break;
-			case '\t':
-				writeChar('\\', buf);
-				writeChar('t', buf);
-				break;
-			case '\\':
-				writeChar('\\', buf);
-				writeChar('\\', buf);
-				break;
-			case '/':
-				writeChar('\\', buf);
-				writeChar('/', buf);
-				break;
-			case '"':
-				writeChar('\\', buf);
-				writeChar('"', buf);
-				break;
-			default:
-				if (0x00 <= *it && *it <= 0x1F)
-				{
-					char higher_half = (*it) >> 4;
-					char lower_half = (*it) & 0xF;
+		case '\b':
+			writeChar('\\', buf);
+			writeChar('b', buf);
+			break;
+		case '\f':
+			writeChar('\\', buf);
+			writeChar('f', buf);
+			break;
+		case '\n':
+			writeChar('\\', buf);
+			writeChar('n', buf);
+			break;
+		case '\r':
+			writeChar('\\', buf);
+			writeChar('r', buf);
+			break;
+		case '\t':
+			writeChar('\\', buf);
+			writeChar('t', buf);
+			break;
+		case '\\':
+			writeChar('\\', buf);
+			writeChar('\\', buf);
+			break;
+		case '/':
+			writeChar('\\', buf);
+			writeChar('/', buf);
+			break;
+		case '"':
+			writeChar('\\', buf);
+			writeChar('"', buf);
+			break;
+		default:
+			if (0x00 <= *it && *it <= 0x1F)
+			{
+				char higher_half = (*it) >> 4;
+				char lower_half = (*it) & 0xF;
 
-					writeCString("\\u00", buf);
-					writeChar('0' + higher_half, buf);
+				writeCString("\\u00", buf);
+				writeChar('0' + higher_half, buf);
 
-					if (0 <= lower_half && lower_half <= 9)
-						writeChar('0' + lower_half, buf);
-					else
-						writeChar('A' + lower_half - 10, buf);
-				}
-				else if (end - it >= 3 && it[0] == '\xE2' && it[1] == '\x80' && (it[2] == '\xA8' || it[2] == '\xA9'))
-				{
-					if (it[2] == '\xA8')
-						writeCString("\\u2028", buf);
-					if (it[2] == '\xA9')
-						writeCString("\\u2029", buf);
-				}
+				if (0 <= lower_half && lower_half <= 9)
+					writeChar('0' + lower_half, buf);
 				else
-					writeChar(*it, buf);
+					writeChar('A' + lower_half - 10, buf);
+			}
+			else if (end - it >= 3 && it[0] == '\xE2' && it[1] == '\x80' && (it[2] == '\xA8' || it[2] == '\xA9'))
+			{
+				if (it[2] == '\xA8')
+					writeCString("\\u2028", buf);
+				if (it[2] == '\xA9')
+					writeCString("\\u2029", buf);
+			}
+			else
+				writeChar(*it, buf);
 		}
 	}
 	writeChar('"', buf);
@@ -242,40 +240,40 @@ void writeAnyEscapedString(const char * begin, const char * end, WriteBuffer & b
 			pos = next_pos;
 			switch (*pos)
 			{
-				case '\b':
-					writeChar('\\', buf);
-					writeChar('b', buf);
-					break;
-				case '\f':
-					writeChar('\\', buf);
-					writeChar('f', buf);
-					break;
-				case '\n':
-					writeChar('\\', buf);
-					writeChar('n', buf);
-					break;
-				case '\r':
-					writeChar('\\', buf);
-					writeChar('r', buf);
-					break;
-				case '\t':
-					writeChar('\\', buf);
-					writeChar('t', buf);
-					break;
-				case '\0':
-					writeChar('\\', buf);
-					writeChar('0', buf);
-					break;
-				case '\\':
-					writeChar('\\', buf);
-					writeChar('\\', buf);
-					break;
-				case c:
-					writeChar('\\', buf);
-					writeChar(c, buf);
-					break;
-				default:
-					writeChar(*pos, buf);
+			case '\b':
+				writeChar('\\', buf);
+				writeChar('b', buf);
+				break;
+			case '\f':
+				writeChar('\\', buf);
+				writeChar('f', buf);
+				break;
+			case '\n':
+				writeChar('\\', buf);
+				writeChar('n', buf);
+				break;
+			case '\r':
+				writeChar('\\', buf);
+				writeChar('r', buf);
+				break;
+			case '\t':
+				writeChar('\\', buf);
+				writeChar('t', buf);
+				break;
+			case '\0':
+				writeChar('\\', buf);
+				writeChar('0', buf);
+				break;
+			case '\\':
+				writeChar('\\', buf);
+				writeChar('\\', buf);
+				break;
+			case c:
+				writeChar('\\', buf);
+				writeChar(c, buf);
+				break;
+			default:
+				writeChar(*pos, buf);
 			}
 			++pos;
 		}
@@ -327,7 +325,6 @@ void writeAnyQuotedString(const char * begin, const char * end, WriteBuffer & bu
 	writeAnyEscapedString<c>(begin, end, buf);
 	writeChar(c, buf);
 }
-
 
 
 template <char c>
@@ -406,7 +403,7 @@ void writeCSVString(const char * begin, const char * end, WriteBuffer & buf)
 			buf.write(pos, end - pos);
 			break;
 		}
-		else						/// Кавычка.
+		else /// Кавычка.
 		{
 			++next_pos;
 			buf.write(pos, next_pos - pos);
@@ -477,7 +474,7 @@ inline void writeXMLString(const StringRef & s, WriteBuffer & buf)
 /// в формате YYYY-MM-DD
 inline void writeDateText(DayNum_t date, WriteBuffer & buf)
 {
-	char s[10] = {'0', '0', '0', '0', '-', '0', '0', '-', '0', '0'};
+	char s[10] = { '0', '0', '0', '0', '-', '0', '0', '-', '0', '0' };
 
 	if (unlikely(date > DATE_LUT_MAX_DAY_NUM || date == 0))
 	{
@@ -501,7 +498,7 @@ inline void writeDateText(DayNum_t date, WriteBuffer & buf)
 
 inline void writeDateText(LocalDate date, WriteBuffer & buf)
 {
-	char s[10] = {'0', '0', '0', '0', '-', '0', '0', '-', '0', '0'};
+	char s[10] = { '0', '0', '0', '0', '-', '0', '0', '-', '0', '0' };
 
 	s[0] += date.year() / 1000;
 	s[1] += (date.year() / 100) % 10;
@@ -520,7 +517,25 @@ inline void writeDateText(LocalDate date, WriteBuffer & buf)
 template <char date_delimeter = '-', char time_delimeter = ':'>
 inline void writeDateTimeText(time_t datetime, WriteBuffer & buf, const DateLUTImpl & date_lut = DateLUT::instance())
 {
-	char s[19] = {'0', '0', '0', '0', date_delimeter, '0', '0', date_delimeter, '0', '0', ' ', '0', '0', time_delimeter, '0', '0', time_delimeter, '0', '0'};
+	char s[19] = { '0',
+		'0',
+		'0',
+		'0',
+		date_delimeter,
+		'0',
+		'0',
+		date_delimeter,
+		'0',
+		'0',
+		' ',
+		'0',
+		'0',
+		time_delimeter,
+		'0',
+		'0',
+		time_delimeter,
+		'0',
+		'0' };
 
 	if (unlikely(datetime > DATE_LUT_MAX || datetime == 0))
 	{
@@ -556,7 +571,25 @@ inline void writeDateTimeText(time_t datetime, WriteBuffer & buf, const DateLUTI
 template <char date_delimeter = '-', char time_delimeter = ':'>
 inline void writeDateTimeText(LocalDateTime datetime, WriteBuffer & buf)
 {
-	char s[19] = {'0', '0', '0', '0', date_delimeter, '0', '0', date_delimeter, '0', '0', ' ', '0', '0', time_delimeter, '0', '0', time_delimeter, '0', '0'};
+	char s[19] = { '0',
+		'0',
+		'0',
+		'0',
+		date_delimeter,
+		'0',
+		'0',
+		date_delimeter,
+		'0',
+		'0',
+		' ',
+		'0',
+		'0',
+		time_delimeter,
+		'0',
+		'0',
+		time_delimeter,
+		'0',
+		'0' };
 
 	s[0] += datetime.year() / 1000;
 	s[1] += (datetime.year() / 100) % 10;
@@ -579,83 +612,230 @@ inline void writeDateTimeText(LocalDateTime datetime, WriteBuffer & buf)
 
 
 /// Методы вывода в бинарном виде
-inline void writeBinary(const UInt8 & x, 	WriteBuffer & buf) { writePODBinary(x, buf); }
-inline void writeBinary(const UInt16 & x, 	WriteBuffer & buf) { writePODBinary(x, buf); }
-inline void writeBinary(const UInt32 & x, 	WriteBuffer & buf) { writePODBinary(x, buf); }
-inline void writeBinary(const UInt64 & x, 	WriteBuffer & buf) { writePODBinary(x, buf); }
-inline void writeBinary(const Int8 & x, 	WriteBuffer & buf) { writePODBinary(x, buf); }
-inline void writeBinary(const Int16 & x, 	WriteBuffer & buf) { writePODBinary(x, buf); }
-inline void writeBinary(const Int32 & x, 	WriteBuffer & buf) { writePODBinary(x, buf); }
-inline void writeBinary(const Int64 & x, 	WriteBuffer & buf) { writePODBinary(x, buf); }
+inline void writeBinary(const UInt8 & x, WriteBuffer & buf)
+{
+	writePODBinary(x, buf);
+}
+inline void writeBinary(const UInt16 & x, WriteBuffer & buf)
+{
+	writePODBinary(x, buf);
+}
+inline void writeBinary(const UInt32 & x, WriteBuffer & buf)
+{
+	writePODBinary(x, buf);
+}
+inline void writeBinary(const UInt64 & x, WriteBuffer & buf)
+{
+	writePODBinary(x, buf);
+}
+inline void writeBinary(const Int8 & x, WriteBuffer & buf)
+{
+	writePODBinary(x, buf);
+}
+inline void writeBinary(const Int16 & x, WriteBuffer & buf)
+{
+	writePODBinary(x, buf);
+}
+inline void writeBinary(const Int32 & x, WriteBuffer & buf)
+{
+	writePODBinary(x, buf);
+}
+inline void writeBinary(const Int64 & x, WriteBuffer & buf)
+{
+	writePODBinary(x, buf);
+}
 #ifdef __APPLE__
-inline void writeBinary(const int64_t & x, 	WriteBuffer & buf) { writePODBinary(x, buf); }
-inline void writeBinary(const uint64_t & x, 	WriteBuffer & buf) { writePODBinary(x, buf); }
+inline void writeBinary(const int64_t & x, WriteBuffer & buf)
+{
+	writePODBinary(x, buf);
+}
+inline void writeBinary(const uint64_t & x, WriteBuffer & buf)
+{
+	writePODBinary(x, buf);
+}
 #endif
-inline void writeBinary(const Float32 & x, 	WriteBuffer & buf) { writePODBinary(x, buf); }
-inline void writeBinary(const Float64 & x, 	WriteBuffer & buf) { writePODBinary(x, buf); }
-inline void writeBinary(const String & x,	WriteBuffer & buf) { writeStringBinary(x, buf); }
-inline void writeBinary(const bool & x, 	WriteBuffer & buf) { writePODBinary(x, buf); }
-inline void writeBinary(const uint128 & x, 	WriteBuffer & buf) { writePODBinary(x, buf); }
+inline void writeBinary(const Float32 & x, WriteBuffer & buf)
+{
+	writePODBinary(x, buf);
+}
+inline void writeBinary(const Float64 & x, WriteBuffer & buf)
+{
+	writePODBinary(x, buf);
+}
+inline void writeBinary(const String & x, WriteBuffer & buf)
+{
+	writeStringBinary(x, buf);
+}
+inline void writeBinary(const bool & x, WriteBuffer & buf)
+{
+	writePODBinary(x, buf);
+}
+inline void writeBinary(const uint128 & x, WriteBuffer & buf)
+{
+	writePODBinary(x, buf);
+}
 
-inline void writeBinary(const VisitID_t & x, 	WriteBuffer & buf) { writePODBinary(static_cast<const UInt64 &>(x), buf); }
-inline void writeBinary(const LocalDate & x,		WriteBuffer & buf) { writePODBinary(x, buf); }
-inline void writeBinary(const LocalDateTime & x,	WriteBuffer & buf) { writePODBinary(x, buf); }
+inline void writeBinary(const VisitID_t & x, WriteBuffer & buf)
+{
+	writePODBinary(static_cast<const UInt64 &>(x), buf);
+}
+inline void writeBinary(const LocalDate & x, WriteBuffer & buf)
+{
+	writePODBinary(x, buf);
+}
+inline void writeBinary(const LocalDateTime & x, WriteBuffer & buf)
+{
+	writePODBinary(x, buf);
+}
 
 
 /// Методы для вывода значения в текстовом виде для tab-separated формата.
-inline void writeText(const UInt8 & x, 		WriteBuffer & buf) { writeIntText(x, buf); }
-inline void writeText(const UInt16 & x, 	WriteBuffer & buf) { writeIntText(x, buf); }
-inline void writeText(const UInt32 & x,		WriteBuffer & buf) { writeIntText(x, buf); }
-inline void writeText(const UInt64 & x, 	WriteBuffer & buf) { writeIntText(x, buf); }
-inline void writeText(const Int8 & x, 		WriteBuffer & buf) { writeIntText(x, buf); }
-inline void writeText(const Int16 & x, 		WriteBuffer & buf) { writeIntText(x, buf); }
-inline void writeText(const Int32 & x, 		WriteBuffer & buf) { writeIntText(x, buf); }
-inline void writeText(const Int64 & x, 		WriteBuffer & buf) { writeIntText(x, buf); }
+inline void writeText(const UInt8 & x, WriteBuffer & buf)
+{
+	writeIntText(x, buf);
+}
+inline void writeText(const UInt16 & x, WriteBuffer & buf)
+{
+	writeIntText(x, buf);
+}
+inline void writeText(const UInt32 & x, WriteBuffer & buf)
+{
+	writeIntText(x, buf);
+}
+inline void writeText(const UInt64 & x, WriteBuffer & buf)
+{
+	writeIntText(x, buf);
+}
+inline void writeText(const Int8 & x, WriteBuffer & buf)
+{
+	writeIntText(x, buf);
+}
+inline void writeText(const Int16 & x, WriteBuffer & buf)
+{
+	writeIntText(x, buf);
+}
+inline void writeText(const Int32 & x, WriteBuffer & buf)
+{
+	writeIntText(x, buf);
+}
+inline void writeText(const Int64 & x, WriteBuffer & buf)
+{
+	writeIntText(x, buf);
+}
 #ifdef __APPLE__
-inline void writeText(const int64_t & x, 	WriteBuffer & buf) { writeIntText(x, buf); }
-inline void writeText(const uint64_t & x, 	WriteBuffer & buf) { writeIntText(x, buf); }
+inline void writeText(const int64_t & x, WriteBuffer & buf)
+{
+	writeIntText(x, buf);
+}
+inline void writeText(const uint64_t & x, WriteBuffer & buf)
+{
+	writeIntText(x, buf);
+}
 #endif
-inline void writeText(const Float32 & x, 	WriteBuffer & buf) { writeFloatText(x, buf); }
-inline void writeText(const Float64 & x, 	WriteBuffer & buf) { writeFloatText(x, buf); }
-inline void writeText(const String & x,		WriteBuffer & buf) { writeEscapedString(x, buf); }
-inline void writeText(const bool & x, 		WriteBuffer & buf) { writeBoolText(x, buf); }
+inline void writeText(const Float32 & x, WriteBuffer & buf)
+{
+	writeFloatText(x, buf);
+}
+inline void writeText(const Float64 & x, WriteBuffer & buf)
+{
+	writeFloatText(x, buf);
+}
+inline void writeText(const String & x, WriteBuffer & buf)
+{
+	writeEscapedString(x, buf);
+}
+inline void writeText(const bool & x, WriteBuffer & buf)
+{
+	writeBoolText(x, buf);
+}
 /// в отличие от метода для std::string
 /// здесь предполагается, что x null-terminated строка.
-inline void writeText(const char * x, 		WriteBuffer & buf) { writeEscapedString(x, strlen(x), buf); }
-inline void writeText(const char * x, size_t size, WriteBuffer & buf) { writeEscapedString(x, size, buf); }
+inline void writeText(const char * x, WriteBuffer & buf)
+{
+	writeEscapedString(x, strlen(x), buf);
+}
+inline void writeText(const char * x, size_t size, WriteBuffer & buf)
+{
+	writeEscapedString(x, size, buf);
+}
 
-inline void writeText(const VisitID_t & x, 	WriteBuffer & buf) { writeIntText(static_cast<const UInt64 &>(x), buf); }
-inline void writeText(const LocalDate & x,		WriteBuffer & buf) { writeDateText(x, buf); }
-inline void writeText(const LocalDateTime & x,	WriteBuffer & buf) { writeDateTimeText(x, buf); }
+inline void writeText(const VisitID_t & x, WriteBuffer & buf)
+{
+	writeIntText(static_cast<const UInt64 &>(x), buf);
+}
+inline void writeText(const LocalDate & x, WriteBuffer & buf)
+{
+	writeDateText(x, buf);
+}
+inline void writeText(const LocalDateTime & x, WriteBuffer & buf)
+{
+	writeDateTimeText(x, buf);
+}
 
 
 /// Строки, даты, даты-с-временем - в одинарных кавычках с C-style эскейпингом. Числа - без.
-inline void writeQuoted(const UInt8 & x, 	WriteBuffer & buf) { writeText(x, buf); }
-inline void writeQuoted(const UInt16 & x, 	WriteBuffer & buf) { writeText(x, buf); }
-inline void writeQuoted(const UInt32 & x, 	WriteBuffer & buf) { writeText(x, buf); }
-inline void writeQuoted(const UInt64 & x, 	WriteBuffer & buf) { writeText(x, buf); }
-inline void writeQuoted(const Int8 & x, 	WriteBuffer & buf) { writeText(x, buf); }
-inline void writeQuoted(const Int16 & x, 	WriteBuffer & buf) { writeText(x, buf); }
-inline void writeQuoted(const Int32 & x, 	WriteBuffer & buf) { writeText(x, buf); }
-inline void writeQuoted(const Int64 & x, 	WriteBuffer & buf) { writeText(x, buf); }
-inline void writeQuoted(const Float32 & x, 	WriteBuffer & buf) { writeText(x, buf); }
-inline void writeQuoted(const Float64 & x, 	WriteBuffer & buf) { writeText(x, buf); }
-inline void writeQuoted(const String & x,	WriteBuffer & buf) { writeQuotedString(x, buf); }
-inline void writeQuoted(const bool & x, 	WriteBuffer & buf) { writeText(x, buf); }
+inline void writeQuoted(const UInt8 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeQuoted(const UInt16 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeQuoted(const UInt32 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeQuoted(const UInt64 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeQuoted(const Int8 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeQuoted(const Int16 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeQuoted(const Int32 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeQuoted(const Int64 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeQuoted(const Float32 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeQuoted(const Float64 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeQuoted(const String & x, WriteBuffer & buf)
+{
+	writeQuotedString(x, buf);
+}
+inline void writeQuoted(const bool & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
 
-inline void writeQuoted(const VisitID_t & x, 	WriteBuffer & buf)
+inline void writeQuoted(const VisitID_t & x, WriteBuffer & buf)
 {
 	writeIntText(static_cast<const UInt64 &>(x), buf);
 }
 
-inline void writeQuoted(const LocalDate & x,		WriteBuffer & buf)
+inline void writeQuoted(const LocalDate & x, WriteBuffer & buf)
 {
 	writeChar('\'', buf);
 	writeDateText(x, buf);
 	writeChar('\'', buf);
 }
 
-inline void writeQuoted(const LocalDateTime & x,	WriteBuffer & buf)
+inline void writeQuoted(const LocalDateTime & x, WriteBuffer & buf)
 {
 	writeChar('\'', buf);
 	writeDateTimeText(x, buf);
@@ -664,32 +844,68 @@ inline void writeQuoted(const LocalDateTime & x,	WriteBuffer & buf)
 
 
 /// Строки, даты, даты-с-временем - в двойных кавычках с C-style эскейпингом. Числа - без.
-inline void writeDoubleQuoted(const UInt8 & x, 		WriteBuffer & buf) { writeText(x, buf); }
-inline void writeDoubleQuoted(const UInt16 & x, 	WriteBuffer & buf) { writeText(x, buf); }
-inline void writeDoubleQuoted(const UInt32 & x, 	WriteBuffer & buf) { writeText(x, buf); }
-inline void writeDoubleQuoted(const UInt64 & x, 	WriteBuffer & buf) { writeText(x, buf); }
-inline void writeDoubleQuoted(const Int8 & x, 		WriteBuffer & buf) { writeText(x, buf); }
-inline void writeDoubleQuoted(const Int16 & x, 		WriteBuffer & buf) { writeText(x, buf); }
-inline void writeDoubleQuoted(const Int32 & x, 		WriteBuffer & buf) { writeText(x, buf); }
-inline void writeDoubleQuoted(const Int64 & x, 		WriteBuffer & buf) { writeText(x, buf); }
-inline void writeDoubleQuoted(const Float32 & x, 	WriteBuffer & buf) { writeText(x, buf); }
-inline void writeDoubleQuoted(const Float64 & x, 	WriteBuffer & buf) { writeText(x, buf); }
-inline void writeDoubleQuoted(const String & x,		WriteBuffer & buf) { writeDoubleQuotedString(x, buf); }
-inline void writeDoubleQuoted(const bool & x, 		WriteBuffer & buf) { writeText(x, buf); }
+inline void writeDoubleQuoted(const UInt8 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeDoubleQuoted(const UInt16 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeDoubleQuoted(const UInt32 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeDoubleQuoted(const UInt64 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeDoubleQuoted(const Int8 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeDoubleQuoted(const Int16 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeDoubleQuoted(const Int32 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeDoubleQuoted(const Int64 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeDoubleQuoted(const Float32 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeDoubleQuoted(const Float64 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeDoubleQuoted(const String & x, WriteBuffer & buf)
+{
+	writeDoubleQuotedString(x, buf);
+}
+inline void writeDoubleQuoted(const bool & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
 
-inline void writeDoubleQuoted(const VisitID_t & x, 	WriteBuffer & buf)
+inline void writeDoubleQuoted(const VisitID_t & x, WriteBuffer & buf)
 {
 	writeIntText(static_cast<const UInt64 &>(x), buf);
 }
 
-inline void writeDoubleQuoted(const LocalDate & x,		WriteBuffer & buf)
+inline void writeDoubleQuoted(const LocalDate & x, WriteBuffer & buf)
 {
 	writeChar('"', buf);
 	writeDateText(x, buf);
 	writeChar('"', buf);
 }
 
-inline void writeDoubleQuoted(const LocalDateTime & x,	WriteBuffer & buf)
+inline void writeDoubleQuoted(const LocalDateTime & x, WriteBuffer & buf)
 {
 	writeChar('"', buf);
 	writeDateTimeText(x, buf);
@@ -698,21 +914,66 @@ inline void writeDoubleQuoted(const LocalDateTime & x,	WriteBuffer & buf)
 
 
 /// Строки - в двойных кавычках и с CSV-эскейпингом; даты, даты-с-временем - в двойных кавычках. Числа - без.
-inline void writeCSV(const UInt8 & x, 		WriteBuffer & buf) { writeText(x, buf); }
-inline void writeCSV(const UInt16 & x, 		WriteBuffer & buf) { writeText(x, buf); }
-inline void writeCSV(const UInt32 & x, 		WriteBuffer & buf) { writeText(x, buf); }
-inline void writeCSV(const UInt64 & x, 		WriteBuffer & buf) { writeText(x, buf); }
-inline void writeCSV(const Int8 & x, 		WriteBuffer & buf) { writeText(x, buf); }
-inline void writeCSV(const Int16 & x, 		WriteBuffer & buf) { writeText(x, buf); }
-inline void writeCSV(const Int32 & x, 		WriteBuffer & buf) { writeText(x, buf); }
-inline void writeCSV(const Int64 & x, 		WriteBuffer & buf) { writeText(x, buf); }
-inline void writeCSV(const Float32 & x, 	WriteBuffer & buf) { writeText(x, buf); }
-inline void writeCSV(const Float64 & x, 	WriteBuffer & buf) { writeText(x, buf); }
-inline void writeCSV(const String & x,		WriteBuffer & buf) { writeCSVString<>(x, buf); }
-inline void writeCSV(const bool & x, 		WriteBuffer & buf) { writeText(x, buf); }
-inline void writeCSV(const VisitID_t & x, 	WriteBuffer & buf) { writeDoubleQuoted(x, buf); }
-inline void writeCSV(const LocalDate & x,	WriteBuffer & buf) { writeDoubleQuoted(x, buf); }
-inline void writeCSV(const LocalDateTime & x, WriteBuffer & buf) { writeDoubleQuoted(x, buf); }
+inline void writeCSV(const UInt8 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeCSV(const UInt16 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeCSV(const UInt32 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeCSV(const UInt64 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeCSV(const Int8 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeCSV(const Int16 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeCSV(const Int32 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeCSV(const Int64 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeCSV(const Float32 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeCSV(const Float64 & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeCSV(const String & x, WriteBuffer & buf)
+{
+	writeCSVString<>(x, buf);
+}
+inline void writeCSV(const bool & x, WriteBuffer & buf)
+{
+	writeText(x, buf);
+}
+inline void writeCSV(const VisitID_t & x, WriteBuffer & buf)
+{
+	writeDoubleQuoted(x, buf);
+}
+inline void writeCSV(const LocalDate & x, WriteBuffer & buf)
+{
+	writeDoubleQuoted(x, buf);
+}
+inline void writeCSV(const LocalDateTime & x, WriteBuffer & buf)
+{
+	writeDoubleQuoted(x, buf);
+}
 
 
 template <typename T>
@@ -757,7 +1018,6 @@ void writeText(const std::vector<T> & x, WriteBuffer & buf)
 }
 
 
-
 /// Сериализация эксепшена (чтобы его можно было передать по сети)
 void writeException(const Exception & e, WriteBuffer & buf);
 
@@ -773,5 +1033,4 @@ inline String toString(const T & x)
 	}
 	return res;
 }
-
 }

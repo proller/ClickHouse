@@ -1,14 +1,13 @@
 #pragma once
 
-#include <DB/IO/ReadBuffer.h>
-#include <DB/IO/WriteBuffer.h>
-#include <DB/IO/ReadHelpers.h>
-#include <DB/IO/WriteHelpers.h>
 #include <DB/Core/Defines.h>
+#include <DB/IO/ReadBuffer.h>
+#include <DB/IO/ReadHelpers.h>
+#include <DB/IO/WriteBuffer.h>
+#include <DB/IO/WriteHelpers.h>
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int NO_AVAILABLE_DATA;
@@ -22,7 +21,7 @@ namespace ErrorCodes
   * симулирует массив content_width-битных значений.
   */
 template <typename BucketIndex, UInt8 content_width, size_t bucket_count>
-class __attribute__ ((packed)) CompactArray final
+class __attribute__((packed)) CompactArray final
 {
 public:
 	class Reader;
@@ -87,8 +86,7 @@ template <typename BucketIndex, UInt8 content_width, size_t bucket_count>
 class CompactArray<BucketIndex, content_width, bucket_count>::Reader final
 {
 public:
-	Reader(ReadBuffer & in_)
-		: in(in_)
+	Reader(ReadBuffer & in_) : in(in_)
 	{
 	}
 
@@ -237,8 +235,7 @@ private:
 	UInt8 ALWAYS_INLINE read(UInt8 value_l, UInt8 value_r) const
 	{
 		/// Ячейка перекрывает два байта.
-		return ((value_l >> offset_l) & ((1 << (8 - offset_l)) - 1))
-			| ((value_r & ((1 << offset_r) - 1)) << (8 - offset_l));
+		return ((value_l >> offset_l) & ((1 << (8 - offset_l)) - 1)) | ((value_r & ((1 << offset_r) - 1)) << (8 - offset_l));
 	}
 
 private:
@@ -254,6 +251,4 @@ private:
 	static_assert((content_width > 0) && (content_width < 8), "Invalid parameter value");
 	static_assert(bucket_count <= (std::numeric_limits<size_t>::max() / content_width), "Invalid parameter value");
 };
-
 }
-

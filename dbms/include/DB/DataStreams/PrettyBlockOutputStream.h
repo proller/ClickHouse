@@ -6,7 +6,6 @@
 
 namespace DB
 {
-
 class WriteBuffer;
 class Context;
 
@@ -24,8 +23,14 @@ public:
 
 	void flush() override;
 
-	void setTotals(const Block & totals_) override { totals = totals_; }
-	void setExtremes(const Block & extremes_) override { extremes = extremes_; }
+	void setTotals(const Block & totals_) override
+	{
+		totals = totals_;
+	}
+	void setExtremes(const Block & extremes_) override
+	{
+		extremes = extremes_;
+	}
 
 protected:
 	void writeTotals();
@@ -48,5 +53,4 @@ protected:
 
 	const Context & context;
 };
-
 }

@@ -1,22 +1,20 @@
 #pragma once
 
-#include <vector>
-#include <map>
 #include <initializer_list>
+#include <map>
+#include <vector>
 
+#include <DB/Common/Exception.h>
 #include <DB/Common/Exception.h>
 #include <DB/Core/BlockInfo.h>
-#include <DB/Core/NamesAndTypes.h>
+#include <DB/Core/ColumnNumbers.h>
 #include <DB/Core/ColumnWithTypeAndName.h>
 #include <DB/Core/ColumnsWithTypeAndName.h>
-#include <DB/Core/ColumnNumbers.h>
-#include <DB/Common/Exception.h>
-
+#include <DB/Core/NamesAndTypes.h>
 
 
 namespace DB
 {
-
 /** Container for set of columns for bunch of rows in memory.
   * This is unit of data processing.
   * Also contains metadata - data types of columns and their names
@@ -60,8 +58,14 @@ public:
 
 	/// References are invalidated after calling functions above.
 
-	ColumnWithTypeAndName & getByPosition(size_t position) { return data[position]; }
-	const ColumnWithTypeAndName & getByPosition(size_t position) const { return data[position]; }
+	ColumnWithTypeAndName & getByPosition(size_t position)
+	{
+		return data[position];
+	}
+	const ColumnWithTypeAndName & getByPosition(size_t position) const
+	{
+		return data[position];
+	}
 
 	ColumnWithTypeAndName & safeGetByPosition(size_t position);
 	const ColumnWithTypeAndName & safeGetByPosition(size_t position) const;
@@ -79,7 +83,10 @@ public:
 	/// Returns number of rows from first column in block, not equal to nullptr. If no columns, returns 0.
 	size_t rows() const;
 
-	size_t columns() const { return data.size(); }
+	size_t columns() const
+	{
+		return data.size();
+	}
 
 	/// Checks that every column in block is not nullptr and has same number of elements.
 	void checkNumberOfRows() const;
@@ -87,8 +94,14 @@ public:
 	/// Approximate number of bytes in memory - for profiling and limits.
 	size_t bytes() const;
 
-	operator bool() const { return !data.empty(); }
-	bool operator!() const { return data.empty(); }
+	operator bool() const
+	{
+		return !data.empty();
+	}
+	bool operator!() const
+	{
+		return data.empty();
+	}
 
 	/** Получить список имён столбцов через запятую. */
 	std::string dumpNames() const;
@@ -140,9 +153,17 @@ void getBlocksDifference(const Block & lhs, const Block & rhs, std::string & out
   */
 struct BlockExtraInfo
 {
-	BlockExtraInfo() {}
-	operator bool() const { return is_valid; }
-	bool operator!() const { return !is_valid; }
+	BlockExtraInfo()
+	{
+	}
+	operator bool() const
+	{
+		return is_valid;
+	}
+	bool operator!() const
+	{
+		return !is_valid;
+	}
 
 	std::string host;
 	std::string resolved_address;
@@ -151,5 +172,4 @@ struct BlockExtraInfo
 
 	bool is_valid = false;
 };
-
 }

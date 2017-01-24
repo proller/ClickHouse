@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 class ExpressionActions;
 
 
@@ -39,5 +38,4 @@ private:
 	bool filter_always_true = false;
 	bool filter_always_false = false;
 };
-
 }

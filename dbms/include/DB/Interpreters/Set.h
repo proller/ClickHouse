@@ -14,7 +14,6 @@
 
 namespace DB
 {
-
 struct Range;
 
 
@@ -23,15 +22,18 @@ struct Range;
 class Set
 {
 public:
-	Set(const Limits & limits) :
-		log(&Logger::get("Set")),
-		max_rows(limits.max_rows_in_set),
-		max_bytes(limits.max_bytes_in_set),
-		overflow_mode(limits.set_overflow_mode)
+	Set(const Limits & limits)
+		: log(&Logger::get("Set")),
+		  max_rows(limits.max_rows_in_set),
+		  max_bytes(limits.max_bytes_in_set),
+		  overflow_mode(limits.set_overflow_mode)
 	{
 	}
 
-	bool empty() const { return data.empty(); }
+	bool empty() const
+	{
+		return data.empty();
+	}
 
 	/** Создать множество по выражению (для перечисления в самом запросе).
 	  * types - типы того, что стоит слева от IN.
@@ -53,8 +55,14 @@ public:
 	/// проверяет есть ли в Set элементы для заданного диапазона индекса
 	BoolMask mayBeTrueInRange(const Range & range) const;
 
-	size_t getTotalRowCount() const { return data.getTotalRowCount(); }
-	size_t getTotalByteCount() const { return data.getTotalByteCount(); }
+	size_t getTotalRowCount() const
+	{
+		return data.getTotalRowCount();
+	}
+	size_t getTotalByteCount() const
+	{
+		return data.getTotalByteCount();
+	}
 
 private:
 	Sizes key_sizes;
@@ -97,23 +105,14 @@ private:
 
 
 	template <typename Method>
-	void insertFromBlockImpl(
-		Method & method,
-		const ConstColumnPlainPtrs & key_columns,
-		size_t rows,
-		SetVariants & variants);
+	void insertFromBlockImpl(Method & method, const ConstColumnPlainPtrs & key_columns, size_t rows, SetVariants & variants);
 
 	template <typename Method>
 	void executeImpl(
-		Method & method,
-		const ConstColumnPlainPtrs & key_columns,
-		ColumnUInt8::Container_t & vec_res,
-		bool negative,
-		size_t rows) const;
+		Method & method, const ConstColumnPlainPtrs & key_columns, ColumnUInt8::Container_t & vec_res, bool negative, size_t rows) const;
 
 	template <typename Method>
-	void executeArrayImpl(
-		Method & method,
+	void executeArrayImpl(Method & method,
 		const ConstColumnPlainPtrs & key_columns,
 		const ColumnArray::Offsets_t & offsets,
 		ColumnUInt8::Container_t & vec_res,
@@ -124,5 +123,4 @@ private:
 using SetPtr = std::shared_ptr<Set>;
 using ConstSetPtr = std::shared_ptr<const Set>;
 using Sets = std::vector<SetPtr>;
-
 }

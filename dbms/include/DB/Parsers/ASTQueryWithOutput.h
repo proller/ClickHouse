@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 /** Query with output options (supporting [INTO OUTFILE 'file_name'] [FORMAT format_name] suffix).
   */
 class ASTQueryWithOutput : public IAST
@@ -15,7 +14,9 @@ public:
 	ASTPtr format;
 
 	ASTQueryWithOutput() = default;
-	ASTQueryWithOutput(const StringRange range_) : IAST(range_) {}
+	ASTQueryWithOutput(const StringRange range_) : IAST(range_)
+	{
+	}
 
 protected:
 	/// NOTE: call this helper at the end of the clone() method of descendant class.
@@ -29,27 +30,33 @@ protected:
 
 
 /// Объявляет класс-наследник ASTQueryWithOutput с реализованными методами getID и clone.
-#define DEFINE_AST_QUERY_WITH_OUTPUT(Name, ID, Query) \
-class Name : public ASTQueryWithOutput \
-{ \
-public: \
-	Name() {} \
-	Name(StringRange range_) : ASTQueryWithOutput(range_) {} \
-	String getID() const override { return ID; }; \
-	\
-	ASTPtr clone() const override \
-	{ \
-		std::shared_ptr<Name> res = std::make_shared<Name>(*this); \
-		res->children.clear(); \
-		cloneOutputOptions(*res); \
-		return res; \
-	} \
-\
-protected: \
-	void formatQueryImpl(const FormatSettings & settings, FormatState & state, FormatStateStacked frame) const override \
-	{ \
-		settings.ostr << (settings.hilite ? hilite_keyword : "") << Query << (settings.hilite ? hilite_none : ""); \
-	} \
-};
-
+#define DEFINE_AST_QUERY_WITH_OUTPUT(Name, ID, Query)                                                                                      \
+	class Name : public ASTQueryWithOutput                                                                                                 \
+	{                                                                                                                                      \
+	public:                                                                                                                                \
+		Name()                                                                                                                             \
+		{                                                                                                                                  \
+		}                                                                                                                                  \
+		Name(StringRange range_) : ASTQueryWithOutput(range_)                                                                              \
+		{                                                                                                                                  \
+		}                                                                                                                                  \
+		String getID() const override                                                                                                      \
+		{                                                                                                                                  \
+			return ID;                                                                                                                     \
+		};                                                                                                                                 \
+                                                                                                                                           \
+		ASTPtr clone() const override                                                                                                      \
+		{                                                                                                                                  \
+			std::shared_ptr<Name> res = std::make_shared<Name>(*this);                                                                     \
+			res->children.clear();                                                                                                         \
+			cloneOutputOptions(*res);                                                                                                      \
+			return res;                                                                                                                    \
+		}                                                                                                                                  \
+                                                                                                                                           \
+	protected:                                                                                                                             \
+		void formatQueryImpl(const FormatSettings & settings, FormatState & state, FormatStateStacked frame) const override                \
+		{                                                                                                                                  \
+			settings.ostr << (settings.hilite ? hilite_keyword : "") << Query << (settings.hilite ? hilite_none : "");                     \
+		}                                                                                                                                  \
+	};
 }

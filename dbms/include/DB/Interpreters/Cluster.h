@@ -1,14 +1,13 @@
 #pragma once
 
 #include <map>
-#include <DB/Interpreters/Settings.h>
+#include <Poco/Net/SocketAddress.h>
 #include <DB/Client/ConnectionPool.h>
 #include <DB/Client/ConnectionPoolWithFailover.h>
-#include <Poco/Net/SocketAddress.h>
+#include <DB/Interpreters/Settings.h>
 
 namespace DB
 {
-
 /// Cluster содержит пулы соединений до каждого из узлов
 /// С локальными узлами соединение не устанавливается, а выполяется запрос напрямую.
 /// Поэтому храним только количество локальных узлов
@@ -19,8 +18,7 @@ public:
 	Cluster(Poco::Util::AbstractConfiguration & config, const Settings & settings, const String & cluster_name);
 
 	/// Построить кластер по именам шардов и реплик. Локальные обрабатываются так же как удаленные.
-	Cluster(const Settings & settings, const std::vector<std::vector<String>> & names,
-			const String & username, const String & password);
+	Cluster(const Settings & settings, const std::vector<std::vector<String>> & names, const String & username, const String & password);
 
 	Cluster(const Cluster &) = delete;
 	Cluster & operator=(const Cluster &) = delete;
@@ -53,7 +51,7 @@ public:
 		UInt16 port;
 		String user;
 		String password;
-		String default_database;	/// this database is selected when no database is specified for Distributed table
+		String default_database; /// this database is selected when no database is specified for Distributed table
 		UInt32 replica_num;
 
 		Address(Poco::Util::AbstractConfiguration & config, const String & config_prefix);
@@ -66,14 +64,23 @@ public:
 	struct ShardInfo
 	{
 	public:
-		bool isLocal() const { return !local_addresses.empty(); }
-		bool hasRemoteConnections() const { return pool.get() != nullptr; }
-		size_t getLocalNodeCount() const { return local_addresses.size(); }
+		bool isLocal() const
+		{
+			return !local_addresses.empty();
+		}
+		bool hasRemoteConnections() const
+		{
+			return pool.get() != nullptr;
+		}
+		size_t getLocalNodeCount() const
+		{
+			return local_addresses.size();
+		}
 
 	public:
 		/// contains names of directories for asynchronous write to StorageDistributed
 		std::vector<std::string> dir_names;
-		UInt32 shard_num;	/// Номер шарда, начиная с 1.
+		UInt32 shard_num; /// Номер шарда, начиная с 1.
 		int weight;
 		Addresses local_addresses;
 		mutable ConnectionPoolPtr pool;
@@ -81,10 +88,22 @@ public:
 
 	using ShardsInfo = std::vector<ShardInfo>;
 
-	String getHashOfAddresses() const { return hash_of_addresses; }
-	const ShardsInfo & getShardsInfo() const { return shards_info; }
-	const Addresses & getShardsAddresses() const { return addresses; }
-	const AddressesWithFailover & getShardsWithFailoverAddresses() const { return addresses_with_failover; }
+	String getHashOfAddresses() const
+	{
+		return hash_of_addresses;
+	}
+	const ShardsInfo & getShardsInfo() const
+	{
+		return shards_info;
+	}
+	const Addresses & getShardsAddresses() const
+	{
+		return addresses;
+	}
+	const AddressesWithFailover & getShardsWithFailoverAddresses() const
+	{
+		return addresses_with_failover;
+	}
 
 	const ShardInfo & getAnyShardInfo() const
 	{
@@ -94,14 +113,23 @@ public:
 	}
 
 	/// Количество удалённых шардов.
-	size_t getRemoteShardCount() const { return remote_shard_count; }
+	size_t getRemoteShardCount() const
+	{
+		return remote_shard_count;
+	}
 
 	/// Количество узлов clickhouse сервера, расположенных локально
 	/// к локальным узлам обращаемся напрямую.
-	size_t getLocalShardCount() const { return local_shard_count; }
+	size_t getLocalShardCount() const
+	{
+		return local_shard_count;
+	}
 
 	/// Количество всех шардов.
-	size_t getShardCount() const { return shards_info.size(); }
+	size_t getShardCount() const
+	{
+		return shards_info.size();
+	}
 
 	/// Получить подкластер, состоящий из одного шарда - index по счёту (с нуля) шарда данного кластера.
 	std::unique_ptr<Cluster> getClusterWithSingleShard(size_t index) const;
@@ -111,7 +139,10 @@ private:
 	SlotToShard slot_to_shard;
 
 public:
-	const SlotToShard & getSlotToShard() const { return slot_to_shard; }
+	const SlotToShard & getSlotToShard() const
+	{
+		return slot_to_shard;
+	}
 
 private:
 	void initMisc();
@@ -155,7 +186,8 @@ public:
 
 	ClusterPtr getCluster(const std::string & cluster_name) const;
 
-	void updateClusters(Poco::Util::AbstractConfiguration & config, const Settings & settings, const String & config_name = "remote_servers");
+	void updateClusters(
+		Poco::Util::AbstractConfiguration & config, const Settings & settings, const String & config_name = "remote_servers");
 
 public:
 	using Impl = std::map<String, ClusterPtr>;
@@ -168,5 +200,4 @@ protected:
 };
 
 using ClustersPtr = std::shared_ptr<Clusters>;
-
 }

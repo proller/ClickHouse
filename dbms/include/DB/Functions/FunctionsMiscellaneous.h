@@ -2,40 +2,39 @@
 
 #include <Poco/Net/DNS.h>
 
+#include <ext/range.hpp>
+#include <DB/Columns/ColumnAggregateFunction.h>
+#include <DB/Columns/ColumnArray.h>
+#include <DB/Columns/ColumnConst.h>
+#include <DB/Columns/ColumnFixedString.h>
+#include <DB/Columns/ColumnSet.h>
+#include <DB/Columns/ColumnString.h>
+#include <DB/Columns/ColumnTuple.h>
+#include <DB/Columns/ColumnVector.h>
+#include <DB/Common/UnicodeBar.h>
 #include <DB/Core/Defines.h>
 #include <DB/Core/FieldVisitors.h>
-#include <DB/IO/WriteBufferFromString.h>
-#include <DB/DataTypes/DataTypesNumberFixed.h>
-#include <DB/DataTypes/DataTypeString.h>
-#include <DB/DataTypes/DataTypeFixedString.h>
+#include <DB/DataTypes/DataTypeAggregateFunction.h>
+#include <DB/DataTypes/DataTypeArray.h>
 #include <DB/DataTypes/DataTypeDate.h>
 #include <DB/DataTypes/DataTypeDateTime.h>
+#include <DB/DataTypes/DataTypeFixedString.h>
+#include <DB/DataTypes/DataTypeString.h>
 #include <DB/DataTypes/DataTypeTuple.h>
-#include <DB/DataTypes/DataTypeArray.h>
-#include <DB/DataTypes/DataTypeAggregateFunction.h>
-#include <DB/Columns/ColumnString.h>
-#include <DB/Columns/ColumnFixedString.h>
-#include <DB/Columns/ColumnConst.h>
-#include <DB/Columns/ColumnVector.h>
-#include <DB/Columns/ColumnSet.h>
-#include <DB/Columns/ColumnTuple.h>
-#include <DB/Columns/ColumnArray.h>
-#include <DB/Columns/ColumnAggregateFunction.h>
-#include <DB/Common/UnicodeBar.h>
+#include <DB/DataTypes/DataTypesNumberFixed.h>
 #include <DB/Functions/IFunction.h>
 #include <DB/Functions/NumberTraits.h>
 #include <DB/Functions/ObjectPool.h>
-#include <DB/Interpreters/ExpressionActions.h>
+#include <DB/IO/WriteBufferFromString.h>
 #include <DB/Interpreters/Context.h>
+#include <DB/Interpreters/ExpressionActions.h>
 #include <DB/Interpreters/Set.h>
-#include <ext/range.hpp>
 
 #include <cmath>
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
@@ -84,12 +83,23 @@ class FunctionCurrentDatabase : public IFunction
 
 public:
 	static constexpr auto name = "currentDatabase";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionCurrentDatabase>(context.getCurrentDatabase()); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionCurrentDatabase>(context.getCurrentDatabase());
+	}
 
-	explicit FunctionCurrentDatabase(const String & db_name) : db_name{db_name} {}
+	explicit FunctionCurrentDatabase(const String & db_name) : db_name{ db_name }
+	{
+	}
 
-	String getName() const override { return name; }
-	size_t getNumberOfArguments() const override { return 0; }
+	String getName() const override
+	{
+		return name;
+	}
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
@@ -98,8 +108,7 @@ public:
 
 	void executeImpl(Block & block, const ColumnNumbers & arguments, const size_t result) override
 	{
-		block.safeGetByPosition(result).column = std::make_shared<ColumnConstString>(
-			block.rows(), db_name);
+		block.safeGetByPosition(result).column = std::make_shared<ColumnConstString>(block.rows(), db_name);
 	}
 };
 
@@ -109,16 +118,25 @@ class FunctionHostName : public IFunction
 {
 public:
 	static constexpr auto name = "hostName";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionHostName>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionHostName>();
+	}
 
 	String getName() const override
 	{
 		return name;
 	}
 
-	bool isDeterministicInScopeOfQuery() override { return false; }
+	bool isDeterministicInScopeOfQuery() override
+	{
+		return false;
+	}
 
-	size_t getNumberOfArguments() const override { return 0; }
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
@@ -131,9 +149,7 @@ public:
 	  */
 	void executeImpl(Block & block, const ColumnNumbers & arguments, size_t result) override
 	{
-		block.safeGetByPosition(result).column = ColumnConstString(
-			block.rows(),
-			Poco::Net::DNS::hostName()).convertToFullColumn();
+		block.safeGetByPosition(result).column = ColumnConstString(block.rows(), Poco::Net::DNS::hostName()).convertToFullColumn();
 	}
 };
 
@@ -142,7 +158,10 @@ class FunctionVisibleWidth : public IFunction
 {
 public:
 	static constexpr auto name = "visibleWidth";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionVisibleWidth>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionVisibleWidth>();
+	}
 
 	bool hasSpecialSupportForNulls() const override
 	{
@@ -155,7 +174,10 @@ public:
 		return name;
 	}
 
-	size_t getNumberOfArguments() const override { return 1; }
+	size_t getNumberOfArguments() const override
+	{
+		return 1;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
@@ -173,7 +195,10 @@ class FunctionToTypeName : public IFunction
 {
 public:
 	static constexpr auto name = "toTypeName";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionToTypeName>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionToTypeName>();
+	}
 
 	String getName() const override
 	{
@@ -185,7 +210,10 @@ public:
 		return true;
 	}
 
-	size_t getNumberOfArguments() const override { return 1; }
+	size_t getNumberOfArguments() const override
+	{
+		return 1;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
@@ -196,8 +224,8 @@ public:
 	/// Выполнить функцию над блоком.
 	void executeImpl(Block & block, const ColumnNumbers & arguments, size_t result) override
 	{
-		block.safeGetByPosition(result).column = std::make_shared<ColumnConstString>(
-			block.rows(), block.safeGetByPosition(arguments[0]).type->getName());
+		block.safeGetByPosition(result).column
+			= std::make_shared<ColumnConstString>(block.rows(), block.safeGetByPosition(arguments[0]).type->getName());
 	}
 };
 
@@ -207,7 +235,10 @@ class FunctionToColumnTypeName : public IFunction
 {
 public:
 	static constexpr auto name = "toColumnTypeName";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionToColumnTypeName>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionToColumnTypeName>();
+	}
 
 	String getName() const override
 	{
@@ -219,7 +250,10 @@ public:
 		return true;
 	}
 
-	size_t getNumberOfArguments() const override { return 1; }
+	size_t getNumberOfArguments() const override
+	{
+		return 1;
+	}
 
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
@@ -228,8 +262,8 @@ public:
 
 	void executeImpl(Block & block, const ColumnNumbers & arguments, size_t result) override
 	{
-		block.safeGetByPosition(result).column = std::make_shared<ColumnConstString>(
-			block.rows(), block.safeGetByPosition(arguments[0]).column->getName());
+		block.safeGetByPosition(result).column
+			= std::make_shared<ColumnConstString>(block.rows(), block.safeGetByPosition(arguments[0]).column->getName());
 	}
 };
 
@@ -238,7 +272,10 @@ class FunctionBlockSize : public IFunction
 {
 public:
 	static constexpr auto name = "blockSize";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionBlockSize>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionBlockSize>();
+	}
 
 	/// Получить имя функции.
 	String getName() const override
@@ -246,9 +283,15 @@ public:
 		return name;
 	}
 
-	bool isDeterministicInScopeOfQuery() override { return false; }
+	bool isDeterministicInScopeOfQuery() override
+	{
+		return false;
+	}
 
-	size_t getNumberOfArguments() const override { return 0; }
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
@@ -269,7 +312,10 @@ class FunctionRowNumberInBlock : public IFunction
 {
 public:
 	static constexpr auto name = "rowNumberInBlock";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionRowNumberInBlock>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionRowNumberInBlock>();
+	}
 
 	/// Получить имя функции.
 	String getName() const override
@@ -277,9 +323,15 @@ public:
 		return name;
 	}
 
-	size_t getNumberOfArguments() const override { return 0; }
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 
-	bool isDeterministicInScopeOfQuery() override { return false; }
+	bool isDeterministicInScopeOfQuery() override
+	{
+		return false;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
@@ -306,11 +358,14 @@ public:
 class FunctionBlockNumber : public IFunction
 {
 private:
-	std::atomic<size_t> block_number {0};
+	std::atomic<size_t> block_number{ 0 };
 
 public:
 	static constexpr auto name = "blockNumber";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionBlockNumber>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionBlockNumber>();
+	}
 
 	/// Получить имя функции.
 	String getName() const override
@@ -318,9 +373,15 @@ public:
 		return name;
 	}
 
-	size_t getNumberOfArguments() const override { return 0; }
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 
-	bool isDeterministicInScopeOfQuery() override { return false; }
+	bool isDeterministicInScopeOfQuery() override
+	{
+		return false;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
@@ -341,11 +402,14 @@ public:
 class FunctionRowNumberInAllBlocks : public IFunction
 {
 private:
-	std::atomic<size_t> rows {0};
+	std::atomic<size_t> rows{ 0 };
 
 public:
 	static constexpr auto name = "rowNumberInAllBlocks";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionRowNumberInAllBlocks>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionRowNumberInAllBlocks>();
+	}
 
 	/// Получить имя функции.
 	String getName() const override
@@ -353,9 +417,15 @@ public:
 		return name;
 	}
 
-	size_t getNumberOfArguments() const override { return 0; }
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 
-	bool isDeterministicInScopeOfQuery() override { return false; }
+	bool isDeterministicInScopeOfQuery() override
+	{
+		return false;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
@@ -384,7 +454,10 @@ class FunctionSleep : public IFunction
 {
 public:
 	static constexpr auto name = "sleep";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionSleep>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionSleep>();
+	}
 
 	/// Получить имя функции.
 	String getName() const override
@@ -393,21 +466,26 @@ public:
 	}
 
 	/// Do not sleep during query analysis.
-	bool isSuitableForConstantFolding() const override { return false; }
+	bool isSuitableForConstantFolding() const override
+	{
+		return false;
+	}
 
-	size_t getNumberOfArguments() const override { return 1; }
+	size_t getNumberOfArguments() const override
+	{
+		return 1;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
-		if (!typeid_cast<const DataTypeFloat64 *>(&*arguments[0]) &&
-			!typeid_cast<const DataTypeFloat32 *>(&*arguments[0]) &&
-			!typeid_cast<const DataTypeUInt64 *>(&*arguments[0]) &&
-			!typeid_cast<const DataTypeUInt32 *>(&*arguments[0]) &&
-			!typeid_cast<const DataTypeUInt16 *>(&*arguments[0]) &&
-			!typeid_cast<const DataTypeUInt8 *>(&*arguments[0]))
+		if (!typeid_cast<const DataTypeFloat64 *>(&*arguments[0]) && !typeid_cast<const DataTypeFloat32 *>(&*arguments[0])
+			&& !typeid_cast<const DataTypeUInt64 *>(&*arguments[0])
+			&& !typeid_cast<const DataTypeUInt32 *>(&*arguments[0])
+			&& !typeid_cast<const DataTypeUInt16 *>(&*arguments[0])
+			&& !typeid_cast<const DataTypeUInt8 *>(&*arguments[0]))
 			throw Exception("Illegal type " + arguments[0]->getName() + " of argument of function " + getName() + ", expected Float64",
-			ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 		return std::make_shared<DataTypeUInt8>();
 	}
@@ -454,7 +532,10 @@ class FunctionMaterialize : public IFunction
 {
 public:
 	static constexpr auto name = "materialize";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionMaterialize>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionMaterialize>();
+	}
 
 	/// Получить имя функции.
 	String getName() const override
@@ -462,7 +543,10 @@ public:
 		return name;
 	}
 
-	size_t getNumberOfArguments() const override { return 1; }
+	size_t getNumberOfArguments() const override
+	{
+		return 1;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
@@ -481,25 +565,48 @@ public:
 	}
 };
 
-template <bool negative, bool global> struct FunctionInName;
-template <> struct FunctionInName<false, false>	{ static constexpr auto name = "in"; };
-template <> struct FunctionInName<false, true>	{ static constexpr auto name = "globalIn"; };
-template <> struct FunctionInName<true, false>	{ static constexpr auto name = "notIn"; };
-template <> struct FunctionInName<true, true>	{ static constexpr auto name = "globalNotIn"; };
+template <bool negative, bool global>
+struct FunctionInName;
+template <>
+struct FunctionInName<false, false>
+{
+	static constexpr auto name = "in";
+};
+template <>
+struct FunctionInName<false, true>
+{
+	static constexpr auto name = "globalIn";
+};
+template <>
+struct FunctionInName<true, false>
+{
+	static constexpr auto name = "notIn";
+};
+template <>
+struct FunctionInName<true, true>
+{
+	static constexpr auto name = "globalNotIn";
+};
 
 template <bool negative, bool global>
 class FunctionIn : public IFunction
 {
 public:
 	static constexpr auto name = FunctionInName<negative, global>::name;
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionIn>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionIn>();
+	}
 
 	String getName() const override
 	{
 		return name;
 	}
 
-	size_t getNumberOfArguments() const override { return 2; }
+	size_t getNumberOfArguments() const override
+	{
+		return 2;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
@@ -539,18 +646,33 @@ class FunctionTuple : public IFunction
 {
 public:
 	static constexpr auto name = "tuple";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionTuple>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionTuple>();
+	}
 
 	String getName() const override
 	{
 		return name;
 	}
 
-	bool isVariadic() const override { return true; }
-	size_t getNumberOfArguments() const override { return 0; }
-	bool isInjective(const Block &) override { return true; }
+	bool isVariadic() const override
+	{
+		return true;
+	}
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
+	bool isInjective(const Block &) override
+	{
+		return true;
+	}
 
-	bool hasSpecialSupportForNulls() const override { return true; }
+	bool hasSpecialSupportForNulls() const override
+	{
+		return true;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
@@ -586,8 +708,8 @@ public:
 			for (size_t i = 0, size = arguments.size(); i < size; ++i)
 				tuple_block.getByPosition(i).column->get(0, tuple[i]);
 
-			block.safeGetByPosition(result).column = std::make_shared<ColumnConstTuple>(
-				block.rows(), Tuple(tuple), block.safeGetByPosition(result).type);
+			block.safeGetByPosition(result).column
+				= std::make_shared<ColumnConstTuple>(block.rows(), Tuple(tuple), block.safeGetByPosition(result).type);
 		}
 		else
 		{
@@ -613,18 +735,23 @@ class FunctionTupleElement : public IFunction
 {
 public:
 	static constexpr auto name = "tupleElement";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionTupleElement>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionTupleElement>();
+	}
 
 	String getName() const override
 	{
 		return name;
 	}
 
-	size_t getNumberOfArguments() const override { return 2; }
+	size_t getNumberOfArguments() const override
+	{
+		return 2;
+	}
 
-	void getReturnTypeAndPrerequisitesImpl(const ColumnsWithTypeAndName & arguments,
-										DataTypePtr & out_return_type,
-										ExpressionActions::Actions & out_prerequisites) override
+	void getReturnTypeAndPrerequisitesImpl(
+		const ColumnsWithTypeAndName & arguments, DataTypePtr & out_return_type, ExpressionActions::Actions & out_prerequisites) override
 	{
 		const ColumnConstUInt8 * index_col = typeid_cast<const ColumnConstUInt8 *>(&*arguments[1].column);
 		if (!index_col)
@@ -651,7 +778,8 @@ public:
 	void executeImpl(Block & block, const ColumnNumbers & arguments, size_t result) override
 	{
 		const ColumnTuple * tuple_col = typeid_cast<const ColumnTuple *>(block.safeGetByPosition(arguments[0]).column.get());
-		const ColumnConstTuple * const_tuple_col = typeid_cast<const ColumnConstTuple *>(block.safeGetByPosition(arguments[0]).column.get());
+		const ColumnConstTuple * const_tuple_col
+			= typeid_cast<const ColumnConstTuple *>(block.safeGetByPosition(arguments[0]).column.get());
 		const ColumnConstUInt8 * index_col = typeid_cast<const ColumnConstUInt8 *>(block.safeGetByPosition(arguments[1]).column.get());
 
 		if (!tuple_col && !const_tuple_col)
@@ -677,7 +805,8 @@ public:
 		{
 			const TupleBackend & data = const_tuple_col->getData();
 			block.safeGetByPosition(result).column = static_cast<const DataTypeTuple &>(*block.safeGetByPosition(arguments[0]).type)
-				.getElements()[index - 1]->createConstColumn(block.rows(), data[index - 1]);
+														 .getElements()[index - 1]
+														 ->createConstColumn(block.rows(), data[index - 1]);
 		}
 	}
 };
@@ -687,15 +816,33 @@ class FunctionIgnore : public IFunction
 {
 public:
 	static constexpr auto name = "ignore";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionIgnore>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionIgnore>();
+	}
 
-	bool isVariadic() const override { return true; }
-	size_t getNumberOfArguments() const override { return 0; }
+	bool isVariadic() const override
+	{
+		return true;
+	}
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 
-	bool hasSpecialSupportForNulls() const override { return true; }
+	bool hasSpecialSupportForNulls() const override
+	{
+		return true;
+	}
 
-	String getName() const override { return name; }
-	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override { return std::make_shared<DataTypeUInt8>(); }
+	String getName() const override
+	{
+		return name;
+	}
+	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
+	{
+		return std::make_shared<DataTypeUInt8>();
+	}
 
 	/// Выполнить функцию над блоком.
 	void executeImpl(Block & block, const ColumnNumbers & arguments, size_t result) override
@@ -721,15 +868,33 @@ class FunctionIndexHint : public IFunction
 {
 public:
 	static constexpr auto name = "indexHint";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionIndexHint>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionIndexHint>();
+	}
 
-	bool isVariadic() const override { return true; }
-	size_t getNumberOfArguments() const override { return 0; }
+	bool isVariadic() const override
+	{
+		return true;
+	}
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 
-	bool hasSpecialSupportForNulls() const override { return true; }
+	bool hasSpecialSupportForNulls() const override
+	{
+		return true;
+	}
 
-	String getName() const override	{ return name; }
-	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override { return std::make_shared<DataTypeUInt8>(); }
+	String getName() const override
+	{
+		return name;
+	}
+	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
+	{
+		return std::make_shared<DataTypeUInt8>();
+	}
 
 	/// Выполнить функцию над блоком.
 	void executeImpl(Block & block, const ColumnNumbers & arguments, size_t result) override
@@ -743,7 +908,10 @@ class FunctionIdentity : public IFunction
 {
 public:
 	static constexpr auto name = "identity";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionIdentity>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionIdentity>();
+	}
 
 	/// Получить имя функции.
 	String getName() const override
@@ -751,7 +919,10 @@ public:
 		return name;
 	}
 
-	size_t getNumberOfArguments() const override { return 1; }
+	size_t getNumberOfArguments() const override
+	{
+		return 1;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
@@ -771,7 +942,10 @@ class FunctionArrayJoin : public IFunction
 {
 public:
 	static constexpr auto name = "arrayJoin";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionArrayJoin>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionArrayJoin>();
+	}
 
 
 	/// Получить имя функции.
@@ -780,10 +954,16 @@ public:
 		return name;
 	}
 
-	size_t getNumberOfArguments() const override { return 1; }
+	size_t getNumberOfArguments() const override
+	{
+		return 1;
+	}
 
 	/** It could return many different values for single argument. */
-	bool isDeterministicInScopeOfQuery() override { return false; }
+	bool isDeterministicInScopeOfQuery() override
+	{
+		return false;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
@@ -802,7 +982,10 @@ public:
 	}
 
 	/// Because of function cannot be executed directly.
-	bool isSuitableForConstantFolding() const override { return false; }
+	bool isSuitableForConstantFolding() const override
+	{
+		return false;
+	}
 };
 
 
@@ -813,7 +996,10 @@ class FunctionReplicate : public IFunction
 {
 public:
 	static constexpr auto name = "replicate";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionReplicate>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionReplicate>();
+	}
 
 	/// Получить имя функции.
 	String getName() const override
@@ -821,7 +1007,10 @@ public:
 		return name;
 	}
 
-	size_t getNumberOfArguments() const override { return 2; }
+	size_t getNumberOfArguments() const override
+	{
+		return 2;
+	}
 
 	/// Получить типы результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
@@ -850,9 +1039,8 @@ public:
 			array_column = typeid_cast<ColumnArray *>(&*temp_column);
 		}
 
-		block.safeGetByPosition(result).column = std::make_shared<ColumnArray>(
-			first_column->replicate(array_column->getOffsets()),
-			array_column->getOffsetsColumn());
+		block.safeGetByPosition(result).column
+			= std::make_shared<ColumnArray>(first_column->replicate(array_column->getOffsets()), array_column->getOffsetsColumn());
 	}
 };
 
@@ -863,22 +1051,33 @@ class FunctionBar : public IFunction
 {
 public:
 	static constexpr auto name = "bar";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionBar>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionBar>();
+	}
 
 	String getName() const override
 	{
 		return name;
 	}
 
-	bool isVariadic() const override { return true; }
-	size_t getNumberOfArguments() const override { return 0; }
+	bool isVariadic() const override
+	{
+		return true;
+	}
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
 		if (arguments.size() != 3 && arguments.size() != 4)
-			throw Exception("Function " + getName() + " requires from 3 or 4 parameters: value, min_value, max_value, [max_width_of_bar = 80]. Passed "
-				+ toString(arguments.size()) + ".",
+			throw Exception("Function " + getName()
+					+ " requires from 3 or 4 parameters: value, min_value, max_value, [max_width_of_bar = 80]. Passed "
+					+ toString(arguments.size())
+					+ ".",
 				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
 		if (!arguments[0]->isNumeric() || !arguments[1]->isNumeric() || !arguments[2]->isNumeric()
@@ -891,13 +1090,12 @@ public:
 	/// Выполнить функцию над блоком.
 	void executeImpl(Block & block, const ColumnNumbers & arguments, size_t result) override
 	{
-		Int64 min = extractConstant<Int64>(block, arguments, 1, "Second");	/// Уровень значения, при котором полоска имеет нулевую длину.
-		Int64 max = extractConstant<Int64>(block, arguments, 2, "Third");	/// Уровень значения, при котором полоска имеет максимальную длину.
+		Int64 min = extractConstant<Int64>(block, arguments, 1, "Second"); /// Уровень значения, при котором полоска имеет нулевую длину.
+		Int64 max
+			= extractConstant<Int64>(block, arguments, 2, "Third"); /// Уровень значения, при котором полоска имеет максимальную длину.
 
 		/// Максимальная ширина полоски в символах, по-умолчанию.
-		Float64 max_width = arguments.size() == 4
-			? extractConstant<Float64>(block, arguments, 3, "Fourth")
-			: 80;
+		Float64 max_width = arguments.size() == 4 ? extractConstant<Float64>(block, arguments, 3, "Fourth") : 80;
 
 		if (max_width < 1)
 			throw Exception("Max_width argument must be >= 1.", ErrorCodes::ARGUMENT_OUT_OF_BOUND);
@@ -912,21 +1110,21 @@ public:
 			auto res_column = std::make_shared<ColumnConstString>(block.rows(), "");
 			block.safeGetByPosition(result).column = res_column;
 
-			if (   executeConstNumber<UInt8>	(src, *res_column, min, max, max_width)
-				|| executeConstNumber<UInt16>	(src, *res_column, min, max, max_width)
-				|| executeConstNumber<UInt32>	(src, *res_column, min, max, max_width)
-				|| executeConstNumber<UInt64>	(src, *res_column, min, max, max_width)
-				|| executeConstNumber<Int8>		(src, *res_column, min, max, max_width)
-				|| executeConstNumber<Int16>	(src, *res_column, min, max, max_width)
-				|| executeConstNumber<Int32>	(src, *res_column, min, max, max_width)
-				|| executeConstNumber<Int64>	(src, *res_column, min, max, max_width)
-				|| executeConstNumber<Float32>	(src, *res_column, min, max, max_width)
-				|| executeConstNumber<Float64>	(src, *res_column, min, max, max_width))
+			if (executeConstNumber<UInt8>(src, *res_column, min, max, max_width)
+				|| executeConstNumber<UInt16>(src, *res_column, min, max, max_width)
+				|| executeConstNumber<UInt32>(src, *res_column, min, max, max_width)
+				|| executeConstNumber<UInt64>(src, *res_column, min, max, max_width)
+				|| executeConstNumber<Int8>(src, *res_column, min, max, max_width)
+				|| executeConstNumber<Int16>(src, *res_column, min, max, max_width)
+				|| executeConstNumber<Int32>(src, *res_column, min, max, max_width)
+				|| executeConstNumber<Int64>(src, *res_column, min, max, max_width)
+				|| executeConstNumber<Float32>(src, *res_column, min, max, max_width)
+				|| executeConstNumber<Float64>(src, *res_column, min, max, max_width))
 			{
 			}
 			else
-				throw Exception("Illegal column " + block.safeGetByPosition(arguments[0]).column->getName()
-					+ " of argument of function " + getName(),
+				throw Exception(
+					"Illegal column " + block.safeGetByPosition(arguments[0]).column->getName() + " of argument of function " + getName(),
 					ErrorCodes::ILLEGAL_COLUMN);
 		}
 		else
@@ -934,21 +1132,20 @@ public:
 			auto res_column = std::make_shared<ColumnString>();
 			block.safeGetByPosition(result).column = res_column;
 
-			if (   executeNumber<UInt8>		(src, *res_column, min, max, max_width)
-				|| executeNumber<UInt16>	(src, *res_column, min, max, max_width)
-				|| executeNumber<UInt32>	(src, *res_column, min, max, max_width)
-				|| executeNumber<UInt64>	(src, *res_column, min, max, max_width)
-				|| executeNumber<Int8>		(src, *res_column, min, max, max_width)
-				|| executeNumber<Int16>		(src, *res_column, min, max, max_width)
-				|| executeNumber<Int32>		(src, *res_column, min, max, max_width)
-				|| executeNumber<Int64>		(src, *res_column, min, max, max_width)
-				|| executeNumber<Float32>	(src, *res_column, min, max, max_width)
-				|| executeNumber<Float64>	(src, *res_column, min, max, max_width))
+			if (executeNumber<UInt8>(src, *res_column, min, max, max_width) || executeNumber<UInt16>(src, *res_column, min, max, max_width)
+				|| executeNumber<UInt32>(src, *res_column, min, max, max_width)
+				|| executeNumber<UInt64>(src, *res_column, min, max, max_width)
+				|| executeNumber<Int8>(src, *res_column, min, max, max_width)
+				|| executeNumber<Int16>(src, *res_column, min, max, max_width)
+				|| executeNumber<Int32>(src, *res_column, min, max, max_width)
+				|| executeNumber<Int64>(src, *res_column, min, max, max_width)
+				|| executeNumber<Float32>(src, *res_column, min, max, max_width)
+				|| executeNumber<Float64>(src, *res_column, min, max, max_width))
 			{
 			}
 			else
-				throw Exception("Illegal column " + block.safeGetByPosition(arguments[0]).column->getName()
-					+ " of argument of function " + getName(),
+				throw Exception(
+					"Illegal column " + block.safeGetByPosition(arguments[0]).column->getName() + " of argument of function " + getName(),
 					ErrorCodes::ILLEGAL_COLUMN);
 		}
 	}
@@ -960,20 +1157,25 @@ private:
 		const auto & column = *block.safeGetByPosition(arguments[argument_pos]).column;
 
 		if (!column.isConst())
-			throw Exception(which_argument + String(" argument for function ") + getName() + " must be constant.", ErrorCodes::ILLEGAL_COLUMN);
+			throw Exception(
+				which_argument + String(" argument for function ") + getName() + " must be constant.", ErrorCodes::ILLEGAL_COLUMN);
 
 		return applyVisitor(FieldVisitorConvertToNumber<T>(), column[0]);
 	}
 
 	template <typename T>
-	static void fill(const PaddedPODArray<T> & src, ColumnString::Chars_t & dst_chars, ColumnString::Offsets_t & dst_offsets,
-		Int64 min, Int64 max, Float64 max_width)
+	static void fill(const PaddedPODArray<T> & src,
+		ColumnString::Chars_t & dst_chars,
+		ColumnString::Offsets_t & dst_offsets,
+		Int64 min,
+		Int64 max,
+		Float64 max_width)
 	{
 		size_t size = src.size();
 		size_t current_offset = 0;
 
 		dst_offsets.resize(size);
-		dst_chars.reserve(size * (UnicodeBar::getWidthInBytes(max_width) + 1));	/// строки 0-terminated.
+		dst_chars.reserve(size * (UnicodeBar::getWidthInBytes(max_width) + 1)); /// строки 0-terminated.
 
 		for (size_t i = 0; i < size; ++i)
 		{
@@ -987,8 +1189,7 @@ private:
 	}
 
 	template <typename T>
-	static void fill(T src, String & dst_chars,
-		Int64 min, Int64 max, Float64 max_width)
+	static void fill(T src, String & dst_chars, Int64 min, Int64 max, Float64 max_width)
 	{
 		Float64 width = UnicodeBar::getWidth(src, min, max, max_width);
 		dst_chars.resize(UnicodeBar::getWidthInBytes(width));
@@ -1026,29 +1227,34 @@ class FunctionNumericPredicate : public IFunction
 {
 public:
 	static constexpr auto name = Impl::name;
-	static FunctionPtr create(const Context &) { return std::make_shared<FunctionNumericPredicate>(); }
+	static FunctionPtr create(const Context &)
+	{
+		return std::make_shared<FunctionNumericPredicate>();
+	}
 
-	String getName() const override { return name; }
+	String getName() const override
+	{
+		return name;
+	}
 
-	size_t getNumberOfArguments() const override { return 1; }
+	size_t getNumberOfArguments() const override
+	{
+		return 1;
+	}
 
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
 		const auto arg = arguments.front().get();
-		if (!typeid_cast<const DataTypeUInt8 *>(arg) &&
-			!typeid_cast<const DataTypeUInt16 *>(arg) &&
-			!typeid_cast<const DataTypeUInt32 *>(arg) &&
-			!typeid_cast<const DataTypeUInt64 *>(arg) &&
-			!typeid_cast<const DataTypeInt8 *>(arg) &&
-			!typeid_cast<const DataTypeInt16 *>(arg) &&
-			!typeid_cast<const DataTypeInt32 *>(arg) &&
-			!typeid_cast<const DataTypeInt64 *>(arg) &&
-			!typeid_cast<const DataTypeFloat32 *>(arg) &&
-			!typeid_cast<const DataTypeFloat64 *>(arg))
-			throw Exception{
-				"Argument for function " + getName() + " must be numeric",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT
-			};
+		if (!typeid_cast<const DataTypeUInt8 *>(arg) && !typeid_cast<const DataTypeUInt16 *>(arg)
+			&& !typeid_cast<const DataTypeUInt32 *>(arg)
+			&& !typeid_cast<const DataTypeUInt64 *>(arg)
+			&& !typeid_cast<const DataTypeInt8 *>(arg)
+			&& !typeid_cast<const DataTypeInt16 *>(arg)
+			&& !typeid_cast<const DataTypeInt32 *>(arg)
+			&& !typeid_cast<const DataTypeInt64 *>(arg)
+			&& !typeid_cast<const DataTypeFloat32 *>(arg)
+			&& !typeid_cast<const DataTypeFloat64 *>(arg))
+			throw Exception{ "Argument for function " + getName() + " must be numeric", ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 
 		return std::make_shared<DataTypeUInt8>();
 	}
@@ -1057,20 +1263,16 @@ public:
 	{
 		const auto in = block.safeGetByPosition(arguments.front()).column.get();
 
-		if (!execute<UInt8>(block, in, result) &&
-			!execute<UInt16>(block, in, result) &&
-			!execute<UInt32>(block, in, result) &&
-			!execute<UInt64>(block, in, result) &&
-			!execute<Int8>(block, in, result) &&
-			!execute<Int16>(block, in, result) &&
-			!execute<Int32>(block, in, result) &&
-			!execute<Int64>(block, in, result) &&
-			!execute<Float32>(block, in, result)  &&
-			!execute<Float64>(block, in, result))
-			throw Exception{
-				"Illegal column " + in->getName() + " of first argument of function " + getName(),
-				ErrorCodes::ILLEGAL_COLUMN
-			};
+		if (!execute<UInt8>(block, in, result) && !execute<UInt16>(block, in, result) && !execute<UInt32>(block, in, result)
+			&& !execute<UInt64>(block, in, result)
+			&& !execute<Int8>(block, in, result)
+			&& !execute<Int16>(block, in, result)
+			&& !execute<Int32>(block, in, result)
+			&& !execute<Int64>(block, in, result)
+			&& !execute<Float32>(block, in, result)
+			&& !execute<Float64>(block, in, result))
+			throw Exception{ "Illegal column " + in->getName() + " of first argument of function " + getName(),
+				ErrorCodes::ILLEGAL_COLUMN };
 	}
 
 	template <typename T>
@@ -1093,9 +1295,7 @@ public:
 		}
 		else if (const auto in = typeid_cast<const ColumnConst<T> *>(in_untyped))
 		{
-			block.safeGetByPosition(result).column = std::make_shared<ColumnConstUInt8>(
-				in->size(),
-				Impl::execute(in->getData()));
+			block.safeGetByPosition(result).column = std::make_shared<ColumnConstUInt8>(in->size(), Impl::execute(in->getData()));
 
 			return true;
 		}
@@ -1107,19 +1307,31 @@ public:
 struct IsFiniteImpl
 {
 	static constexpr auto name = "isFinite";
-	template <typename T> static bool execute(const T t) { return std::isfinite(t); }
+	template <typename T>
+	static bool execute(const T t)
+	{
+		return std::isfinite(t);
+	}
 };
 
 struct IsInfiniteImpl
 {
 	static constexpr auto name = "isInfinite";
-	template <typename T> static bool execute(const T t) { return std::isinf(t); }
+	template <typename T>
+	static bool execute(const T t)
+	{
+		return std::isinf(t);
+	}
 };
 
 struct IsNaNImpl
 {
 	static constexpr auto name = "isNaN";
-	template <typename T> static bool execute(const T t) { return std::isnan(t); }
+	template <typename T>
+	static bool execute(const T t)
+	{
+		return std::isnan(t);
+	}
 };
 
 using FunctionIsFinite = FunctionNumericPredicate<IsFiniteImpl>;
@@ -1133,11 +1345,20 @@ class FunctionVersion : public IFunction
 {
 public:
 	static constexpr auto name = "version";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionVersion>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionVersion>();
+	}
 
-	String getName() const override { return name; }
+	String getName() const override
+	{
+		return name;
+	}
 
-	size_t getNumberOfArguments() const override { return 0; }
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
@@ -1161,13 +1382,24 @@ class FunctionUptime : public IFunction
 {
 public:
 	static constexpr auto name = "uptime";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionUptime>(context.getUptimeSeconds()); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionUptime>(context.getUptimeSeconds());
+	}
 
-	FunctionUptime(time_t uptime_) : uptime(uptime_) {}
+	FunctionUptime(time_t uptime_) : uptime(uptime_)
+	{
+	}
 
-	String getName() const override { return name; }
+	String getName() const override
+	{
+		return name;
+	}
 
-	size_t getNumberOfArguments() const override { return 0; }
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
@@ -1190,10 +1422,19 @@ class FunctionTimeZone : public IFunction
 {
 public:
 	static constexpr auto name = "timezone";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionTimeZone>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionTimeZone>();
+	}
 
-	String getName() const override { return name; }
-	size_t getNumberOfArguments() const override { return 0; }
+	String getName() const override
+	{
+		return name;
+	}
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
@@ -1217,13 +1458,25 @@ class FunctionRunningAccumulate : public IFunction
 {
 public:
 	static constexpr auto name = "runningAccumulate";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionRunningAccumulate>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionRunningAccumulate>();
+	}
 
-	String getName() const override { return name; }
+	String getName() const override
+	{
+		return name;
+	}
 
-	size_t getNumberOfArguments() const override { return 1; }
+	size_t getNumberOfArguments() const override
+	{
+		return 1;
+	}
 
-	bool isDeterministicInScopeOfQuery() override { return false; }
+	bool isDeterministicInScopeOfQuery() override
+	{
+		return false;
+	}
 
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
@@ -1237,28 +1490,31 @@ public:
 
 	void executeImpl(Block & block, const ColumnNumbers & arguments, size_t result) override
 	{
-		const ColumnAggregateFunction * column_with_states = typeid_cast<const ColumnAggregateFunction *>(&*block.safeGetByPosition(arguments.at(0)).column);
+		const ColumnAggregateFunction * column_with_states
+			= typeid_cast<const ColumnAggregateFunction *>(&*block.safeGetByPosition(arguments.at(0)).column);
 		if (!column_with_states)
-			throw Exception(
-				"Illegal column " + block.safeGetByPosition(arguments.at(0)).column->getName() + " of first argument of function " + getName(),
+			throw Exception("Illegal column " + block.safeGetByPosition(arguments.at(0)).column->getName()
+					+ " of first argument of function "
+					+ getName(),
 				ErrorCodes::ILLEGAL_COLUMN);
 
 		AggregateFunctionPtr aggregate_function_ptr = column_with_states->getAggregateFunction();
 		const IAggregateFunction & agg_func = *aggregate_function_ptr;
 
-		auto deleter = [&agg_func] (char * ptr) { agg_func.destroy(ptr); free(ptr); };
-		std::unique_ptr<char, decltype(deleter)> place { reinterpret_cast<char *>(malloc(agg_func.sizeOfData())), deleter };
+		auto deleter = [&agg_func](char * ptr) {
+			agg_func.destroy(ptr);
+			free(ptr);
+		};
+		std::unique_ptr<char, decltype(deleter)> place{ reinterpret_cast<char *>(malloc(agg_func.sizeOfData())), deleter };
 
-		agg_func.create(place.get());	/// Немного не exception-safe. Если здесь выкинется исключение, то зря вызовется destroy.
+		agg_func.create(place.get()); /// Немного не exception-safe. Если здесь выкинется исключение, то зря вызовется destroy.
 
 		ColumnPtr result_column_ptr = agg_func.getReturnType()->createColumn();
 		block.safeGetByPosition(result).column = result_column_ptr;
 		IColumn & result_column = *result_column_ptr;
 		result_column.reserve(column_with_states->size());
 
-		auto arena = (agg_func.allocatesMemoryInArena())
-			? arenas_pool.get(0, []{ return new Arena(); })
-			: nullptr;
+		auto arena = (agg_func.allocatesMemoryInArena()) ? arenas_pool.get(0, [] { return new Arena(); }) : nullptr;
 
 		const auto & states = column_with_states->getData();
 		for (const auto & state_to_add : states)
@@ -1270,7 +1526,6 @@ public:
 	}
 
 private:
-
 	ObjectPool<Arena, int> arenas_pool; /// Used only for complex functions
 };
 
@@ -1312,38 +1567,60 @@ private:
 	template <typename F>
 	void dispatchForSourceType(const IDataType & src_type, F && f) const
 	{
-			 if (typeid_cast<const DataTypeUInt8  *>(&src_type)) f(UInt8());
-		else if (typeid_cast<const DataTypeUInt16 *>(&src_type)) f(UInt16());
-		else if (typeid_cast<const DataTypeUInt32 *>(&src_type)) f(UInt32());
-		else if (typeid_cast<const DataTypeUInt64 *>(&src_type)) f(UInt64());
-		else if (typeid_cast<const DataTypeInt8 *>(&src_type)) f(Int8());
-		else if (typeid_cast<const DataTypeInt16 *>(&src_type)) f(Int16());
-		else if (typeid_cast<const DataTypeInt32 *>(&src_type)) f(Int32());
-		else if (typeid_cast<const DataTypeInt64 *>(&src_type)) f(Int64());
-		else if (typeid_cast<const DataTypeFloat32 *>(&src_type)) f(Float32());
-		else if (typeid_cast<const DataTypeFloat64 *>(&src_type)) f(Float64());
-		else if (typeid_cast<const DataTypeDate *>(&src_type)) f(DataTypeDate::FieldType());
-		else if (typeid_cast<const DataTypeDateTime *>(&src_type)) f(DataTypeDateTime::FieldType());
+		if (typeid_cast<const DataTypeUInt8 *>(&src_type))
+			f(UInt8());
+		else if (typeid_cast<const DataTypeUInt16 *>(&src_type))
+			f(UInt16());
+		else if (typeid_cast<const DataTypeUInt32 *>(&src_type))
+			f(UInt32());
+		else if (typeid_cast<const DataTypeUInt64 *>(&src_type))
+			f(UInt64());
+		else if (typeid_cast<const DataTypeInt8 *>(&src_type))
+			f(Int8());
+		else if (typeid_cast<const DataTypeInt16 *>(&src_type))
+			f(Int16());
+		else if (typeid_cast<const DataTypeInt32 *>(&src_type))
+			f(Int32());
+		else if (typeid_cast<const DataTypeInt64 *>(&src_type))
+			f(Int64());
+		else if (typeid_cast<const DataTypeFloat32 *>(&src_type))
+			f(Float32());
+		else if (typeid_cast<const DataTypeFloat64 *>(&src_type))
+			f(Float64());
+		else if (typeid_cast<const DataTypeDate *>(&src_type))
+			f(DataTypeDate::FieldType());
+		else if (typeid_cast<const DataTypeDateTime *>(&src_type))
+			f(DataTypeDateTime::FieldType());
 		else
-			throw Exception("Argument for function " + getName() + " must have numeric type.",
-				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+			throw Exception("Argument for function " + getName() + " must have numeric type.", ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 	}
 
 public:
 	static constexpr auto name = "runningDifference";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionRunningDifference>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionRunningDifference>();
+	}
 
-	String getName() const override { return name; }
+	String getName() const override
+	{
+		return name;
+	}
 
-	size_t getNumberOfArguments() const override { return 1; }
+	size_t getNumberOfArguments() const override
+	{
+		return 1;
+	}
 
-	bool isDeterministicInScopeOfQuery() override { return false; }
+	bool isDeterministicInScopeOfQuery() override
+	{
+		return false;
+	}
 
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
 		DataTypePtr res;
-		dispatchForSourceType(*arguments[0], [&] (auto field_type_tag)
-		{
+		dispatchForSourceType(*arguments[0], [&](auto field_type_tag) {
 			res = std::make_shared<typename DataTypeFromFieldType<DstFieldType<decltype(field_type_tag)>>::Type>();
 		});
 
@@ -1364,11 +1641,9 @@ public:
 
 		res.column = res.type->createColumn();
 
-		dispatchForSourceType(*src.type, [&] (auto field_type_tag)
-		{
+		dispatchForSourceType(*src.type, [&](auto field_type_tag) {
 			using SrcFieldType = decltype(field_type_tag);
-			process(
-				static_cast<const ColumnVector<SrcFieldType> &>(*src.column).getData(),
+			process(static_cast<const ColumnVector<SrcFieldType> &>(*src.column).getData(),
 				static_cast<ColumnVector<DstFieldType<SrcFieldType>> &>(*res.column).getData());
 		});
 	}
@@ -1381,11 +1656,20 @@ class FunctionFinalizeAggregation : public IFunction
 {
 public:
 	static constexpr auto name = "finalizeAggregation";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionFinalizeAggregation>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionFinalizeAggregation>();
+	}
 
-	String getName() const override { return name; }
+	String getName() const override
+	{
+		return name;
+	}
 
-	size_t getNumberOfArguments() const override { return 1; }
+	size_t getNumberOfArguments() const override
+	{
+		return 1;
+	}
 
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
@@ -1399,10 +1683,12 @@ public:
 
 	void executeImpl(Block & block, const ColumnNumbers & arguments, size_t result) override
 	{
-		ColumnAggregateFunction * column_with_states = typeid_cast<ColumnAggregateFunction *>(&*block.safeGetByPosition(arguments.at(0)).column);
+		ColumnAggregateFunction * column_with_states
+			= typeid_cast<ColumnAggregateFunction *>(&*block.safeGetByPosition(arguments.at(0)).column);
 		if (!column_with_states)
-			throw Exception(
-				"Illegal column " + block.safeGetByPosition(arguments.at(0)).column->getName() + " of first argument of function " + getName(),
+			throw Exception("Illegal column " + block.safeGetByPosition(arguments.at(0)).column->getName()
+					+ " of first argument of function "
+					+ getName(),
 				ErrorCodes::ILLEGAL_COLUMN);
 
 		block.safeGetByPosition(result).column = column_with_states->convertToValues();
@@ -1418,25 +1704,31 @@ class FunctionHasColumnInTable : public IFunction
 public:
 	static constexpr auto name = "hasColumnInTable";
 
-	size_t getNumberOfArguments() const override { return 3; }
+	size_t getNumberOfArguments() const override
+	{
+		return 3;
+	}
 
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionHasColumnInTable>(context.getGlobalContext()); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionHasColumnInTable>(context.getGlobalContext());
+	}
 
-	FunctionHasColumnInTable(const Context & global_context_)
-		: global_context(global_context_)
+	FunctionHasColumnInTable(const Context & global_context_) : global_context(global_context_)
 	{
 	}
 
-	String getName() const override { return name; }
+	String getName() const override
+	{
+		return name;
+	}
 
-	void getReturnTypeAndPrerequisitesImpl(const ColumnsWithTypeAndName & arguments,
-		DataTypePtr & out_return_type,
-		ExpressionActions::Actions & out_prerequisites) override;
+	void getReturnTypeAndPrerequisitesImpl(
+		const ColumnsWithTypeAndName & arguments, DataTypePtr & out_return_type, ExpressionActions::Actions & out_prerequisites) override;
 
 	void executeImpl(Block & block, const ColumnNumbers & arguments, size_t result) override;
 
 private:
 	const Context & global_context;
 };
-
 }

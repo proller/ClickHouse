@@ -2,24 +2,25 @@
 
 #include <array>
 
-#include <DB/Common/SipHash.h>
+#include <DB/Columns/ColumnFixedString.h>
+#include <DB/Columns/ColumnNullable.h>
+#include <DB/Columns/ColumnsNumber.h>
+#include <DB/Columns/IColumn.h>
 #include <DB/Common/Arena.h>
+#include <DB/Common/SipHash.h>
 #include <DB/Common/UInt128.h>
 #include <DB/Core/Defines.h>
 #include <DB/Core/StringRef.h>
-#include <DB/Columns/IColumn.h>
-#include <DB/Columns/ColumnsNumber.h>
-#include <DB/Columns/ColumnFixedString.h>
-#include <DB/Columns/ColumnNullable.h>
 
 
 template <>
-struct DefaultHash<StringRef> : public StringRefHash {};
+struct DefaultHash<StringRef> : public StringRefHash
+{
+};
 
 
 namespace DB
 {
-
 using Sizes = std::vector<size_t>;
 
 /// When packing the values of nullable columns at a given row, we have to
@@ -39,24 +40,11 @@ using Sizes = std::vector<size_t>;
 
 namespace
 {
-
-template <typename T>
-constexpr auto getBitmapSize()
-{
-	return
-		(sizeof(T) == 32) ?
-			4 :
-		(sizeof(T) == 16) ?
-			2 :
-		((sizeof(T) == 8) ?
-			1 :
-		((sizeof(T) == 4) ?
-			1 :
-		((sizeof(T) == 2) ?
-			1 :
-		0)));
-}
-
+	template <typename T>
+	constexpr auto getBitmapSize()
+	{
+		return (sizeof(T) == 32) ? 4 : (sizeof(T) == 16) ? 2 : ((sizeof(T) == 8) ? 1 : ((sizeof(T) == 4) ? 1 : ((sizeof(T) == 2) ? 1 : 0)));
+	}
 }
 
 template <typename T>
@@ -65,11 +53,9 @@ using KeysNullMap = std::array<UInt8, getBitmapSize<T>()>;
 /// Pack into a binary blob of type T a set of fixed-size keys. Granted that all the keys fit into the
 /// binary blob, they are disposed in it consecutively.
 template <typename T>
-static inline T ALWAYS_INLINE packFixed(
-	size_t i, size_t keys_size, const ConstColumnPlainPtrs & key_columns, const Sizes & key_sizes)
+static inline T ALWAYS_INLINE packFixed(size_t i, size_t keys_size, const ConstColumnPlainPtrs & key_columns, const Sizes & key_sizes)
 {
-	union
-	{
+	union {
 		T key;
 		char bytes[sizeof(key)] = {};
 	};
@@ -80,25 +66,25 @@ static inline T ALWAYS_INLINE packFixed(
 	{
 		switch (key_sizes[j])
 		{
-			case 1:
-				memcpy(bytes + offset, &static_cast<const ColumnUInt8 *>(key_columns[j])->getData()[i], 1);
-				offset += 1;
-				break;
-			case 2:
-				memcpy(bytes + offset, &static_cast<const ColumnUInt16 *>(key_columns[j])->getData()[i], 2);
-				offset += 2;
-				break;
-			case 4:
-				memcpy(bytes + offset, &static_cast<const ColumnUInt32 *>(key_columns[j])->getData()[i], 4);
-				offset += 4;
-				break;
-			case 8:
-				memcpy(bytes + offset, &static_cast<const ColumnUInt64 *>(key_columns[j])->getData()[i], 8);
-				offset += 8;
-				break;
-			default:
-				memcpy(bytes + offset, &static_cast<const ColumnFixedString *>(key_columns[j])->getChars()[i * key_sizes[j]], key_sizes[j]);
-				offset += key_sizes[j];
+		case 1:
+			memcpy(bytes + offset, &static_cast<const ColumnUInt8 *>(key_columns[j])->getData()[i], 1);
+			offset += 1;
+			break;
+		case 2:
+			memcpy(bytes + offset, &static_cast<const ColumnUInt16 *>(key_columns[j])->getData()[i], 2);
+			offset += 2;
+			break;
+		case 4:
+			memcpy(bytes + offset, &static_cast<const ColumnUInt32 *>(key_columns[j])->getData()[i], 4);
+			offset += 4;
+			break;
+		case 8:
+			memcpy(bytes + offset, &static_cast<const ColumnUInt64 *>(key_columns[j])->getData()[i], 8);
+			offset += 8;
+			break;
+		default:
+			memcpy(bytes + offset, &static_cast<const ColumnFixedString *>(key_columns[j])->getChars()[i * key_sizes[j]], key_sizes[j]);
+			offset += key_sizes[j];
 		}
 	}
 
@@ -108,11 +94,9 @@ static inline T ALWAYS_INLINE packFixed(
 /// Similar as above but supports nullable values.
 template <typename T>
 static inline T ALWAYS_INLINE packFixed(
-	size_t i, size_t keys_size, const ConstColumnPlainPtrs & key_columns, const Sizes & key_sizes,
-	const KeysNullMap<T> & bitmap)
+	size_t i, size_t keys_size, const ConstColumnPlainPtrs & key_columns, const Sizes & key_sizes, const KeysNullMap<T> & bitmap)
 {
-	union
-	{
+	union {
 		T key;
 		char bytes[sizeof(key)] = {};
 	};
@@ -146,25 +130,25 @@ static inline T ALWAYS_INLINE packFixed(
 
 		switch (key_sizes[j])
 		{
-			case 1:
-				memcpy(bytes + offset, &static_cast<const ColumnUInt8 *>(key_columns[j])->getData()[i], 1);
-				offset += 1;
-				break;
-			case 2:
-				memcpy(bytes + offset, &static_cast<const ColumnUInt16 *>(key_columns[j])->getData()[i], 2);
-				offset += 2;
-				break;
-			case 4:
-				memcpy(bytes + offset, &static_cast<const ColumnUInt32 *>(key_columns[j])->getData()[i], 4);
-				offset += 4;
-				break;
-			case 8:
-				memcpy(bytes + offset, &static_cast<const ColumnUInt64 *>(key_columns[j])->getData()[i], 8);
-				offset += 8;
-				break;
-			default:
-				memcpy(bytes + offset, &static_cast<const ColumnFixedString *>(key_columns[j])->getChars()[i * key_sizes[j]], key_sizes[j]);
-				offset += key_sizes[j];
+		case 1:
+			memcpy(bytes + offset, &static_cast<const ColumnUInt8 *>(key_columns[j])->getData()[i], 1);
+			offset += 1;
+			break;
+		case 2:
+			memcpy(bytes + offset, &static_cast<const ColumnUInt16 *>(key_columns[j])->getData()[i], 2);
+			offset += 2;
+			break;
+		case 4:
+			memcpy(bytes + offset, &static_cast<const ColumnUInt32 *>(key_columns[j])->getData()[i], 4);
+			offset += 4;
+			break;
+		case 8:
+			memcpy(bytes + offset, &static_cast<const ColumnUInt64 *>(key_columns[j])->getData()[i], 8);
+			offset += 8;
+			break;
+		default:
+			memcpy(bytes + offset, &static_cast<const ColumnFixedString *>(key_columns[j])->getChars()[i * key_sizes[j]], key_sizes[j]);
+			offset += key_sizes[j];
 		}
 	}
 
@@ -173,8 +157,7 @@ static inline T ALWAYS_INLINE packFixed(
 
 
 /// Hash a set of keys into a UInt128 value.
-static inline UInt128 ALWAYS_INLINE hash128(
-	size_t i, size_t keys_size, const ConstColumnPlainPtrs & key_columns, StringRefs & keys)
+static inline UInt128 ALWAYS_INLINE hash128(size_t i, size_t keys_size, const ConstColumnPlainPtrs & key_columns, StringRefs & keys)
 {
 	UInt128 key;
 	SipHash hash;
@@ -186,15 +169,14 @@ static inline UInt128 ALWAYS_INLINE hash128(
 		hash.update(keys[j].data, keys[j].size);
 	}
 
-    hash.get128(key.first, key.second);
+	hash.get128(key.first, key.second);
 
 	return key;
 }
 
 
 /// Almost the same as above but it doesn't return any reference to key data.
-static inline UInt128 ALWAYS_INLINE hash128(
-	size_t i, size_t keys_size, const ConstColumnPlainPtrs & key_columns)
+static inline UInt128 ALWAYS_INLINE hash128(size_t i, size_t keys_size, const ConstColumnPlainPtrs & key_columns)
 {
 	UInt128 key;
 	SipHash hash;
@@ -202,20 +184,19 @@ static inline UInt128 ALWAYS_INLINE hash128(
 	for (size_t j = 0; j < keys_size; ++j)
 		key_columns[j]->updateHashWithValue(i, hash);
 
-    hash.get128(key.first, key.second);
+	hash.get128(key.first, key.second);
 
 	return key;
 }
 
 
 /// Скопировать ключи в пул. Потом разместить в пуле StringRef-ы на них и вернуть указатель на первый.
-static inline StringRef * ALWAYS_INLINE placeKeysInPool(
-	size_t i, size_t keys_size, StringRefs & keys, Arena & pool)
+static inline StringRef * ALWAYS_INLINE placeKeysInPool(size_t i, size_t keys_size, StringRefs & keys, Arena & pool)
 {
 	for (size_t j = 0; j < keys_size; ++j)
 	{
 		char * place = pool.alloc(keys[j].size);
-		memcpy(place, keys[j].data, keys[j].size);		/// TODO padding в Arena и memcpySmall
+		memcpy(place, keys[j].data, keys[j].size); /// TODO padding в Arena и memcpySmall
 		keys[j].data = place;
 	}
 
@@ -292,7 +273,7 @@ inline StringRef ALWAYS_INLINE extractKeysAndPlaceInPoolContiguous<false>(
 	/// Размещаем в пуле StringRef-ы на только что скопированные ключи.
 	memcpy(place, &keys[0], keys_size * sizeof(StringRef));
 
-	return {res, sum_keys_size};
+	return { res, sum_keys_size };
 }
 
 /// Implementation for the case where there is at least one nullable key.
@@ -317,7 +298,10 @@ inline StringRef ALWAYS_INLINE extractKeysAndPlaceInPoolContiguous<true>(
 	size_t i, size_t keys_size, const ConstColumnPlainPtrs & key_columns, StringRefs & keys, Arena & pool)
 {
 	size_t bitmap_size = keys_size / 8;
-	if ((keys_size % 8) != 0) { ++bitmap_size; }
+	if ((keys_size % 8) != 0)
+	{
+		++bitmap_size;
+	}
 	std::vector<UInt8> bitmap(bitmap_size);
 
 	/// Prepare the keys to be stored. Create the bitmap.
@@ -380,7 +364,7 @@ inline StringRef ALWAYS_INLINE extractKeysAndPlaceInPoolContiguous<true>(
 	/// whose value is null.
 	memcpy(place, &keys[0], keys_size * sizeof(StringRef));
 
-	return {res, bitmap_size + keys_bytes};
+	return { res, bitmap_size + keys_bytes };
 }
 
 /** Сериализовать ключи в непрерывный кусок памяти.
@@ -394,8 +378,6 @@ static inline StringRef ALWAYS_INLINE serializeKeysToPoolContiguous(
 	for (size_t j = 0; j < keys_size; ++j)
 		sum_size += key_columns[j]->serializeValueIntoArena(i, pool, begin).size;
 
-	return {begin, sum_size};
+	return { begin, sum_size };
 }
-
-
 }

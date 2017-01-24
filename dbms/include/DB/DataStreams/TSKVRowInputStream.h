@@ -1,13 +1,12 @@
 #pragma once
 
+#include <DB/Common/HashTable/HashMap.h>
 #include <DB/Core/Block.h>
 #include <DB/DataStreams/IRowInputStream.h>
-#include <DB/Common/HashTable/HashMap.h>
 
 
 namespace DB
 {
-
 class ReadBuffer;
 
 
@@ -39,5 +38,4 @@ private:
 	using NameMap = HashMap<StringRef, size_t, StringRefHash>;
 	NameMap name_map;
 };
-
 }

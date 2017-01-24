@@ -13,18 +13,26 @@
 
 namespace DB
 {
-
 template <typename Impl>
 class FunctionMathNullaryConstFloat64 : public IFunction
 {
 public:
 	static constexpr auto name = Impl::name;
-	static FunctionPtr create(const Context &) { return std::make_shared<FunctionMathNullaryConstFloat64>(); }
+	static FunctionPtr create(const Context &)
+	{
+		return std::make_shared<FunctionMathNullaryConstFloat64>();
+	}
 
 private:
-	String getName() const override { return name; }
+	String getName() const override
+	{
+		return name;
+	}
 
-	size_t getNumberOfArguments() const override { return 0; }
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
@@ -33,9 +41,7 @@ private:
 
 	void executeImpl(Block & block, const ColumnNumbers & arguments, const size_t result) override
 	{
-		block.safeGetByPosition(result).column = std::make_shared<ColumnConst<Float64>>(
-			block.rows(),
-			Impl::value);
+		block.safeGetByPosition(result).column = std::make_shared<ColumnConst<Float64>>(block.rows(), Impl::value);
 	}
 };
 
@@ -45,32 +51,38 @@ class FunctionMathUnaryFloat64 : public IFunction
 {
 public:
 	static constexpr auto name = Impl::name;
-	static FunctionPtr create(const Context &) { return std::make_shared<FunctionMathUnaryFloat64>(); }
+	static FunctionPtr create(const Context &)
+	{
+		return std::make_shared<FunctionMathUnaryFloat64>();
+	}
 	static_assert(Impl::rows_per_iteration > 0, "Impl must process at least one row per iteration");
 
 private:
-	String getName() const override { return name; }
+	String getName() const override
+	{
+		return name;
+	}
 
-	size_t getNumberOfArguments() const override { return 1; }
+	size_t getNumberOfArguments() const override
+	{
+		return 1;
+	}
 
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
-		const auto check_argument_type = [this] (const IDataType * const arg) {
-			if (!typeid_cast<const DataTypeUInt8 *>(arg) &&
-				!typeid_cast<const DataTypeUInt16 *>(arg) &&
-				!typeid_cast<const DataTypeUInt32 *>(arg) &&
-				!typeid_cast<const DataTypeUInt64 *>(arg) &&
-				!typeid_cast<const DataTypeInt8 *>(arg) &&
-				!typeid_cast<const DataTypeInt16 *>(arg) &&
-				!typeid_cast<const DataTypeInt32 *>(arg) &&
-				!typeid_cast<const DataTypeInt64 *>(arg) &&
-				!typeid_cast<const DataTypeFloat32 *>(arg) &&
-				!typeid_cast<const DataTypeFloat64 *>(arg))
+		const auto check_argument_type = [this](const IDataType * const arg) {
+			if (!typeid_cast<const DataTypeUInt8 *>(arg) && !typeid_cast<const DataTypeUInt16 *>(arg)
+				&& !typeid_cast<const DataTypeUInt32 *>(arg)
+				&& !typeid_cast<const DataTypeUInt64 *>(arg)
+				&& !typeid_cast<const DataTypeInt8 *>(arg)
+				&& !typeid_cast<const DataTypeInt16 *>(arg)
+				&& !typeid_cast<const DataTypeInt32 *>(arg)
+				&& !typeid_cast<const DataTypeInt64 *>(arg)
+				&& !typeid_cast<const DataTypeFloat32 *>(arg)
+				&& !typeid_cast<const DataTypeFloat64 *>(arg))
 			{
-				throw Exception{
-					"Illegal type " + arg->getName() + " of argument of function " + getName(),
-					ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT
-				};
+				throw Exception{ "Illegal type " + arg->getName() + " of argument of function " + getName(),
+					ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 			}
 		};
 
@@ -114,7 +126,7 @@ private:
 		}
 		else if (const auto col = typeid_cast<const ColumnConst<FieldType> *>(arg))
 		{
-			const FieldType src[Impl::rows_per_iteration] { col->getData() };
+			const FieldType src[Impl::rows_per_iteration]{ col->getData() };
 			Float64 dst[Impl::rows_per_iteration];
 
 			Impl::execute(src, dst);
@@ -131,27 +143,22 @@ private:
 	{
 		const auto arg = block.safeGetByPosition(arguments[0]).column.get();
 
-		if (!execute<UInt8>(block, arg, result) &&
-			!execute<UInt16>(block, arg, result) &&
-			!execute<UInt32>(block, arg, result) &&
-			!execute<UInt64>(block, arg, result) &&
-			!execute<Int8>(block, arg, result) &&
-			!execute<Int16>(block, arg, result) &&
-			!execute<Int32>(block, arg, result) &&
-			!execute<Int64>(block, arg, result) &&
-			!execute<Float32>(block, arg, result) &&
-			!execute<Float64>(block, arg, result))
+		if (!execute<UInt8>(block, arg, result) && !execute<UInt16>(block, arg, result) && !execute<UInt32>(block, arg, result)
+			&& !execute<UInt64>(block, arg, result)
+			&& !execute<Int8>(block, arg, result)
+			&& !execute<Int16>(block, arg, result)
+			&& !execute<Int32>(block, arg, result)
+			&& !execute<Int64>(block, arg, result)
+			&& !execute<Float32>(block, arg, result)
+			&& !execute<Float64>(block, arg, result))
 		{
-			throw Exception{
-				"Illegal column " + arg->getName() + " of argument of function " + getName(),
-				ErrorCodes::ILLEGAL_COLUMN
-			};
+			throw Exception{ "Illegal column " + arg->getName() + " of argument of function " + getName(), ErrorCodes::ILLEGAL_COLUMN };
 		}
 	}
 };
 
 
-template <typename Name, Float64(&Function)(Float64)>
+template <typename Name, Float64 (&Function)(Float64)>
 struct UnaryFunctionPlain
 {
 	static constexpr auto name = Name::name;
@@ -166,7 +173,7 @@ struct UnaryFunctionPlain
 
 #if USE_VECTORIZED_FUNCTIONS
 
-template <typename Name, Vec2d(&Function)(const Vec2d &)>
+template <typename Name, Vec2d (&Function)(const Vec2d &)>
 struct UnaryFunctionVectorized
 {
 	static constexpr auto name = Name::name;
@@ -192,31 +199,38 @@ class FunctionMathBinaryFloat64 : public IFunction
 {
 public:
 	static constexpr auto name = Impl::name;
-	static FunctionPtr create(const Context &) { return std::make_shared<FunctionMathBinaryFloat64>(); }
+	static FunctionPtr create(const Context &)
+	{
+		return std::make_shared<FunctionMathBinaryFloat64>();
+	}
 	static_assert(Impl::rows_per_iteration > 0, "Impl must process at least one row per iteration");
 
 private:
-	String getName() const override { return name; }
+	String getName() const override
+	{
+		return name;
+	}
 
-	size_t getNumberOfArguments() const override { return 2; }
+	size_t getNumberOfArguments() const override
+	{
+		return 2;
+	}
 
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
-		const auto check_argument_type = [this] (const IDataType * const arg) {
-			if (!typeid_cast<const DataTypeUInt8 *>(arg) &&
-				!typeid_cast<const DataTypeUInt16 *>(arg) &&
-				!typeid_cast<const DataTypeUInt32 *>(arg) &&
-				!typeid_cast<const DataTypeUInt64 *>(arg) &&
-				!typeid_cast<const DataTypeInt8 *>(arg) &&
-				!typeid_cast<const DataTypeInt16 *>(arg) &&
-				!typeid_cast<const DataTypeInt32 *>(arg) &&
-				!typeid_cast<const DataTypeInt64 *>(arg) &&
-				!typeid_cast<const DataTypeFloat32 *>(arg) &&
-				!typeid_cast<const DataTypeFloat64 *>(arg))
+		const auto check_argument_type = [this](const IDataType * const arg) {
+			if (!typeid_cast<const DataTypeUInt8 *>(arg) && !typeid_cast<const DataTypeUInt16 *>(arg)
+				&& !typeid_cast<const DataTypeUInt32 *>(arg)
+				&& !typeid_cast<const DataTypeUInt64 *>(arg)
+				&& !typeid_cast<const DataTypeInt8 *>(arg)
+				&& !typeid_cast<const DataTypeInt16 *>(arg)
+				&& !typeid_cast<const DataTypeInt32 *>(arg)
+				&& !typeid_cast<const DataTypeInt64 *>(arg)
+				&& !typeid_cast<const DataTypeFloat32 *>(arg)
+				&& !typeid_cast<const DataTypeFloat64 *>(arg))
 			{
-				throw Exception{
-					"Illegal type " + arg->getName() + " of argument of function " + getName(),
-					ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
+				throw Exception{ "Illegal type " + arg->getName() + " of argument of function " + getName(),
+					ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT };
 			}
 		};
 
@@ -227,8 +241,7 @@ private:
 	}
 
 	template <typename LeftType, typename RightType>
-	bool executeRight(Block & block, const size_t result, const ColumnConst<LeftType> * const left_arg,
-		const IColumn * const right_arg)
+	bool executeRight(Block & block, const size_t result, const ColumnConst<LeftType> * const left_arg, const IColumn * const right_arg)
 	{
 		if (const auto right_arg_typed = typeid_cast<const ColumnVector<RightType> *>(right_arg))
 		{
@@ -264,8 +277,8 @@ private:
 		}
 		else if (const auto right_arg_typed = typeid_cast<const ColumnConst<RightType> *>(right_arg))
 		{
-			const LeftType left_src[Impl::rows_per_iteration] { left_arg->getData() };
-			const RightType right_src[Impl::rows_per_iteration] { right_arg_typed->getData() };
+			const LeftType left_src[Impl::rows_per_iteration]{ left_arg->getData() };
+			const RightType right_src[Impl::rows_per_iteration]{ right_arg_typed->getData() };
 			Float64 dst[Impl::rows_per_iteration];
 
 			Impl::execute(left_src, right_src, dst);
@@ -279,8 +292,7 @@ private:
 	}
 
 	template <typename LeftType, typename RightType>
-	bool executeRight(Block & block, const size_t result, const ColumnVector<LeftType> * const left_arg,
-		const IColumn * const right_arg)
+	bool executeRight(Block & block, const size_t result, const ColumnVector<LeftType> * const left_arg, const IColumn * const right_arg)
 	{
 		if (const auto right_arg_typed = typeid_cast<const ColumnVector<RightType> *>(right_arg))
 		{
@@ -353,33 +365,31 @@ private:
 	}
 
 	template <typename LeftType, template <typename> class LeftColumnType>
-	bool executeLeftImpl(Block & block, const ColumnNumbers & arguments, const size_t result,
-		const IColumn * const left_arg)
+	bool executeLeftImpl(Block & block, const ColumnNumbers & arguments, const size_t result, const IColumn * const left_arg)
 	{
 		if (const auto left_arg_typed = typeid_cast<const LeftColumnType<LeftType> *>(left_arg))
 		{
 			const auto right_arg = block.safeGetByPosition(arguments[1]).column.get();
 
-			if (executeRight<LeftType, UInt8>(block, result, left_arg_typed, right_arg) ||
-				executeRight<LeftType, UInt16>(block, result, left_arg_typed, right_arg) ||
-				executeRight<LeftType, UInt32>(block, result, left_arg_typed, right_arg) ||
-				executeRight<LeftType, UInt64>(block, result, left_arg_typed, right_arg) ||
-				executeRight<LeftType, Int8>(block, result, left_arg_typed, right_arg) ||
-				executeRight<LeftType, Int16>(block, result, left_arg_typed, right_arg) ||
-				executeRight<LeftType, Int32>(block, result, left_arg_typed, right_arg) ||
-				executeRight<LeftType, Int64>(block, result, left_arg_typed, right_arg) ||
-				executeRight<LeftType, Float32>(block, result, left_arg_typed, right_arg) ||
-				executeRight<LeftType, Float64>(block, result, left_arg_typed, right_arg))
+			if (executeRight<LeftType, UInt8>(block, result, left_arg_typed, right_arg)
+				|| executeRight<LeftType, UInt16>(block, result, left_arg_typed, right_arg)
+				|| executeRight<LeftType, UInt32>(block, result, left_arg_typed, right_arg)
+				|| executeRight<LeftType, UInt64>(block, result, left_arg_typed, right_arg)
+				|| executeRight<LeftType, Int8>(block, result, left_arg_typed, right_arg)
+				|| executeRight<LeftType, Int16>(block, result, left_arg_typed, right_arg)
+				|| executeRight<LeftType, Int32>(block, result, left_arg_typed, right_arg)
+				|| executeRight<LeftType, Int64>(block, result, left_arg_typed, right_arg)
+				|| executeRight<LeftType, Float32>(block, result, left_arg_typed, right_arg)
+				|| executeRight<LeftType, Float64>(block, result, left_arg_typed, right_arg))
 			{
 				return true;
 			}
 			else
 			{
-				throw Exception{
-					"Illegal column " + block.safeGetByPosition(arguments[1]).column->getName() +
-					" of second argument of function " + getName(),
-					ErrorCodes::ILLEGAL_COLUMN
-				};
+				throw Exception{ "Illegal column " + block.safeGetByPosition(arguments[1]).column->getName()
+						+ " of second argument of function "
+						+ getName(),
+					ErrorCodes::ILLEGAL_COLUMN };
 			}
 		}
 
@@ -387,11 +397,10 @@ private:
 	}
 
 	template <typename LeftType>
-	bool executeLeft(Block & block, const ColumnNumbers & arguments, const size_t result,
-		const IColumn * const left_arg)
+	bool executeLeft(Block & block, const ColumnNumbers & arguments, const size_t result, const IColumn * const left_arg)
 	{
-		if (executeLeftImpl<LeftType, ColumnVector>(block, arguments, result, left_arg) ||
-			executeLeftImpl<LeftType, ColumnConst>(block, arguments, result, left_arg))
+		if (executeLeftImpl<LeftType, ColumnVector>(block, arguments, result, left_arg)
+			|| executeLeftImpl<LeftType, ColumnConst>(block, arguments, result, left_arg))
 			return true;
 
 		return false;
@@ -401,27 +410,24 @@ private:
 	{
 		const auto left_arg = block.safeGetByPosition(arguments[0]).column.get();
 
-		if (!executeLeft<UInt8>(block, arguments, result, left_arg) &&
-			!executeLeft<UInt16>(block, arguments, result, left_arg) &&
-			!executeLeft<UInt32>(block, arguments, result, left_arg) &&
-			!executeLeft<UInt64>(block, arguments, result, left_arg) &&
-			!executeLeft<Int8>(block, arguments, result, left_arg) &&
-			!executeLeft<Int16>(block, arguments, result, left_arg) &&
-			!executeLeft<Int32>(block, arguments, result, left_arg) &&
-			!executeLeft<Int64>(block, arguments, result, left_arg) &&
-			!executeLeft<Float32>(block, arguments, result, left_arg) &&
-			!executeLeft<Float64>(block, arguments, result, left_arg))
+		if (!executeLeft<UInt8>(block, arguments, result, left_arg) && !executeLeft<UInt16>(block, arguments, result, left_arg)
+			&& !executeLeft<UInt32>(block, arguments, result, left_arg)
+			&& !executeLeft<UInt64>(block, arguments, result, left_arg)
+			&& !executeLeft<Int8>(block, arguments, result, left_arg)
+			&& !executeLeft<Int16>(block, arguments, result, left_arg)
+			&& !executeLeft<Int32>(block, arguments, result, left_arg)
+			&& !executeLeft<Int64>(block, arguments, result, left_arg)
+			&& !executeLeft<Float32>(block, arguments, result, left_arg)
+			&& !executeLeft<Float64>(block, arguments, result, left_arg))
 		{
-			throw Exception{
-				"Illegal column " + left_arg->getName() + " of argument of function " + getName(),
-				ErrorCodes::ILLEGAL_COLUMN
-			};
+			throw Exception{ "Illegal column " + left_arg->getName() + " of argument of function " + getName(),
+				ErrorCodes::ILLEGAL_COLUMN };
 		}
 	}
 };
 
 
-template <typename Name, Float64(&Function)(Float64, Float64)>
+template <typename Name, Float64 (&Function)(Float64, Float64)>
 struct BinaryFunctionPlain
 {
 	static constexpr auto name = Name::name;
@@ -436,7 +442,7 @@ struct BinaryFunctionPlain
 
 #if USE_VECTORIZED_FUNCTIONS
 
-template <typename Name, Vec2d(&Function)(const Vec2d &, const Vec2d &)>
+template <typename Name, Vec2d (&Function)(const Vec2d &, const Vec2d &)>
 struct BinaryFunctionVectorized
 {
 	static constexpr auto name = Name::name;
@@ -460,7 +466,7 @@ struct BinaryFunctionVectorized
 struct EImpl
 {
 	static constexpr auto name = "e";
-	static const double value;	/// См. .cpp
+	static const double value; /// См. .cpp
 };
 
 struct PiImpl
@@ -469,25 +475,82 @@ struct PiImpl
 	static const double value;
 };
 
-struct ExpName { static constexpr auto name = "exp"; };
-struct LogName { static constexpr auto name = "log"; };
-struct Exp2Name { static constexpr auto name = "exp2"; };
-struct Log2Name { static constexpr auto name = "log2"; };
-struct Exp10Name { static constexpr auto name = "exp10"; };
-struct Log10Name { static constexpr auto name = "log10"; };
-struct SqrtName { static constexpr auto name = "sqrt"; };
-struct CbrtName { static constexpr auto name = "cbrt"; };
-struct SinName { static constexpr auto name = "sin"; };
-struct CosName { static constexpr auto name = "cos"; };
-struct TanName { static constexpr auto name = "tan"; };
-struct AsinName { static constexpr auto name = "asin"; };
-struct AcosName { static constexpr auto name = "acos"; };
-struct AtanName { static constexpr auto name = "atan"; };
-struct ErfName { static constexpr auto name = "erf"; };
-struct ErfcName { static constexpr auto name = "erfc"; };
-struct LGammaName { static constexpr auto name = "lgamma"; };
-struct TGammaName { static constexpr auto name = "tgamma"; };
-struct PowName { static constexpr auto name = "pow"; };
+struct ExpName
+{
+	static constexpr auto name = "exp";
+};
+struct LogName
+{
+	static constexpr auto name = "log";
+};
+struct Exp2Name
+{
+	static constexpr auto name = "exp2";
+};
+struct Log2Name
+{
+	static constexpr auto name = "log2";
+};
+struct Exp10Name
+{
+	static constexpr auto name = "exp10";
+};
+struct Log10Name
+{
+	static constexpr auto name = "log10";
+};
+struct SqrtName
+{
+	static constexpr auto name = "sqrt";
+};
+struct CbrtName
+{
+	static constexpr auto name = "cbrt";
+};
+struct SinName
+{
+	static constexpr auto name = "sin";
+};
+struct CosName
+{
+	static constexpr auto name = "cos";
+};
+struct TanName
+{
+	static constexpr auto name = "tan";
+};
+struct AsinName
+{
+	static constexpr auto name = "asin";
+};
+struct AcosName
+{
+	static constexpr auto name = "acos";
+};
+struct AtanName
+{
+	static constexpr auto name = "atan";
+};
+struct ErfName
+{
+	static constexpr auto name = "erf";
+};
+struct ErfcName
+{
+	static constexpr auto name = "erfc";
+};
+struct LGammaName
+{
+	static constexpr auto name = "lgamma";
+};
+struct TGammaName
+{
+	static constexpr auto name = "tgamma";
+};
+struct PowName
+{
+	static constexpr auto name = "pow";
+};
 
 using FunctionE = FunctionMathNullaryConstFloat64<EImpl>;
 using FunctionPi = FunctionMathNullaryConstFloat64<PiImpl>;
@@ -505,7 +568,7 @@ using FunctionCbrt = FunctionMathUnaryFloat64<UnaryFunctionVectorized<CbrtName,
 #else
 	cbrt
 #endif
->>;
+	>>;
 
 using FunctionSin = FunctionMathUnaryFloat64<UnaryFunctionVectorized<SinName, sin>>;
 using FunctionCos = FunctionMathUnaryFloat64<UnaryFunctionVectorized<CosName, cos>>;
@@ -518,5 +581,4 @@ using FunctionErfc = FunctionMathUnaryFloat64<UnaryFunctionPlain<ErfcName, std::
 using FunctionLGamma = FunctionMathUnaryFloat64<UnaryFunctionPlain<LGammaName, std::lgamma>>;
 using FunctionTGamma = FunctionMathUnaryFloat64<UnaryFunctionPlain<TGammaName, std::tgamma>>;
 using FunctionPow = FunctionMathBinaryFloat64<BinaryFunctionVectorized<PowName, pow>>;
-
 }

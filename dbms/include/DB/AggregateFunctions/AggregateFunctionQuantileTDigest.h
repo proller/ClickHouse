@@ -1,20 +1,20 @@
 #pragma once
 
+#include <cassert>
 #include <cmath>
 #include <cstdint>
-#include <cassert>
 
-#include <vector>
 #include <algorithm>
+#include <vector>
 
-#include <DB/Common/RadixSort.h>
-#include <DB/Common/PODArray.h>
-#include <DB/Columns/ColumnArray.h>
-#include <DB/AggregateFunctions/IUnaryAggregateFunction.h>
 #include <DB/AggregateFunctions/IBinaryAggregateFunction.h>
+#include <DB/AggregateFunctions/IUnaryAggregateFunction.h>
 #include <DB/AggregateFunctions/QuantilesCommon.h>
-#include <DB/DataTypes/DataTypesNumberFixed.h>
+#include <DB/Columns/ColumnArray.h>
+#include <DB/Common/PODArray.h>
+#include <DB/Common/RadixSort.h>
 #include <DB/DataTypes/DataTypeArray.h>
+#include <DB/DataTypes/DataTypesNumberFixed.h>
 
 
 namespace DB
@@ -32,7 +32,6 @@ namespace ErrorCodes
   */
 namespace tdigest
 {
-
 /**
   * Центроид хранит вес точек вокруг их среднего значения
   */
@@ -44,10 +43,9 @@ struct Centroid
 
 	Centroid() = default;
 
-	explicit Centroid(Value mean, Count count = 1)
-		: mean(mean)
-		, count(count)
-	{}
+	explicit Centroid(Value mean, Count count = 1) : mean(mean), count(count)
+	{
+	}
 
 	Centroid & operator+=(const Centroid & other)
 	{
@@ -127,7 +125,10 @@ class MergingDigest
 		using Allocator = RadixSortMallocAllocator;
 
 		/// Функция получения ключа из элемента массива.
-		static Key & extractKey(Element & elem) { return elem.mean; }
+		static Key & extractKey(Element & elem)
+		{
+			return elem.mean;
+		}
 	};
 
 public:
@@ -334,13 +335,11 @@ public:
 		buf.read(reinterpret_cast<char *>(&summary[0]), size * sizeof(summary[0]));
 	}
 };
-
 }
 
 
 namespace DB
 {
-
 struct AggregateFunctionQuantileTDigestData
 {
 	tdigest::MergingDigest<Float32, Float32, Float32> digest;
@@ -357,9 +356,14 @@ private:
 	DataTypePtr type;
 
 public:
-	AggregateFunctionQuantileTDigest(double level_ = 0.5) : level(level_) {}
+	AggregateFunctionQuantileTDigest(double level_ = 0.5) : level(level_)
+	{
+	}
 
-	String getName() const override { return "quantileTDigest"; }
+	String getName() const override
+	{
+		return "quantileTDigest";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -377,7 +381,8 @@ public:
 	void setParameters(const Array & params) override
 	{
 		if (params.size() != 1)
-			throw Exception("Aggregate function " + getName() + " requires exactly one parameter.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+			throw Exception(
+				"Aggregate function " + getName() + " requires exactly one parameter.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
 		level = applyVisitor(FieldVisitorConvertToNumber<Float32>(), params[0]);
 	}
@@ -415,8 +420,8 @@ public:
 
 
 template <typename T, typename Weight, bool returns_float = true>
-class AggregateFunctionQuantileTDigestWeighted final
-	: public IBinaryAggregateFunction<AggregateFunctionQuantileTDigestData, AggregateFunctionQuantileTDigestWeighted<T, Weight, returns_float>>
+class AggregateFunctionQuantileTDigestWeighted final : public IBinaryAggregateFunction<AggregateFunctionQuantileTDigestData,
+														   AggregateFunctionQuantileTDigestWeighted<T, Weight, returns_float>>
 {
 private:
 	Float32 level;
@@ -424,9 +429,14 @@ private:
 	DataTypePtr type;
 
 public:
-	AggregateFunctionQuantileTDigestWeighted(double level_ = 0.5) : level(level_) {}
+	AggregateFunctionQuantileTDigestWeighted(double level_ = 0.5) : level(level_)
+	{
+	}
 
-	String getName() const override { return "quantileTDigestWeighted"; }
+	String getName() const override
+	{
+		return "quantileTDigestWeighted";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -444,7 +454,8 @@ public:
 	void setParameters(const Array & params) override
 	{
 		if (params.size() != 1)
-			throw Exception("Aggregate function " + getName() + " requires exactly one parameter.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+			throw Exception(
+				"Aggregate function " + getName() + " requires exactly one parameter.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
 		level = applyVisitor(FieldVisitorConvertToNumber<Float32>(), params[0]);
 	}
@@ -493,7 +504,10 @@ private:
 	DataTypePtr type;
 
 public:
-	String getName() const override { return "quantilesTDigest"; }
+	String getName() const override
+	{
+		return "quantilesTDigest";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -550,8 +564,8 @@ public:
 			size_t old_size = data_to.size();
 			data_to.resize(data_to.size() + size);
 
-			this->data(const_cast<AggregateDataPtr>(place)).digest.getManyQuantiles(
-				params, &levels.levels[0], &levels.permutation[0], size, &data_to[old_size]);
+			this->data(const_cast<AggregateDataPtr>(place))
+				.digest.getManyQuantiles(params, &levels.levels[0], &levels.permutation[0], size, &data_to[old_size]);
 		}
 		else
 		{
@@ -559,16 +573,16 @@ public:
 			size_t old_size = data_to.size();
 			data_to.resize(data_to.size() + size);
 
-			this->data(const_cast<AggregateDataPtr>(place)).digest.getManyQuantiles(
-				params, &levels.levels[0], &levels.permutation[0], size, &data_to[old_size]);
+			this->data(const_cast<AggregateDataPtr>(place))
+				.digest.getManyQuantiles(params, &levels.levels[0], &levels.permutation[0], size, &data_to[old_size]);
 		}
 	}
 };
 
 
 template <typename T, typename Weight, bool returns_float = true>
-class AggregateFunctionQuantilesTDigestWeighted final
-	: public IBinaryAggregateFunction<AggregateFunctionQuantileTDigestData, AggregateFunctionQuantilesTDigestWeighted<T, Weight, returns_float>>
+class AggregateFunctionQuantilesTDigestWeighted final : public IBinaryAggregateFunction<AggregateFunctionQuantileTDigestData,
+															AggregateFunctionQuantilesTDigestWeighted<T, Weight, returns_float>>
 {
 private:
 	QuantileLevels<Float32> levels;
@@ -576,7 +590,10 @@ private:
 	DataTypePtr type;
 
 public:
-	String getName() const override { return "quantilesTDigest"; }
+	String getName() const override
+	{
+		return "quantilesTDigest";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -635,8 +652,8 @@ public:
 			size_t old_size = data_to.size();
 			data_to.resize(data_to.size() + size);
 
-			this->data(const_cast<AggregateDataPtr>(place)).digest.getManyQuantiles(
-				params, &levels.levels[0], &levels.permutation[0], size, &data_to[old_size]);
+			this->data(const_cast<AggregateDataPtr>(place))
+				.digest.getManyQuantiles(params, &levels.levels[0], &levels.permutation[0], size, &data_to[old_size]);
 		}
 		else
 		{
@@ -644,10 +661,9 @@ public:
 			size_t old_size = data_to.size();
 			data_to.resize(data_to.size() + size);
 
-			this->data(const_cast<AggregateDataPtr>(place)).digest.getManyQuantiles(
-				params, &levels.levels[0], &levels.permutation[0], size, &data_to[old_size]);
+			this->data(const_cast<AggregateDataPtr>(place))
+				.digest.getManyQuantiles(params, &levels.levels[0], &levels.permutation[0], size, &data_to[old_size]);
 		}
 	}
 };
-
 }

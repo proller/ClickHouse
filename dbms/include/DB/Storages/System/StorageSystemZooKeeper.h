@@ -6,7 +6,6 @@
 
 namespace DB
 {
-
 class Context;
 
 
@@ -14,18 +13,26 @@ class Context;
   */
 class StorageSystemZooKeeper : private ext::shared_ptr_helper<StorageSystemZooKeeper>, public IStorage
 {
-friend class ext::shared_ptr_helper<StorageSystemZooKeeper>;
+	friend class ext::shared_ptr_helper<StorageSystemZooKeeper>;
 
 public:
 	static StoragePtr create(const std::string & name_);
 
-	std::string getName() const override { return "SystemZooKeeper"; }
-	std::string getTableName() const override { return name; }
+	std::string getName() const override
+	{
+		return "SystemZooKeeper";
+	}
+	std::string getTableName() const override
+	{
+		return name;
+	}
 
-	const NamesAndTypesList & getColumnsListImpl() const override { return columns; }
+	const NamesAndTypesList & getColumnsListImpl() const override
+	{
+		return columns;
+	}
 
-	BlockInputStreams read(
-		const Names & column_names,
+	BlockInputStreams read(const Names & column_names,
 		ASTPtr query,
 		const Context & context,
 		const Settings & settings,
@@ -39,5 +46,4 @@ private:
 
 	StorageSystemZooKeeper(const std::string & name_);
 };
-
 }

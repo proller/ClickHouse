@@ -1,21 +1,21 @@
 #pragma once
 
-#include <sys/types.h>
 #include <unistd.h>
+#include <sys/types.h>
 
+#include <functional>
 #include <iostream>
 #include <memory>
-#include <functional>
 
-#include <Poco/Process.h>
-#include <Poco/ThreadPool.h>
-#include <Poco/TaskNotification.h>
+#include <Poco/FileChannel.h>
+#include <Poco/Net/SocketAddress.h>
 #include <Poco/NumberFormatter.h>
+#include <Poco/Process.h>
+#include <Poco/SyslogChannel.h>
+#include <Poco/TaskNotification.h>
+#include <Poco/ThreadPool.h>
 #include <Poco/Util/Application.h>
 #include <Poco/Util/ServerApplication.h>
-#include <Poco/Net/SocketAddress.h>
-#include <Poco/FileChannel.h>
-#include <Poco/SyslogChannel.h>
 #include <Poco/Version.h>
 
 #include <common/Common.h>
@@ -27,7 +27,10 @@
 #include <zkutil/ZooKeeperHolder.h>
 
 
-namespace Poco { class TaskManager; }
+namespace Poco
+{
+class TaskManager;
+}
 
 
 /// \brief Базовый класс для демонов
@@ -58,7 +61,7 @@ class BaseDaemon : public Poco::Util::ServerApplication
 
 public:
 	BaseDaemon();
-    ~BaseDaemon();
+	~BaseDaemon();
 
 	/// Загружает конфигурацию и "строит" логгеры на запись в файлы
 	void initialize(Poco::Util::Application &) override;
@@ -70,7 +73,7 @@ public:
 	void buildLoggers();
 
 	/// Определяет параметр командной строки
-	void defineOptions(Poco::Util::OptionSet& _options) override;
+	void defineOptions(Poco::Util::OptionSet & _options) override;
 
 	/// Заставляет демон завершаться, если хотя бы одна задача завершилась неудачно
 	void exitOnTaskError();
@@ -94,7 +97,10 @@ public:
 	}
 
 	/// return none if daemon doesn't exist, reference to the daemon otherwise
-	static std::experimental::optional<std::reference_wrapper<BaseDaemon>> tryGetInstance() { return tryGetInstance<BaseDaemon>(); }
+	static std::experimental::optional<std::reference_wrapper<BaseDaemon>> tryGetInstance()
+	{
+		return tryGetInstance<BaseDaemon>();
+	}
 
 	/// Спит заданное количество секунд или до события wakeup
 	void sleep(double seconds);
@@ -116,23 +122,30 @@ public:
 	}
 
 	template <class T>
-	void writeToGraphite(const GraphiteWriter::KeyValueVector<T> & key_vals, time_t timestamp = 0, const std::string & custom_root_path = "")
+	void writeToGraphite(
+		const GraphiteWriter::KeyValueVector<T> & key_vals, time_t timestamp = 0, const std::string & custom_root_path = "")
 	{
 		graphite_writer->write(key_vals, timestamp, custom_root_path);
 	}
 
-	GraphiteWriter * getGraphiteWriter() { return graphite_writer.get(); }
+	GraphiteWriter * getGraphiteWriter()
+	{
+		return graphite_writer.get();
+	}
 
 	std::experimental::optional<size_t> getLayer() const
 	{
-		return layer;	/// layer выставляется в классе-наследнике BaseDaemonApplication.
+		return layer; /// layer выставляется в классе-наследнике BaseDaemonApplication.
 	}
 
 protected:
 	/// Возвращает TaskManager приложения
 	/// все методы task_manager следует вызывать из одного потока
 	/// иначе возможен deadlock, т.к. joinAll выполняется под локом, а любой метод тоже берет лок
-	Poco::TaskManager & getTaskManager() { return *task_manager; }
+	Poco::TaskManager & getTaskManager()
+	{
+		return *task_manager;
+	}
 
 	virtual void logRevision() const;
 
@@ -145,9 +158,9 @@ protected:
 	/// реализация обработки сигналов завершения через pipe не требует блокировки сигнала с помощью sigprocmask во всех потоках
 	void waitForTerminationRequest()
 #if POCO_CLICKHOUSE_PATCH || POCO_VERSION >= 0x02000000 // in old upstream poco not vitrual
-	override
+		override
 #endif
-	;
+		;
 	/// thread safe
 	virtual void onInterruptSignals(int signal_id);
 
@@ -164,10 +177,15 @@ protected:
 		std::string file;
 
 		/// Создать объект, не создавая PID файл
-		PID() {}
+		PID()
+		{
+		}
 
 		/// Создать объект, создать PID файл
-		PID(const std::string & file_) { seed(file_); }
+		PID(const std::string & file_)
+		{
+			seed(file_);
+		}
 
 		/// Создать PID файл
 		void seed(const std::string & file_);
@@ -175,12 +193,15 @@ protected:
 		/// Удалить PID файл
 		void clear();
 
-		~PID() { clear(); }
+		~PID()
+		{
+			clear();
+		}
 	};
 
 	PID pid;
 
-	std::atomic_bool is_cancelled{false};
+	std::atomic_bool is_cancelled{ false };
 
 	/// Флаг устанавливается по сообщению из Task (при аварийном завершении).
 	bool task_failed = false;
@@ -205,8 +226,8 @@ protected:
 
 	std::mutex signal_handler_mutex;
 	std::condition_variable signal_event;
-	std::atomic_size_t terminate_signals_counter{0};
-	std::atomic_size_t sigint_signals_counter{0};
+	std::atomic_size_t terminate_signals_counter{ 0 };
+	std::atomic_size_t sigint_signals_counter{ 0 };
 };
 
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <DB/Common/HashTable/HashMap.h>
 #include <DB/Common/HashTable/ClearableHashSet.h>
+#include <DB/Common/HashTable/HashMap.h>
 
 
 template <typename Key, typename Mapped, typename Hash>
@@ -11,18 +11,17 @@ struct ClearableHashMapCell : public ClearableHashTableCell<Key, HashMapCell<Key
 	using Base::Base;
 
 	ClearableHashMapCell(const typename Base::value_type & value_, const typename Base::State & state)
-		: Base::BaseCell(value_, state), Base::version(state.version) {}
+		: Base::BaseCell(value_, state), Base::version(state.version)
+	{
+	}
 };
 
 
-template
-<
-	typename Key,
+template <typename Key,
 	typename Mapped,
 	typename Hash = DefaultHash<Key>,
 	typename Grower = HashTableGrower<>,
-	typename Allocator = HashTableAllocator
->
+	typename Allocator = HashTableAllocator>
 class ClearableHashMap : public HashTable<Key, ClearableHashMapCell<Key, Mapped, Hash>, Hash, Grower, Allocator>
 {
 public:
@@ -37,7 +36,7 @@ public:
 		this->emplace(x, it, inserted);
 
 		if (inserted)
-			new(&it->second) mapped_type();
+			new (&it->second) mapped_type();
 
 		return it->second;
 	}

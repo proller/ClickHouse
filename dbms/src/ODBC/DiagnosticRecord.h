@@ -1,7 +1,7 @@
 #pragma once
 
-#include <sql.h>
 #include <stdexcept>
+#include <sql.h>
 
 #include "Log.h"
 
@@ -22,7 +22,7 @@ struct DiagnosticRecord
 		{
 			message = e.what();
 			native_error_code = 1;
-			sql_state = "HY000";	/// General error.
+			sql_state = "HY000"; /// General error.
 		}
 		catch (...)
 		{

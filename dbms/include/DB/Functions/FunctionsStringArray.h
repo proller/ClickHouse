@@ -1,17 +1,16 @@
 #pragma once
 
-#include <DB/DataTypes/DataTypeArray.h>
-#include <DB/Columns/ColumnString.h>
-#include <DB/Columns/ColumnFixedString.h>
-#include <DB/Columns/ColumnConst.h>
 #include <DB/Columns/ColumnArray.h>
-#include <DB/Functions/IFunction.h>
+#include <DB/Columns/ColumnConst.h>
+#include <DB/Columns/ColumnFixedString.h>
+#include <DB/Columns/ColumnString.h>
+#include <DB/DataTypes/DataTypeArray.h>
 #include <DB/Functions/FunctionsStringSearch.h>
+#include <DB/Functions/IFunction.h>
 
 
 namespace DB
 {
-
 /** Функции, разделяющие строки на массив строк или наоборот.
   *
   * splitByChar(sep, s)
@@ -47,9 +46,15 @@ private:
 public:
 	/// Получить имя фукнции.
 	static constexpr auto name = "alphaTokens";
-	static String getName() { return name; }
+	static String getName()
+	{
+		return name;
+	}
 
-	static size_t getNumberOfArguments() { return 1; }
+	static size_t getNumberOfArguments()
+	{
+		return 1;
+	}
 
 	/// Проверить типы агрументов функции.
 	static void checkArguments(const DataTypes & arguments)
@@ -60,7 +65,9 @@ public:
 	}
 
 	/// Инициализировать по аргументам функции.
-	void init(Block & block, const ColumnNumbers & arguments) {}
+	void init(Block & block, const ColumnNumbers & arguments)
+	{
+	}
 
 	/// Вызывается для каждой следующей строки.
 	void set(Pos pos_, Pos end_)
@@ -107,8 +114,14 @@ private:
 
 public:
 	static constexpr auto name = "splitByChar";
-	static String getName() { return name; }
-	static size_t getNumberOfArguments() { return 2; }
+	static String getName()
+	{
+		return name;
+	}
+	static size_t getNumberOfArguments()
+	{
+		return 2;
+	}
 
 	static void checkArguments(const DataTypes & arguments)
 	{
@@ -117,7 +130,8 @@ public:
 				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 		if (!typeid_cast<const DataTypeString *>(&*arguments[1]))
-			throw Exception("Illegal type " + arguments[1]->getName() + " of second argument of function " + getName() + ". Must be String.",
+			throw Exception(
+				"Illegal type " + arguments[1]->getName() + " of second argument of function " + getName() + ". Must be String.",
 				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 	}
 
@@ -126,8 +140,9 @@ public:
 		const ColumnConstString * col = typeid_cast<const ColumnConstString *>(block.safeGetByPosition(arguments[0]).column.get());
 
 		if (!col)
-			throw Exception("Illegal column " + block.safeGetByPosition(arguments[0]).column->getName()
-				+ " of first argument of function " + getName() + ". Must be constant string.",
+			throw Exception("Illegal column " + block.safeGetByPosition(arguments[0]).column->getName() + " of first argument of function "
+					+ getName()
+					+ ". Must be constant string.",
 				ErrorCodes::ILLEGAL_COLUMN);
 
 		const String & sep_str = col->getData();
@@ -181,8 +196,14 @@ private:
 
 public:
 	static constexpr auto name = "splitByString";
-	static String getName() { return name; }
-	static size_t getNumberOfArguments() { return 2; }
+	static String getName()
+	{
+		return name;
+	}
+	static size_t getNumberOfArguments()
+	{
+		return 2;
+	}
 
 	static void checkArguments(const DataTypes & arguments)
 	{
@@ -194,8 +215,9 @@ public:
 		const ColumnConstString * col = typeid_cast<const ColumnConstString *>(block.safeGetByPosition(arguments[0]).column.get());
 
 		if (!col)
-			throw Exception("Illegal column " + block.safeGetByPosition(arguments[0]).column->getName()
-				+ " of first argument of function " + getName() + ". Must be constant string.",
+			throw Exception("Illegal column " + block.safeGetByPosition(arguments[0]).column->getName() + " of first argument of function "
+					+ getName()
+					+ ". Must be constant string.",
 				ErrorCodes::ILLEGAL_COLUMN);
 
 		sep = col->getData();
@@ -244,13 +266,20 @@ private:
 
 	Pos pos;
 	Pos end;
+
 public:
 	static constexpr auto name = "extractAll";
-	static String getName() { return name; }
-	static size_t getNumberOfArguments() { return 2; }
+	static String getName()
+	{
+		return name;
+	}
+	static size_t getNumberOfArguments()
+	{
+		return 2;
+	}
 
 	/// Проверить типы агрументов функции.
-	static void checkArguments( const DataTypes &  arguments )
+	static void checkArguments(const DataTypes & arguments)
 	{
 		SplitByStringImpl::checkArguments(arguments);
 	}
@@ -261,8 +290,9 @@ public:
 		const ColumnConstString * col = typeid_cast<const ColumnConstString *>(block.safeGetByPosition(arguments[1]).column.get());
 
 		if (!col)
-			throw Exception("Illegal column " + block.safeGetByPosition(arguments[1]).column->getName()
-				+ " of first argument of function " + getName() + ". Must be constant string.",
+			throw Exception("Illegal column " + block.safeGetByPosition(arguments[1]).column->getName() + " of first argument of function "
+					+ getName()
+					+ ". Must be constant string.",
 				ErrorCodes::ILLEGAL_COLUMN);
 
 		re = Regexps::get<false, false>(col->getData());
@@ -308,7 +338,10 @@ class FunctionTokens : public IFunction
 {
 public:
 	static constexpr auto name = Generator::name;
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionTokens>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionTokens>();
+	}
 
 	/// Получить имя функции.
 	String getName() const override
@@ -316,7 +349,10 @@ public:
 		return name;
 	}
 
-	size_t getNumberOfArguments() const override { return Generator::getNumberOfArguments(); }
+	size_t getNumberOfArguments() const override
+	{
+		return Generator::getNumberOfArguments();
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
@@ -334,8 +370,8 @@ public:
 		size_t arrayArgumentPosition = arguments[generator.getStringsArgumentPosition()];
 
 		const ColumnString * col_str = typeid_cast<const ColumnString *>(block.safeGetByPosition(arrayArgumentPosition).column.get());
-		const ColumnConstString * col_const_str =
-				typeid_cast<const ColumnConstString *>(block.safeGetByPosition(arrayArgumentPosition).column.get());
+		const ColumnConstString * col_const_str
+			= typeid_cast<const ColumnConstString *>(block.safeGetByPosition(arrayArgumentPosition).column.get());
 
 		auto col_res = std::make_shared<ColumnArray>(std::make_shared<ColumnString>());
 		ColumnPtr col_res_holder = col_res;
@@ -350,7 +386,7 @@ public:
 			const ColumnString::Offsets_t & src_offsets = col_str->getOffsets();
 
 			res_offsets.reserve(src_offsets.size());
-			res_strings_offsets.reserve(src_offsets.size() * 5);	/// Константа 5 - наугад.
+			res_strings_offsets.reserve(src_offsets.size() * 5); /// Константа 5 - наугад.
 			res_strings_chars.reserve(src_chars.size());
 
 			Pos token_begin = nullptr;
@@ -400,12 +436,14 @@ public:
 			while (generator.get(token_begin, token_end))
 				dst.push_back(String(token_begin, token_end - token_begin));
 
-			block.safeGetByPosition(result).column = std::make_shared<ColumnConstArray>(col_const_str->size(), dst, std::make_shared<DataTypeArray>(std::make_shared<DataTypeString>()));
+			block.safeGetByPosition(result).column = std::make_shared<ColumnConstArray>(
+				col_const_str->size(), dst, std::make_shared<DataTypeArray>(std::make_shared<DataTypeString>()));
 		}
 		else
-			throw Exception("Illegal columns " + block.safeGetByPosition(arrayArgumentPosition).column->getName()
-					+ ", " + block.safeGetByPosition(arrayArgumentPosition).column->getName()
-					+ " of arguments of function " + getName(),
+			throw Exception("Illegal columns " + block.safeGetByPosition(arrayArgumentPosition).column->getName() + ", "
+					+ block.safeGetByPosition(arrayArgumentPosition).column->getName()
+					+ " of arguments of function "
+					+ getName(),
 				ErrorCodes::ILLEGAL_COLUMN);
 	}
 };
@@ -415,11 +453,11 @@ public:
 class FunctionArrayStringConcat : public IFunction
 {
 private:
-	void executeInternal(
-		const ColumnString::Chars_t & src_chars,
+	void executeInternal(const ColumnString::Chars_t & src_chars,
 		const ColumnString::Offsets_t & src_string_offsets,
 		const ColumnArray::Offsets_t & src_array_offsets,
-		const char * delimiter, const size_t delimiter_size,
+		const char * delimiter,
+		const size_t delimiter_size,
 		ColumnString::Chars_t & dst_chars,
 		ColumnString::Offsets_t & dst_string_offsets)
 	{
@@ -429,11 +467,9 @@ private:
 			return;
 
 		/// С небольшим запасом - как будто разделитель идёт и после последней строки массива.
-		dst_chars.resize(
-			src_chars.size()
-			+ delimiter_size * src_string_offsets.size()	/// Разделители после каждой строки...
-			+ src_array_offsets.size() 					/// Нулевой байт после каждой склеенной строки
-			- src_string_offsets.size());				/// Бывший нулевой байт после каждой строки массива
+		dst_chars.resize(src_chars.size() + delimiter_size * src_string_offsets.size() /// Разделители после каждой строки...
+			+ src_array_offsets.size() /// Нулевой байт после каждой склеенной строки
+			- src_string_offsets.size()); /// Бывший нулевой байт после каждой строки массива
 
 		/// Будет столько строк, сколько было массивов.
 		dst_string_offsets.resize(src_array_offsets.size());
@@ -447,7 +483,8 @@ private:
 		for (size_t i = 0; i < size; ++i)
 		{
 			/// Цикл по строкам внутри массива. /// NOTE Можно всё сделать за одно копирование, если разделитель имеет размер 1.
-			for (auto next_src_array_offset = src_array_offsets[i]; current_src_array_offset < next_src_array_offset; ++current_src_array_offset)
+			for (auto next_src_array_offset = src_array_offsets[i]; current_src_array_offset < next_src_array_offset;
+				 ++current_src_array_offset)
 			{
 				size_t bytes_to_copy = src_string_offsets[current_src_array_offset] - current_src_string_offset - 1;
 
@@ -475,7 +512,10 @@ private:
 
 public:
 	static constexpr auto name = "arrayStringConcat";
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionArrayStringConcat>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionArrayStringConcat>();
+	}
 
 	/// Получить имя функции.
 	String getName() const override
@@ -483,24 +523,31 @@ public:
 		return name;
 	}
 
-	bool isVariadic() const override { return true; }
-	size_t getNumberOfArguments() const override { return 0; }
+	bool isVariadic() const override
+	{
+		return true;
+	}
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
 		if (arguments.size() != 1 && arguments.size() != 2)
-			throw Exception("Number of arguments for function " + getName() + " doesn't match: passed "
-				+ toString(arguments.size()) + ", should be 1 or 2.",
+			throw Exception("Number of arguments for function " + getName() + " doesn't match: passed " + toString(arguments.size())
+					+ ", should be 1 or 2.",
 				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
 		const DataTypeArray * array_type = typeid_cast<const DataTypeArray *>(arguments[0].get());
 		if (!array_type || !typeid_cast<const DataTypeString *>(array_type->getNestedType().get()))
-			throw Exception("First argument for function " + getName() + " must be array of strings.", ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+			throw Exception(
+				"First argument for function " + getName() + " must be array of strings.", ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
-		if (arguments.size() == 2
-			&& !typeid_cast<const DataTypeString *>(arguments[1].get()))
-			throw Exception("Second argument for function " + getName() + " must be constant string.", ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+		if (arguments.size() == 2 && !typeid_cast<const DataTypeString *>(arguments[1].get()))
+			throw Exception(
+				"Second argument for function " + getName() + " must be constant string.", ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
 		return std::make_shared<DataTypeString>();
 	}
@@ -511,14 +558,16 @@ public:
 		String delimiter;
 		if (arguments.size() == 2)
 		{
-			const ColumnConstString * col_delim = typeid_cast<const ColumnConstString *>(block.safeGetByPosition(arguments[1]).column.get());
+			const ColumnConstString * col_delim
+				= typeid_cast<const ColumnConstString *>(block.safeGetByPosition(arguments[1]).column.get());
 			if (!col_delim)
 				throw Exception("Second argument for function " + getName() + " must be constant string.", ErrorCodes::ILLEGAL_COLUMN);
 
 			delimiter = col_delim->getData();
 		}
 
-		if (const ColumnConstArray * col_const_arr = typeid_cast<const ColumnConstArray *>(block.safeGetByPosition(arguments[0]).column.get()))
+		if (const ColumnConstArray * col_const_arr
+			= typeid_cast<const ColumnConstArray *>(block.safeGetByPosition(arguments[0]).column.get()))
 		{
 			auto col_res = std::make_shared<ColumnConstString>(col_const_arr->size(), "");
 			block.safeGetByPosition(result).column = col_res;
@@ -540,18 +589,20 @@ public:
 			std::shared_ptr<ColumnString> col_res = std::make_shared<ColumnString>();
 			block.safeGetByPosition(result).column = col_res;
 
-			executeInternal(
-				col_string.getChars(), col_string.getOffsets(), col_arr.getOffsets(),
-				delimiter.data(), delimiter.size(),
-				col_res->getChars(), col_res->getOffsets());
+			executeInternal(col_string.getChars(),
+				col_string.getOffsets(),
+				col_arr.getOffsets(),
+				delimiter.data(),
+				delimiter.size(),
+				col_res->getChars(),
+				col_res->getOffsets());
 		}
 	}
 };
 
 
-using FunctionAlphaTokens = FunctionTokens<AlphaTokensImpl>	;
-using FunctionSplitByChar = FunctionTokens<SplitByCharImpl>	;
+using FunctionAlphaTokens = FunctionTokens<AlphaTokensImpl>;
+using FunctionSplitByChar = FunctionTokens<SplitByCharImpl>;
 using FunctionSplitByString = FunctionTokens<SplitByStringImpl>;
-using FunctionExtractAll = FunctionTokens<ExtractAllImpl> 	;
-
+using FunctionExtractAll = FunctionTokens<ExtractAllImpl>;
 }

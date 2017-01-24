@@ -1,14 +1,12 @@
 #pragma once
 #include <map>
 #include <memory>
-#include <stack>
 #include <mutex>
+#include <stack>
 
 
 namespace DB
 {
-
-
 /** Pool for objects that cannot be used from different threads simultaneously.
   * Allows to create an object for each thread.
   * Pool has unbounded size and objects are not destroyed before destruction of pool.
@@ -63,11 +61,13 @@ private:
 	{
 		Holder * holder;
 
-		Deleter(Holder * holder = nullptr) : holder{holder} {}
+		Deleter(Holder * holder = nullptr) : holder{ holder }
+		{
+		}
 
 		void operator()(T * owning_ptr) const
 		{
-			std::lock_guard<std::mutex> lock{holder->mutex};
+			std::lock_guard<std::mutex> lock{ holder->mutex };
 			holder->stack.emplace(owning_ptr);
 		}
 	};
@@ -79,7 +79,6 @@ private:
 	std::mutex mutex;
 
 public:
-
 	/// f is a function that takes zero arguments (usually captures key from outside scope)
 	///  and returns plain pointer to new created object.
 	template <typename Factory>
@@ -98,6 +97,4 @@ public:
 		return it->second->get(std::forward<Factory>(f));
 	}
 };
-
-
 }

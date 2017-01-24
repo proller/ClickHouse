@@ -4,7 +4,6 @@
 
 namespace DB
 {
-
 /** Name, type, default-specifier, default-expression.
  *  The type is optional if default-expression is specified.
  */
@@ -16,24 +15,31 @@ public:
 	String default_specifier;
 	ASTPtr default_expression;
 
-    ASTColumnDeclaration() = default;
-    ASTColumnDeclaration(const StringRange range) : IAST{range} {}
+	ASTColumnDeclaration() = default;
+	ASTColumnDeclaration(const StringRange range) : IAST{ range }
+	{
+	}
 
-	String getID() const override { return "ColumnDeclaration_" + name; }
+	String getID() const override
+	{
+		return "ColumnDeclaration_" + name;
+	}
 
 	ASTPtr clone() const override
 	{
 		const auto res = std::make_shared<ASTColumnDeclaration>(*this);
-		ASTPtr ptr{res};
+		ASTPtr ptr{ res };
 
 		res->children.clear();
 
-		if (type) {
+		if (type)
+		{
 			res->type = type->clone();
 			res->children.push_back(res->type);
 		}
 
-		if (default_expression) {
+		if (default_expression)
+		{
 			res->default_expression = default_expression->clone();
 			res->children.push_back(res->default_expression);
 		}
@@ -56,10 +62,10 @@ protected:
 
 		if (default_expression)
 		{
-			settings.ostr << ' ' << (settings.hilite ? hilite_keyword : "") << default_specifier << (settings.hilite ? hilite_none : "") << ' ';
+			settings.ostr << ' ' << (settings.hilite ? hilite_keyword : "") << default_specifier << (settings.hilite ? hilite_none : "")
+						  << ' ';
 			default_expression->formatImpl(settings, state, frame);
 		}
 	}
 };
-
 }

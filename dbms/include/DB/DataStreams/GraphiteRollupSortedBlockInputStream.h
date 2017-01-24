@@ -2,17 +2,16 @@
 
 #include <common/logger_useful.h>
 
-#include <DB/Core/Row.h>
-#include <DB/Core/ColumnNumbers.h>
-#include <DB/DataStreams/MergingSortedBlockInputStream.h>
 #include <DB/AggregateFunctions/IAggregateFunction.h>
 #include <DB/Columns/ColumnAggregateFunction.h>
 #include <DB/Common/OptimizedRegularExpression.h>
+#include <DB/Core/ColumnNumbers.h>
+#include <DB/Core/Row.h>
+#include <DB/DataStreams/MergingSortedBlockInputStream.h>
 
 
 namespace DB
 {
-
 /** Предназначен для реализации "rollup" - загрубления старых данных
   *  для таблицы с данными Графита - системы количественного мониторинга.
   *
@@ -96,7 +95,7 @@ namespace Graphite
 	{
 		std::shared_ptr<OptimizedRegularExpression> regexp;
 		AggregateFunctionPtr function;
-		Retentions retentions;	/// Должны быть упорядочены по убыванию age.
+		Retentions retentions; /// Должны быть упорядочены по убыванию age.
 	};
 
 	using Patterns = std::vector<Pattern>;
@@ -125,15 +124,19 @@ namespace Graphite
 class GraphiteRollupSortedBlockInputStream : public MergingSortedBlockInputStream
 {
 public:
-	GraphiteRollupSortedBlockInputStream(
-		BlockInputStreams inputs_, const SortDescription & description_, size_t max_block_size_,
-		const Graphite::Params & params, time_t time_of_merge)
-		: MergingSortedBlockInputStream(inputs_, description_, max_block_size_),
-		params(params), time_of_merge(time_of_merge)
+	GraphiteRollupSortedBlockInputStream(BlockInputStreams inputs_,
+		const SortDescription & description_,
+		size_t max_block_size_,
+		const Graphite::Params & params,
+		time_t time_of_merge)
+		: MergingSortedBlockInputStream(inputs_, description_, max_block_size_), params(params), time_of_merge(time_of_merge)
 	{
 	}
 
-	String getName() const override { return "GraphiteRollupSorted"; }
+	String getName() const override
+	{
+		return "GraphiteRollupSorted";
+	}
 
 	String getID() const override
 	{
@@ -152,7 +155,7 @@ public:
 		return res.str();
 	}
 
-    ~GraphiteRollupSortedBlockInputStream()
+	~GraphiteRollupSortedBlockInputStream()
 	{
 		if (current_pattern)
 			current_pattern->function->destroy(place_for_aggregate_state.data());
@@ -210,5 +213,4 @@ private:
 	template <class TSortCursor>
 	void accumulateRow(TSortCursor & cursor);
 };
-
 }

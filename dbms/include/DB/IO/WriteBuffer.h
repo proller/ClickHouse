@@ -9,7 +9,6 @@
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int CANNOT_WRITE_AFTER_END_OF_BUFFER;
@@ -25,8 +24,13 @@ namespace ErrorCodes
 class WriteBuffer : public BufferBase
 {
 public:
-    WriteBuffer(Position ptr, size_t size) : BufferBase(ptr, size, 0) {}
-    void set(Position ptr, size_t size) { BufferBase::set(ptr, size, 0); }
+	WriteBuffer(Position ptr, size_t size) : BufferBase(ptr, size, 0)
+	{
+	}
+	void set(Position ptr, size_t size)
+	{
+		BufferBase::set(ptr, size, 0);
+	}
 
 	/** записать данные, находящиеся в буфере (от начала буфера до текущей позиции);
 	  * переместить позицию в начало; кинуть исключение, если что-то не так
@@ -56,7 +60,9 @@ public:
 	/** желательно в наследниках поместить в деструктор вызов next(),
 	  * чтобы последние данные записались
 	  */
-	virtual ~WriteBuffer() {}
+	virtual ~WriteBuffer()
+	{
+	}
 
 
 	inline void nextIfAtEnd()
@@ -92,8 +98,9 @@ private:
 	/** Записать данные, находящиеся в буфере (от начала буфера до текущей позиции).
 	  * Кинуть исключение, если что-то не так.
 	  */
-	virtual void nextImpl() { throw Exception("Cannot write after end of buffer.", ErrorCodes::CANNOT_WRITE_AFTER_END_OF_BUFFER); };
+	virtual void nextImpl()
+	{
+		throw Exception("Cannot write after end of buffer.", ErrorCodes::CANNOT_WRITE_AFTER_END_OF_BUFFER);
+	};
 };
-
-
 }

@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 /** Common part for implementation of MySQLBlockInputStream, MongoDBBlockInputStream and others.
   */
 struct ExternalResultDescription
@@ -34,5 +33,4 @@ struct ExternalResultDescription
 
 	void init(const Block & sample_block_);
 };
-
 }

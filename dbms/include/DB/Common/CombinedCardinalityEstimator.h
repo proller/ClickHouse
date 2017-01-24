@@ -1,34 +1,34 @@
 #pragma once
 
-#include <DB/Common/HashTable/SmallTable.h>
 #include <DB/Common/HashTable/HashSet.h>
+#include <DB/Common/HashTable/SmallTable.h>
 #include <DB/Common/HyperLogLogCounter.h>
 #include <DB/Core/Defines.h>
 
 
 namespace DB
 {
-
 namespace details
 {
+	enum class ContainerType : UInt8
+	{
+		SMALL = 1,
+		MEDIUM = 2,
+		LARGE = 3
+	};
 
-enum class ContainerType : UInt8 { SMALL = 1, MEDIUM = 2, LARGE = 3 };
-
-static inline ContainerType max(const ContainerType & lhs, const ContainerType & rhs)
-{
-	UInt8 res = std::max(static_cast<UInt8>(lhs), static_cast<UInt8>(rhs));
-	return static_cast<ContainerType>(res);
-}
-
+	static inline ContainerType max(const ContainerType & lhs, const ContainerType & rhs)
+	{
+		UInt8 res = std::max(static_cast<UInt8>(lhs), static_cast<UInt8>(rhs));
+		return static_cast<ContainerType>(res);
+	}
 }
 
 /** Для маленького количества ключей - массив фиксированного размера "на стеке".
   * Для среднего - выделяется HashSet.
   * Для большого - выделяется HyperLogLog.
   */
-template
-<
-	typename Key,
+template <typename Key,
 	typename HashContainer,
 	UInt8 small_set_size_max,
 	UInt8 medium_set_power2_max,
@@ -37,24 +37,20 @@ template
 	typename HashValueType = UInt32,
 	typename BiasEstimator = TrivialBiasEstimator,
 	HyperLogLogMode mode = HyperLogLogMode::FullFeatured,
-	typename DenominatorType = double
->
+	typename DenominatorType = double>
 class CombinedCardinalityEstimator
 {
 public:
-	using Self = CombinedCardinalityEstimator
-		<
-			Key,
-			HashContainer,
-			small_set_size_max,
-			medium_set_power2_max,
-			K,
-			Hash,
-			HashValueType,
-			BiasEstimator,
-			mode,
-			DenominatorType
-		>;
+	using Self = CombinedCardinalityEstimator<Key,
+		HashContainer,
+		small_set_size_max,
+		medium_set_power2_max,
+		K,
+		Hash,
+		HashValueType,
+		BiasEstimator,
+		mode,
+		DenominatorType>;
 
 private:
 	using Small = SmallSet<Key, small_set_size_max>;
@@ -266,7 +262,6 @@ private:
 
 		if (current_memory_tracker)
 			current_memory_tracker->alloc(sizeof(large));
-
 	}
 
 	void NO_INLINE destroy()
@@ -293,13 +288,13 @@ private:
 		}
 	}
 
-	template<typename T>
+	template <typename T>
 	inline T & getContainer()
 	{
 		return *reinterpret_cast<T *>(address & mask);
 	}
 
-	template<typename T>
+	template <typename T>
 	inline const T & getContainer() const
 	{
 		return *reinterpret_cast<T *>(address & mask);
@@ -323,8 +318,7 @@ private:
 
 private:
 	Small small;
-	union
-	{
+	union {
 		Medium * medium;
 		Large * large;
 		UInt64 address = 0;
@@ -332,5 +326,4 @@ private:
 	static const UInt64 mask = 0xFFFFFFFFFFFFFFFC;
 	static const UInt32 medium_set_size_max = 1UL << medium_set_power2_max;
 };
-
 }

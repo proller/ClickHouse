@@ -5,8 +5,6 @@
 
 namespace DB
 {
-
-
 /** При попытке записать в этот поток блоков, кидает исключение.
   * Используется там, где, в общем случае, нужно передать поток блоков, но в некоторых случаях, он не должен быть использован.
   */
@@ -18,5 +16,4 @@ public:
 		throw Exception("Cannot write to EmptyBlockOutputStream", ErrorCodes::CANNOT_WRITE_TO_EMPTY_BLOCK_OUTPUT_STREAM);
 	}
 };
-
 }

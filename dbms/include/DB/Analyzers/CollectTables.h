@@ -1,13 +1,12 @@
 #pragma once
 
+#include <vector>
 #include <DB/Parsers/IAST.h>
 #include <DB/Storages/IStorage.h>
-#include <vector>
 
 
 namespace DB
 {
-
 class Context;
 struct CollectAliases;
 class WriteBuffer;
@@ -49,5 +48,4 @@ struct CollectTables
 	/// Debug output
 	void dump(WriteBuffer & out) const;
 };
-
 }

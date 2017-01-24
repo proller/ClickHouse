@@ -1,13 +1,13 @@
 #pragma once
 
-#include <DB/DataTypes/DataTypeString.h>
-#include <DB/Columns/ColumnString.h>
 #include <DB/Columns/ColumnConst.h>
+#include <DB/Columns/ColumnString.h>
 #include <DB/Common/StringUtils.h>
 #include <DB/Common/StringView.h>
+#include <DB/DataTypes/DataTypeString.h>
 #include <DB/Functions/FunctionsString.h>
-#include <DB/Functions/FunctionsStringSearch.h>
 #include <DB/Functions/FunctionsStringArray.h>
+#include <DB/Functions/FunctionsStringSearch.h>
 
 #ifdef __APPLE__
 #include <common/apple_memrchr.h>
@@ -15,7 +15,6 @@
 
 namespace DB
 {
-
 /** URL processing functions.
   * All functions are not strictly follow RFC, instead they are maximally simplified for performance reasons.
   *
@@ -128,7 +127,10 @@ struct ExtractProtocol
 template <bool without_www>
 struct ExtractDomain
 {
-	static size_t getReserveLengthForElement() { return 15; }
+	static size_t getReserveLengthForElement()
+	{
+		return 15;
+	}
 
 	static void execute(Pos data, size_t size, Pos & res_data, size_t & res_size)
 	{
@@ -152,7 +154,10 @@ struct ExtractDomain
 
 struct ExtractFirstSignificantSubdomain
 {
-	static size_t getReserveLengthForElement() { return 10; }
+	static size_t getReserveLengthForElement()
+	{
+		return 10;
+	}
 
 	static void execute(const Pos data, const size_t size, Pos & res_data, size_t & res_size, Pos * out_domain_end = nullptr)
 	{
@@ -201,7 +206,7 @@ struct ExtractFirstSignificantSubdomain
 		if (!last_3_periods[2])
 			last_3_periods[2] = begin - 1;
 
-		if (!strncmp(last_3_periods[1] + 1, "com.", 4)		/// Note that in ColumnString every value has zero byte after it.
+		if (!strncmp(last_3_periods[1] + 1, "com.", 4) /// Note that in ColumnString every value has zero byte after it.
 			|| !strncmp(last_3_periods[1] + 1, "net.", 4)
 			|| !strncmp(last_3_periods[1] + 1, "org.", 4)
 			|| !strncmp(last_3_periods[1] + 1, "co.", 3))
@@ -218,7 +223,10 @@ struct ExtractFirstSignificantSubdomain
 
 struct CutToFirstSignificantSubdomain
 {
-	static size_t getReserveLengthForElement() { return 15; }
+	static size_t getReserveLengthForElement()
+	{
+		return 15;
+	}
 
 	static void execute(const Pos data, const size_t size, Pos & res_data, size_t & res_size)
 	{
@@ -240,7 +248,10 @@ struct CutToFirstSignificantSubdomain
 
 struct ExtractTopLevelDomain
 {
-	static size_t getReserveLengthForElement() { return 5; }
+	static size_t getReserveLengthForElement()
+	{
+		return 5;
+	}
 
 	static void execute(Pos data, size_t size, Pos & res_data, size_t & res_size)
 	{
@@ -270,7 +281,10 @@ struct ExtractTopLevelDomain
 
 struct ExtractPath
 {
-	static size_t getReserveLengthForElement() { return 25; }
+	static size_t getReserveLengthForElement()
+	{
+		return 25;
+	}
 
 	static void execute(Pos data, size_t size, Pos & res_data, size_t & res_size)
 	{
@@ -292,7 +306,10 @@ struct ExtractPath
 
 struct ExtractPathFull
 {
-	static size_t getReserveLengthForElement() { return 30; }
+	static size_t getReserveLengthForElement()
+	{
+		return 30;
+	}
 
 	static void execute(const Pos data, const size_t size, Pos & res_data, size_t & res_size)
 	{
@@ -313,7 +330,10 @@ struct ExtractPathFull
 template <bool without_leading_char>
 struct ExtractQueryString
 {
-	static size_t getReserveLengthForElement() { return 10; }
+	static size_t getReserveLengthForElement()
+	{
+		return 10;
+	}
 
 	static void execute(Pos data, size_t size, Pos & res_data, size_t & res_size)
 	{
@@ -336,7 +356,10 @@ struct ExtractQueryString
 template <bool without_leading_char>
 struct ExtractFragment
 {
-	static size_t getReserveLengthForElement() { return 10; }
+	static size_t getReserveLengthForElement()
+	{
+		return 10;
+	}
 
 	static void execute(Pos data, size_t size, Pos & res_data, size_t & res_size)
 	{
@@ -357,7 +380,10 @@ struct ExtractFragment
 template <bool without_leading_char>
 struct ExtractQueryStringAndFragment
 {
-	static size_t getReserveLengthForElement() { return 20; }
+	static size_t getReserveLengthForElement()
+	{
+		return 20;
+	}
 
 	static void execute(Pos data, size_t size, Pos & res_data, size_t & res_size)
 	{
@@ -411,11 +437,12 @@ struct ExtractWWW
 struct ExtractURLParameterImpl
 {
 	static void vector(const ColumnString::Chars_t & data,
-					    const ColumnString::Offsets_t & offsets,
-					    std::string pattern,
-						ColumnString::Chars_t & res_data, ColumnString::Offsets_t & res_offsets)
+		const ColumnString::Offsets_t & offsets,
+		std::string pattern,
+		ColumnString::Chars_t & res_data,
+		ColumnString::Offsets_t & res_offsets)
 	{
-		res_data.reserve(data.size()  / 5);
+		res_data.reserve(data.size() / 5);
 		res_offsets.resize(offsets.size());
 
 		pattern += '=';
@@ -484,9 +511,10 @@ struct ExtractURLParameterImpl
 struct CutURLParameterImpl
 {
 	static void vector(const ColumnString::Chars_t & data,
-					    const ColumnString::Offsets_t & offsets,
-					    std::string pattern,
-						ColumnString::Chars_t & res_data, ColumnString::Offsets_t & res_offsets)
+		const ColumnString::Offsets_t & offsets,
+		std::string pattern,
+		ColumnString::Chars_t & res_data,
+		ColumnString::Offsets_t & res_offsets)
 	{
 		res_data.reserve(data.size());
 		res_offsets.resize(offsets.size());
@@ -560,18 +588,26 @@ private:
 
 public:
 	static constexpr auto name = "extractURLParameters";
-	static String getName() { return name; }
+	static String getName()
+	{
+		return name;
+	}
 
-	static size_t getNumberOfArguments() { return 1; }
+	static size_t getNumberOfArguments()
+	{
+		return 1;
+	}
 
 	static void checkArguments(const DataTypes & arguments)
 	{
 		if (!typeid_cast<const DataTypeString *>(&*arguments[0]))
 			throw Exception("Illegal type " + arguments[0]->getName() + " of first argument of function " + getName() + ". Must be String.",
-			ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 	}
 
-	void init(Block & block, const ColumnNumbers & arguments) {}
+	void init(Block & block, const ColumnNumbers & arguments)
+	{
+	}
 
 	/// Возвращает позицию аргумента, являющегося столбцом строк
 	size_t getStringsArgumentPosition()
@@ -645,15 +681,21 @@ private:
 
 public:
 	static constexpr auto name = "extractURLParameterNames";
-	static String getName() { return name; }
+	static String getName()
+	{
+		return name;
+	}
 
-	static size_t getNumberOfArguments() { return 1; }
+	static size_t getNumberOfArguments()
+	{
+		return 1;
+	}
 
 	static void checkArguments(const DataTypes & arguments)
 	{
 		if (!typeid_cast<const DataTypeString *>(&*arguments[0]))
 			throw Exception("Illegal type " + arguments[0]->getName() + " of first argument of function " + getName() + ". Must be String.",
-			ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 	}
 
 	/// Возвращает позицию аргумента, являющегося столбцом строк
@@ -662,7 +704,9 @@ public:
 		return 0;
 	}
 
-	void init(Block & block, const ColumnNumbers & arguments) {}
+	void init(Block & block, const ColumnNumbers & arguments)
+	{
+	}
 
 	/// Вызывается для каждой следующей строки.
 	void set(Pos pos_, Pos end_)
@@ -722,18 +766,26 @@ private:
 
 public:
 	static constexpr auto name = "URLHierarchy";
-	static String getName() { return name; }
+	static String getName()
+	{
+		return name;
+	}
 
-	static size_t getNumberOfArguments() { return 1; }
+	static size_t getNumberOfArguments()
+	{
+		return 1;
+	}
 
 	static void checkArguments(const DataTypes & arguments)
 	{
 		if (!typeid_cast<const DataTypeString *>(&*arguments[0]))
 			throw Exception("Illegal type " + arguments[0]->getName() + " of first argument of function " + getName() + ". Must be String.",
-			ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 	}
 
-	void init(Block & block, const ColumnNumbers & arguments) {}
+	void init(Block & block, const ColumnNumbers & arguments)
+	{
+	}
 
 	/// Возвращает позицию аргумента, являющегося столбцом строк
 	size_t getStringsArgumentPosition()
@@ -818,18 +870,26 @@ private:
 
 public:
 	static constexpr auto name = "URLPathHierarchy";
-	static String getName() { return name; }
+	static String getName()
+	{
+		return name;
+	}
 
-	static size_t getNumberOfArguments() { return 1; }
+	static size_t getNumberOfArguments()
+	{
+		return 1;
+	}
 
 	static void checkArguments(const DataTypes & arguments)
 	{
 		if (!typeid_cast<const DataTypeString *>(&*arguments[0]))
 			throw Exception("Illegal type " + arguments[0]->getName() + " of first argument of function " + getName() + ". Must be String.",
-			ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+				ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 	}
 
-	void init(Block & block, const ColumnNumbers & arguments) {}
+	void init(Block & block, const ColumnNumbers & arguments)
+	{
+	}
 
 	/// Возвращает позицию аргумента, являющегося столбцом строк
 	size_t getStringsArgumentPosition()
@@ -905,8 +965,10 @@ public:
 template <typename Extractor>
 struct ExtractSubstringImpl
 {
-	static void vector(const ColumnString::Chars_t & data, const ColumnString::Offsets_t & offsets,
-		ColumnString::Chars_t & res_data, ColumnString::Offsets_t & res_offsets)
+	static void vector(const ColumnString::Chars_t & data,
+		const ColumnString::Offsets_t & offsets,
+		ColumnString::Chars_t & res_data,
+		ColumnString::Offsets_t & res_offsets)
 	{
 		size_t size = offsets.size();
 		res_offsets.resize(size);
@@ -933,8 +995,7 @@ struct ExtractSubstringImpl
 		}
 	}
 
-	static void constant(const std::string & data,
-		std::string & res_data)
+	static void constant(const std::string & data, std::string & res_data)
 	{
 		Pos start;
 		size_t length;
@@ -942,8 +1003,7 @@ struct ExtractSubstringImpl
 		res_data.assign(start, length);
 	}
 
-	static void vector_fixed(const ColumnString::Chars_t & data, size_t n,
-		ColumnString::Chars_t & res_data)
+	static void vector_fixed(const ColumnString::Chars_t & data, size_t n, ColumnString::Chars_t & res_data)
 	{
 		throw Exception("Column of type FixedString is not supported by URL functions", ErrorCodes::ILLEGAL_COLUMN);
 	}
@@ -955,8 +1015,10 @@ struct ExtractSubstringImpl
 template <typename Extractor>
 struct CutSubstringImpl
 {
-	static void vector(const ColumnString::Chars_t & data, const ColumnString::Offsets_t & offsets,
-		ColumnString::Chars_t & res_data, ColumnString::Offsets_t & res_offsets)
+	static void vector(const ColumnString::Chars_t & data,
+		const ColumnString::Offsets_t & offsets,
+		ColumnString::Chars_t & res_data,
+		ColumnString::Offsets_t & res_offsets)
 	{
 		res_data.reserve(data.size());
 		size_t size = offsets.size();
@@ -976,10 +1038,8 @@ struct CutSubstringImpl
 			size_t start_index = start - reinterpret_cast<const char *>(&data[0]);
 
 			res_data.resize(res_data.size() + offsets[i] - prev_offset - length);
-			memcpySmallAllowReadWriteOverflow15(
-				&res_data[res_offset], current, start - current);
-			memcpySmallAllowReadWriteOverflow15(
-				&res_data[res_offset + start - current], start + length, offsets[i] - start_index - length);
+			memcpySmallAllowReadWriteOverflow15(&res_data[res_offset], current, start - current);
+			memcpySmallAllowReadWriteOverflow15(&res_data[res_offset + start - current], start + length, offsets[i] - start_index - length);
 			res_offset += offsets[i] - prev_offset - length;
 
 			res_offsets[i] = res_offset;
@@ -987,8 +1047,7 @@ struct CutSubstringImpl
 		}
 	}
 
-	static void constant(const std::string & data,
-		std::string & res_data)
+	static void constant(const std::string & data, std::string & res_data)
 	{
 		Pos start;
 		size_t length;
@@ -998,8 +1057,7 @@ struct CutSubstringImpl
 		res_data.append(start + length, data.data() + data.size());
 	}
 
-	static void vector_fixed(const ColumnString::Chars_t & data, size_t n,
-		ColumnString::Chars_t & res_data)
+	static void vector_fixed(const ColumnString::Chars_t & data, size_t n, ColumnString::Chars_t & res_data)
 	{
 		throw Exception("Column of type FixedString is not supported by URL functions", ErrorCodes::ILLEGAL_COLUMN);
 	}
@@ -1009,57 +1067,115 @@ struct CutSubstringImpl
 /// Percent decode of url data.
 struct DecodeURLComponentImpl
 {
-	static void vector(const ColumnString::Chars_t & data, const ColumnString::Offsets_t & offsets,
-		ColumnString::Chars_t & res_data, ColumnString::Offsets_t & res_offsets);
+	static void vector(const ColumnString::Chars_t & data,
+		const ColumnString::Offsets_t & offsets,
+		ColumnString::Chars_t & res_data,
+		ColumnString::Offsets_t & res_offsets);
 
-	static void constant(const std::string & data,
-		std::string & res_data);
+	static void constant(const std::string & data, std::string & res_data);
 
-	static void vector_fixed(const ColumnString::Chars_t & data, size_t n,
-		ColumnString::Chars_t & res_data);
+	static void vector_fixed(const ColumnString::Chars_t & data, size_t n, ColumnString::Chars_t & res_data);
 };
 
 
-struct NameProtocol 					{ static constexpr auto name = "protocol"; };
-struct NameDomain 						{ static constexpr auto name = "domain"; };
-struct NameDomainWithoutWWW 			{ static constexpr auto name = "domainWithoutWWW"; };
-struct NameFirstSignificantSubdomain	{ static constexpr auto name = "firstSignificantSubdomain"; };
-struct NameTopLevelDomain 				{ static constexpr auto name = "topLevelDomain"; };
-struct NamePath 						{ static constexpr auto name = "path"; };
-struct NamePathFull						{ static constexpr auto name = "pathFull"; };
-struct NameQueryString					{ static constexpr auto name = "queryString"; };
-struct NameFragment 					{ static constexpr auto name = "fragment"; };
-struct NameQueryStringAndFragment		{ static constexpr auto name = "queryStringAndFragment"; };
-struct NameDecodeURLComponent           { static constexpr auto name = "decodeURLComponent"; };
+struct NameProtocol
+{
+	static constexpr auto name = "protocol";
+};
+struct NameDomain
+{
+	static constexpr auto name = "domain";
+};
+struct NameDomainWithoutWWW
+{
+	static constexpr auto name = "domainWithoutWWW";
+};
+struct NameFirstSignificantSubdomain
+{
+	static constexpr auto name = "firstSignificantSubdomain";
+};
+struct NameTopLevelDomain
+{
+	static constexpr auto name = "topLevelDomain";
+};
+struct NamePath
+{
+	static constexpr auto name = "path";
+};
+struct NamePathFull
+{
+	static constexpr auto name = "pathFull";
+};
+struct NameQueryString
+{
+	static constexpr auto name = "queryString";
+};
+struct NameFragment
+{
+	static constexpr auto name = "fragment";
+};
+struct NameQueryStringAndFragment
+{
+	static constexpr auto name = "queryStringAndFragment";
+};
+struct NameDecodeURLComponent
+{
+	static constexpr auto name = "decodeURLComponent";
+};
 
-struct NameCutToFirstSignificantSubdomain { static constexpr auto name = "cutToFirstSignificantSubdomain"; };
+struct NameCutToFirstSignificantSubdomain
+{
+	static constexpr auto name = "cutToFirstSignificantSubdomain";
+};
 
-struct NameCutWWW 						{ static constexpr auto name = "cutWWW"; };
-struct NameCutQueryString				{ static constexpr auto name = "cutQueryString"; };
-struct NameCutFragment 					{ static constexpr auto name = "cutFragment"; };
-struct NameCutQueryStringAndFragment 	{ static constexpr auto name = "cutQueryStringAndFragment"; };
+struct NameCutWWW
+{
+	static constexpr auto name = "cutWWW";
+};
+struct NameCutQueryString
+{
+	static constexpr auto name = "cutQueryString";
+};
+struct NameCutFragment
+{
+	static constexpr auto name = "cutFragment";
+};
+struct NameCutQueryStringAndFragment
+{
+	static constexpr auto name = "cutQueryStringAndFragment";
+};
 
-struct NameExtractURLParameter			{ static constexpr auto name = "extractURLParameter"; };
-struct NameCutURLParameter 				{ static constexpr auto name = "cutURLParameter"; };
+struct NameExtractURLParameter
+{
+	static constexpr auto name = "extractURLParameter";
+};
+struct NameCutURLParameter
+{
+	static constexpr auto name = "cutURLParameter";
+};
 
-using FunctionProtocol = FunctionStringToString<ExtractSubstringImpl<ExtractProtocol>, 				NameProtocol>	 	;
-using FunctionDomain = FunctionStringToString<ExtractSubstringImpl<ExtractDomain<false> >, 		NameDomain>	 		;
-using FunctionDomainWithoutWWW = FunctionStringToString<ExtractSubstringImpl<ExtractDomain<true>  >, 		NameDomainWithoutWWW>;
-using FunctionFirstSignificantSubdomain = FunctionStringToString<ExtractSubstringImpl<ExtractFirstSignificantSubdomain>, NameFirstSignificantSubdomain>;
-using FunctionTopLevelDomain = FunctionStringToString<ExtractSubstringImpl<ExtractTopLevelDomain>, 		NameTopLevelDomain>	;
-using FunctionPath = FunctionStringToString<ExtractSubstringImpl<ExtractPath>, 					NamePath>			;
-using FunctionPathFull = FunctionStringToString<ExtractSubstringImpl<ExtractPathFull>,				NamePathFull>		;
-using FunctionQueryString = FunctionStringToString<ExtractSubstringImpl<ExtractQueryString<true> >, 	NameQueryString>	;
-using FunctionFragment = FunctionStringToString<ExtractSubstringImpl<ExtractFragment<true> >, 		NameFragment>		;
-using FunctionQueryStringAndFragment = FunctionStringToString<ExtractSubstringImpl<ExtractQueryStringAndFragment<true> >, NameQueryStringAndFragment>;
+using FunctionProtocol = FunctionStringToString<ExtractSubstringImpl<ExtractProtocol>, NameProtocol>;
+using FunctionDomain = FunctionStringToString<ExtractSubstringImpl<ExtractDomain<false>>, NameDomain>;
+using FunctionDomainWithoutWWW = FunctionStringToString<ExtractSubstringImpl<ExtractDomain<true>>, NameDomainWithoutWWW>;
+using FunctionFirstSignificantSubdomain
+	= FunctionStringToString<ExtractSubstringImpl<ExtractFirstSignificantSubdomain>, NameFirstSignificantSubdomain>;
+using FunctionTopLevelDomain = FunctionStringToString<ExtractSubstringImpl<ExtractTopLevelDomain>, NameTopLevelDomain>;
+using FunctionPath = FunctionStringToString<ExtractSubstringImpl<ExtractPath>, NamePath>;
+using FunctionPathFull = FunctionStringToString<ExtractSubstringImpl<ExtractPathFull>, NamePathFull>;
+using FunctionQueryString = FunctionStringToString<ExtractSubstringImpl<ExtractQueryString<true>>, NameQueryString>;
+using FunctionFragment = FunctionStringToString<ExtractSubstringImpl<ExtractFragment<true>>, NameFragment>;
+using FunctionQueryStringAndFragment
+	= FunctionStringToString<ExtractSubstringImpl<ExtractQueryStringAndFragment<true>>, NameQueryStringAndFragment>;
 using FunctionDecodeURLComponent = FunctionStringToString<DecodeURLComponentImpl, NameDecodeURLComponent>;
 
-using FunctionCutToFirstSignificantSubdomain = FunctionStringToString<ExtractSubstringImpl<CutToFirstSignificantSubdomain>, NameCutToFirstSignificantSubdomain>;
+using FunctionCutToFirstSignificantSubdomain
+	= FunctionStringToString<ExtractSubstringImpl<CutToFirstSignificantSubdomain>, NameCutToFirstSignificantSubdomain>;
 
-using FunctionCutWWW = FunctionStringToString<CutSubstringImpl<ExtractWWW>, 						NameCutWWW>			;
-using FunctionCutQueryString = FunctionStringToString<CutSubstringImpl<ExtractQueryString<false> >, 		NameCutQueryString>	;
-using FunctionCutFragment = FunctionStringToString<CutSubstringImpl<ExtractFragment<false> >, 			NameCutFragment>	;
-using FunctionCutQueryStringAndFragment = FunctionStringToString<CutSubstringImpl<ExtractQueryStringAndFragment<false> >, NameCutQueryStringAndFragment>;
+using FunctionCutWWW = FunctionStringToString<CutSubstringImpl<ExtractWWW>, NameCutWWW>;
+using FunctionCutQueryString = FunctionStringToString<CutSubstringImpl<ExtractQueryString<false>>, NameCutQueryString>;
+using FunctionCutFragment = FunctionStringToString<CutSubstringImpl<ExtractFragment<false>>, NameCutFragment>;
+using FunctionCutQueryStringAndFragment
+	= FunctionStringToString<CutSubstringImpl<ExtractQueryStringAndFragment<false>>, NameCutQueryStringAndFragment>;
 
 using FunctionExtractURLParameter = FunctionsStringSearchToString<ExtractURLParameterImpl, NameExtractURLParameter>;
 using FunctionCutURLParameter = FunctionsStringSearchToString<CutURLParameterImpl, NameCutURLParameter>;
@@ -1068,5 +1184,4 @@ using FunctionExtractURLParameters = FunctionTokens<ExtractURLParametersImpl>;
 using FunctionURLHierarchy = FunctionTokens<URLHierarchyImpl>;
 using FunctionURLPathHierarchy = FunctionTokens<URLPathHierarchyImpl>;
 using FunctionExtractURLParameterNames = FunctionTokens<ExtractURLParameterNamesImpl>;
-
 }

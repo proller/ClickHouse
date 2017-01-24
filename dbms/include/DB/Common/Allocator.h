@@ -7,8 +7,8 @@
 #include <string.h>
 #include <sys/mman.h>
 
-#include <DB/Common/MemoryTracker.h>
 #include <DB/Common/Exception.h>
+#include <DB/Common/MemoryTracker.h>
 
 
 namespace DB
@@ -133,7 +133,7 @@ public:
 	  */
 	void * realloc(void * buf, size_t old_size, size_t new_size, size_t alignment = 0)
 	{
-	#if !defined(__APPLE__) && !defined(__FreeBSD__)
+#if !defined(__APPLE__) && !defined(__FreeBSD__)
 		if (old_size < MMAP_THRESHOLD && new_size < MMAP_THRESHOLD && alignment <= MALLOC_MIN_ALIGNMENT)
 		{
 			if (current_memory_tracker)
@@ -158,10 +158,10 @@ public:
 
 			/// Заполнение нулями не нужно.
 		}
-	#else
+#else
 		// TODO: We need to use mmap/calloc on Apple too.
-		if ((old_size < MMAP_THRESHOLD && new_size < MMAP_THRESHOLD && alignment <= MALLOC_MIN_ALIGNMENT) ||
-			(old_size >= MMAP_THRESHOLD && new_size >= MMAP_THRESHOLD))
+		if ((old_size < MMAP_THRESHOLD && new_size < MMAP_THRESHOLD && alignment <= MALLOC_MIN_ALIGNMENT)
+			|| (old_size >= MMAP_THRESHOLD && new_size >= MMAP_THRESHOLD))
 		{
 			if (current_memory_tracker)
 				current_memory_tracker->realloc(old_size, new_size);
@@ -174,7 +174,7 @@ public:
 			if (clear_memory)
 				memset(reinterpret_cast<char *>(buf) + old_size, 0, new_size - old_size);
 		}
-	#endif
+#endif
 		else
 		{
 			void * new_buf = alloc(new_size, alignment);

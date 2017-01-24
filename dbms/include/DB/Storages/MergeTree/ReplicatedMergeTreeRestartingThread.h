@@ -1,15 +1,14 @@
 #pragma once
 
+#include <atomic>
+#include <thread>
 #include <Poco/Event.h>
 #include <common/logger_useful.h>
 #include <DB/Core/Types.h>
-#include <thread>
-#include <atomic>
 
 
 namespace DB
 {
-
 class StorageReplicatedMergeTree;
 
 
@@ -49,7 +48,7 @@ private:
 	StorageReplicatedMergeTree & storage;
 	Logger * log;
 	Poco::Event wakeup_event;
-	std::atomic<bool> need_stop {false};
+	std::atomic<bool> need_stop{ false };
 
 	/// Случайные данные, которые мы записали в /replicas/me/is_active.
 	String active_node_identifier;
@@ -72,6 +71,4 @@ private:
 
 	void partialShutdown();
 };
-
-
 }

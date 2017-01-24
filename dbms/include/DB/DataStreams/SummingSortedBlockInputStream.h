@@ -1,13 +1,12 @@
 #pragma once
 
-#include <DB/Core/Row.h>
 #include <DB/Core/ColumnNumbers.h>
+#include <DB/Core/Row.h>
 #include <DB/DataStreams/MergingSortedBlockInputStream.h>
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int LOGICAL_ERROR;
@@ -31,7 +30,10 @@ public:
 	{
 	}
 
-	String getName() const override { return "SummingSorted"; }
+	String getName() const override
+	{
+		return "SummingSorted";
+	}
 
 	String getID() const override;
 
@@ -46,7 +48,7 @@ private:
 	bool finished = false;
 
 	/// Столбцы с какими номерами надо суммировать.
-	Names column_names_to_sum;	/// Если задано - преобразуется в column_numbers_to_sum при инициализации.
+	Names column_names_to_sum; /// Если задано - преобразуется в column_numbers_to_sum при инициализации.
 	ColumnNumbers column_numbers_to_sum;
 
 	/** Таблица может иметь вложенные таблицы, обрабатываемые особым образом.
@@ -79,13 +81,13 @@ private:
 	/// Найденные вложенные Map-таблицы.
 	std::vector<MapDescription> maps_to_sum;
 
-	RowRef current_key;		/// Текущий первичный ключ.
-	RowRef next_key;		/// Первичный ключ следующей строки.
+	RowRef current_key; /// Текущий первичный ключ.
+	RowRef next_key; /// Первичный ключ следующей строки.
 
 	Row current_row;
-	bool current_row_is_zero = true;	/// Текущая строчка просуммировалась в ноль, и её следует удалить.
+	bool current_row_is_zero = true; /// Текущая строчка просуммировалась в ноль, и её следует удалить.
 
-	bool output_is_non_empty = false;	/// Отдали ли мы наружу хоть одну строку.
+	bool output_is_non_empty = false; /// Отдали ли мы наружу хоть одну строку.
 
 	/** Делаем поддержку двух разных курсоров - с Collation и без.
 	 *  Шаблоны используем вместо полиморфных SortCursor'ов и вызовов виртуальных функций.
@@ -111,5 +113,4 @@ private:
 	template <class TSortCursor>
 	bool addRow(Row & row, TSortCursor & cursor);
 };
-
 }

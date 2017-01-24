@@ -10,11 +10,10 @@
 
 namespace DB
 {
-
 /** Инициализируется вектором. Пишет данные в него. Когда вектор закончится - увеличивает его размер в два раза.
   * CharType - char или unsigned char.
   */
-template <typename VectorType = std::vector<char> >
+template <typename VectorType = std::vector<char>>
 class WriteBufferFromVector : public WriteBuffer
 {
 private:
@@ -29,8 +28,7 @@ private:
 	}
 
 public:
-	WriteBufferFromVector(VectorType & vector_)
-		: WriteBuffer(reinterpret_cast<Position>(&vector_[0]), vector_.size()), vector(vector_)
+	WriteBufferFromVector(VectorType & vector_) : WriteBuffer(reinterpret_cast<Position>(&vector_[0]), vector_.size()), vector(vector_)
 	{
 		if (vector.empty())
 		{
@@ -39,5 +37,4 @@ public:
 		}
 	}
 };
-
 }

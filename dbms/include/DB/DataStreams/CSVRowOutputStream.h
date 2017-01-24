@@ -6,7 +6,6 @@
 
 namespace DB
 {
-
 class WriteBuffer;
 
 
@@ -29,8 +28,14 @@ public:
 
 	void flush() override;
 
-	void setTotals(const Block & totals_) override { totals = totals_; }
-	void setExtremes(const Block & extremes_) override { extremes = extremes_; }
+	void setTotals(const Block & totals_) override
+	{
+		totals = totals_;
+	}
+	void setExtremes(const Block & extremes_) override
+	{
+		extremes = extremes_;
+	}
 
 	/// https://www.iana.org/assignments/media-types/text/csv
 	String getContentType() const override
@@ -50,6 +55,4 @@ protected:
 	Block totals;
 	Block extremes;
 };
-
 }
-

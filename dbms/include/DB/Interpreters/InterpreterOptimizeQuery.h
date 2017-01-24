@@ -6,15 +6,12 @@
 
 namespace DB
 {
-
-
 /** Просто вызвать метод optimize у таблицы.
   */
 class InterpreterOptimizeQuery : public IInterpreter
 {
 public:
-	InterpreterOptimizeQuery(ASTPtr query_ptr_, Context & context_)
-		: query_ptr(query_ptr_), context(context_)
+	InterpreterOptimizeQuery(ASTPtr query_ptr_, Context & context_) : query_ptr(query_ptr_), context(context_)
 	{
 	}
 
@@ -24,6 +21,4 @@ private:
 	ASTPtr query_ptr;
 	Context context;
 };
-
-
 }

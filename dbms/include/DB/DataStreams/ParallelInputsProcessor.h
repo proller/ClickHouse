@@ -1,16 +1,16 @@
 #pragma once
 
-#include <list>
-#include <queue>
 #include <atomic>
-#include <thread>
+#include <list>
 #include <mutex>
+#include <queue>
+#include <thread>
 
 #include <common/logger_useful.h>
 
-#include <DB/DataStreams/IProfilingBlockInputStream.h>
-#include <DB/Common/setThreadName.h>
 #include <DB/Common/CurrentMetrics.h>
+#include <DB/Common/setThreadName.h>
+#include <DB/DataStreams/IProfilingBlockInputStream.h>
 
 
 /** Allows to process multiple block input streams (sources) in parallel, using specified number of threads.
@@ -26,40 +26,49 @@
 
 namespace CurrentMetrics
 {
-	extern const Metric QueryThread;
+extern const Metric QueryThread;
 }
 
 namespace DB
 {
-
 /** Режим объединения.
   */
 enum class StreamUnionMode
 {
 	Basic = 0, /// вынимать блоки
-	ExtraInfo  /// вынимать блоки + дополнительную информацию
+	ExtraInfo /// вынимать блоки + дополнительную информацию
 };
 
 /// Пример обработчика.
 struct ParallelInputsHandler
 {
 	/// Обработка блока данных.
-	void onBlock(Block & block, size_t thread_num) {}
+	void onBlock(Block & block, size_t thread_num)
+	{
+	}
 
 	/// Обработка блока данных + дополнительных информаций.
-	void onBlock(Block & block, BlockExtraInfo & extra_info, size_t thread_num) {}
+	void onBlock(Block & block, BlockExtraInfo & extra_info, size_t thread_num)
+	{
+	}
 
 	/// Вызывается для каждого потока, когда потоку стало больше нечего делать.
 	/// Из-за того, что иссякла часть источников, и сейчас источников осталось меньше, чем потоков.
 	/// Вызывается, если метод onException не кидает исключение; вызывается до метода onFinish.
-	void onFinishThread(size_t thread_num) {}
+	void onFinishThread(size_t thread_num)
+	{
+	}
 
 	/// Блоки закончились. Из-за того, что все источники иссякли или из-за отмены работы.
 	/// Этот метод всегда вызывается ровно один раз, в конце работы, если метод onException не кидает исключение.
-	void onFinish() {}
+	void onFinish()
+	{
+	}
 
 	/// Обработка исключения. Разумно вызывать в этом методе метод ParallelInputsProcessor::cancel, а также передавать эксепшен в основной поток.
-	void onException(std::exception_ptr & exception, size_t thread_num) {}
+	void onException(std::exception_ptr & exception, size_t thread_num)
+	{
+	}
 };
 
 
@@ -75,8 +84,12 @@ public:
 	  * - где нужно сначала параллельно сделать JOIN, при этом отмечая, какие ключи не найдены,
 	  *   и только после завершения этой работы, создать блоки из ненайденных ключей.
 	  */
-	ParallelInputsProcessor(BlockInputStreams inputs_, BlockInputStreamPtr additional_input_at_end_, size_t max_threads_, Handler & handler_)
-		: inputs(inputs_), additional_input_at_end(additional_input_at_end_), max_threads(std::min(inputs_.size(), max_threads_)), handler(handler_)
+	ParallelInputsProcessor(
+		BlockInputStreams inputs_, BlockInputStreamPtr additional_input_at_end_, size_t max_threads_, Handler & handler_)
+		: inputs(inputs_),
+		  additional_input_at_end(additional_input_at_end_),
+		  max_threads(std::min(inputs_.size(), max_threads_)),
+		  handler(handler_)
 	{
 		for (size_t i = 0; i < inputs_.size(); ++i)
 			available_inputs.emplace(inputs_[i], i);
@@ -151,21 +164,29 @@ private:
 	struct InputData
 	{
 		BlockInputStreamPtr in;
-		size_t i;		/// Порядковый номер источника (для отладки).
+		size_t i; /// Порядковый номер источника (для отладки).
 
-		InputData() {}
-		InputData(BlockInputStreamPtr & in_, size_t i_) : in(in_), i(i_) {}
+		InputData()
+		{
+		}
+		InputData(BlockInputStreamPtr & in_, size_t i_) : in(in_), i(i_)
+		{
+		}
 	};
 
 	template <StreamUnionMode mode2 = mode>
-	void publishPayload(BlockInputStreamPtr & stream, Block & block, size_t thread_num,
+	void publishPayload(BlockInputStreamPtr & stream,
+		Block & block,
+		size_t thread_num,
 		typename std::enable_if<mode2 == StreamUnionMode::Basic>::type * = nullptr)
 	{
 		handler.onBlock(block, thread_num);
 	}
 
 	template <StreamUnionMode mode2 = mode>
-	void publishPayload(BlockInputStreamPtr & stream, Block & block, size_t thread_num,
+	void publishPayload(BlockInputStreamPtr & stream,
+		Block & block,
+		size_t thread_num,
 		typename std::enable_if<mode2 == StreamUnionMode::ExtraInfo>::type * = nullptr)
 	{
 		BlockExtraInfo extra_info = stream->getBlockExtraInfo();
@@ -178,7 +199,7 @@ private:
 		std::exception_ptr exception;
 
 		setThreadName("ParalInputsProc");
-		CurrentMetrics::Increment metric_increment{CurrentMetrics::QueryThread};
+		CurrentMetrics::Increment metric_increment{ CurrentMetrics::QueryThread };
 
 		try
 		{
@@ -218,13 +239,13 @@ private:
 				}
 			}
 
-			handler.onFinish();		/// TODO Если в onFinish или onFinishThread эксепшен, то вызывается std::terminate.
+			handler.onFinish(); /// TODO Если в onFinish или onFinishThread эксепшен, то вызывается std::terminate.
 		}
 	}
 
 	void loop(size_t thread_num)
 	{
-		while (!finish)	/// Может потребоваться прекратить работу раньше, чем все источники иссякнут.
+		while (!finish) /// Может потребоваться прекратить работу раньше, чем все источники иссякнут.
 		{
 			InputData input;
 
@@ -307,14 +328,12 @@ private:
 	std::mutex available_inputs_mutex;
 
 	/// Сколько источников иссякло.
-	std::atomic<size_t> active_threads { 0 };
+	std::atomic<size_t> active_threads{ 0 };
 	/// Завершить работу потоков (раньше, чем иссякнут источники).
-	std::atomic<bool> finish { false };
+	std::atomic<bool> finish{ false };
 	/// Подождали завершения всех потоков.
-	std::atomic<bool> joined_threads { false };
+	std::atomic<bool> joined_threads{ false };
 
 	Logger * log = &Logger::get("ParallelInputsProcessor");
 };
-
-
 }

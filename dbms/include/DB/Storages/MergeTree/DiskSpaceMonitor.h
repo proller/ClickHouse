@@ -1,24 +1,23 @@
 #pragma once
 
-#include <mutex>
-#include <sys/statvfs.h>
 #include <memory>
+#include <mutex>
 #include <boost/noncopyable.hpp>
+#include <sys/statvfs.h>
 #include <common/logger_useful.h>
-#include <DB/Common/Exception.h>
-#include <DB/IO/WriteHelpers.h>
-#include <DB/Common/formatReadable.h>
 #include <DB/Common/CurrentMetrics.h>
+#include <DB/Common/Exception.h>
+#include <DB/Common/formatReadable.h>
+#include <DB/IO/WriteHelpers.h>
 
 
 namespace CurrentMetrics
 {
-	extern const Metric DiskSpaceReservedForMerge;
+extern const Metric DiskSpaceReservedForMerge;
 }
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int CANNOT_STATVFS;
@@ -81,8 +80,7 @@ public:
 			return size;
 		}
 
-		Reservation(size_t size_)
-			: size(size_), metric_increment(CurrentMetrics::DiskSpaceReservedForMerge, size)
+		Reservation(size_t size_) : size(size_), metric_increment(CurrentMetrics::DiskSpaceReservedForMerge, size)
 		{
 			std::lock_guard<std::mutex> lock(DiskSpaceMonitor::mutex);
 			DiskSpaceMonitor::reserved_bytes += size;
@@ -136,7 +134,9 @@ public:
 		size_t free_bytes = getUnreservedFreeSpace(path);
 		if (free_bytes < size)
 			throw Exception("Not enough free disk space to reserve: " + formatReadableSizeWithBinarySuffix(free_bytes) + " available, "
-				+ formatReadableSizeWithBinarySuffix(size) + " requested", ErrorCodes::NOT_ENOUGH_SPACE);
+					+ formatReadableSizeWithBinarySuffix(size)
+					+ " requested",
+				ErrorCodes::NOT_ENOUGH_SPACE);
 		return std::make_unique<Reservation>(size);
 	}
 
@@ -145,5 +145,4 @@ private:
 	static size_t reservation_count;
 	static std::mutex mutex;
 };
-
 }

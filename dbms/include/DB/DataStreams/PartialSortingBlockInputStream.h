@@ -7,7 +7,6 @@
 
 namespace DB
 {
-
 /** Сортирует каждый блок по отдельности по значениям указанных столбцов.
   * На данный момент, используется не очень оптимальный алгоритм.
   */
@@ -21,7 +20,10 @@ public:
 		children.push_back(input_);
 	}
 
-	String getName() const override { return "PartialSorting"; }
+	String getName() const override
+	{
+		return "PartialSorting";
+	}
 
 	String getID() const override
 	{
@@ -42,5 +44,4 @@ private:
 	SortDescription description;
 	size_t limit;
 };
-
 }

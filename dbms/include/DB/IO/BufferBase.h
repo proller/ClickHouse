@@ -1,13 +1,11 @@
 #pragma once
 
-#include <DB/Core/Defines.h>
 #include <algorithm>
+#include <DB/Core/Defines.h>
 
 
 namespace DB
 {
-
-
 /** Базовый класс для ReadBuffer и WriteBuffer.
   * Содержит общие типы, переменные и функции.
   *
@@ -34,12 +32,26 @@ public:
 	/** Ссылка на диапазон памяти. */
 	struct Buffer
 	{
-		Buffer(Position begin_pos_, Position end_pos_) : begin_pos(begin_pos_), end_pos(end_pos_) {}
+		Buffer(Position begin_pos_, Position end_pos_) : begin_pos(begin_pos_), end_pos(end_pos_)
+		{
+		}
 
-		inline Position begin() const { return begin_pos; }
-		inline Position end() const { return end_pos; }
-		inline size_t size() const { return end_pos - begin_pos; }
-		inline void resize(size_t size) { end_pos = begin_pos + size; }
+		inline Position begin() const
+		{
+			return begin_pos;
+		}
+		inline Position end() const
+		{
+			return end_pos;
+		}
+		inline size_t size() const
+		{
+			return end_pos - begin_pos;
+		}
+		inline void resize(size_t size)
+		{
+			end_pos = begin_pos + size;
+		}
 
 		inline void swap(Buffer & other)
 		{
@@ -49,14 +61,16 @@ public:
 
 	private:
 		Position begin_pos;
-		Position end_pos;		/// на 1 байт после конца буфера
+		Position end_pos; /// на 1 байт после конца буфера
 	};
 
 	/** Конструктор принимает диапазон памяти, который следует использовать под буфер.
 	  * offset - начальное место курсора. ReadBuffer должен установить его в конец диапазона, а WriteBuffer - в начало.
 	  */
 	BufferBase(Position ptr, size_t size, size_t offset)
-		: internal_buffer(ptr, ptr + size), working_buffer(ptr, ptr + size), pos(ptr + offset) {}
+		: internal_buffer(ptr, ptr + size), working_buffer(ptr, ptr + size), pos(ptr + offset)
+	{
+	}
 
 	void set(Position ptr, size_t size, size_t offset)
 	{
@@ -66,16 +80,28 @@ public:
 	}
 
 	/// получить буфер
-	inline Buffer & internalBuffer() { return internal_buffer; }
+	inline Buffer & internalBuffer()
+	{
+		return internal_buffer;
+	}
 
 	/// получить часть буфера, из которого можно читать / в который можно писать данные
-	inline Buffer & buffer() { return working_buffer; }
+	inline Buffer & buffer()
+	{
+		return working_buffer;
+	}
 
 	/// получить (для чтения и изменения) позицию в буфере
-	inline Position & position() { return pos; };
+	inline Position & position()
+	{
+		return pos;
+	};
 
 	/// смещение в байтах курсора от начала буфера
-	inline size_t offset() const { return pos - working_buffer.begin(); }
+	inline size_t offset() const
+	{
+		return pos - working_buffer.begin();
+	}
 
 	/** Сколько байт было прочитано/записано, считая те, что ещё в буфере. */
 	size_t count() const
@@ -108,6 +134,4 @@ protected:
 	  */
 	size_t bytes = 0;
 };
-
-
 }

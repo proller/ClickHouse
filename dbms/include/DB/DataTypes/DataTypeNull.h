@@ -1,7 +1,7 @@
 #pragma once
 
-#include <DB/DataTypes/IDataType.h>
 #include <DB/Columns/ColumnConst.h>
+#include <DB/DataTypes/IDataType.h>
 #include <DB/IO/ReadBuffer.h>
 #include <DB/IO/ReadHelpers.h>
 #include <DB/IO/WriteBuffer.h>
@@ -10,7 +10,6 @@
 
 namespace DB
 {
-
 /// Data type which represents a single NULL value. It is the type
 /// associated to a constant column that contains only NULL values,
 /// namely ColumnNull, which arises when a NULL is specified as a
@@ -54,7 +53,7 @@ public:
 		return Null();
 	}
 
-	size_t getSizeOfField() const override		/// TODO Check where it is needed.
+	size_t getSizeOfField() const override /// TODO Check where it is needed.
 	{
 		/// NULL has the size of the smallest non-null type.
 		return sizeof(UInt8);
@@ -62,7 +61,7 @@ public:
 
 	void serializeBinary(const Field & field, WriteBuffer & ostr) const override
 	{
-		UInt8 x = 1;	/// Value is 1 to be consistent with NULLs serialization in DataTypeNullable.
+		UInt8 x = 1; /// Value is 1 to be consistent with NULLs serialization in DataTypeNullable.
 		writeBinary(x, ostr);
 	}
 
@@ -121,8 +120,7 @@ public:
 		writeCString("NULL", ostr);
 	}
 
-	void serializeTextJSON(const IColumn & column, size_t row_num, WriteBuffer & ostr,
-		bool force_quoting_64bit_integers) const override
+	void serializeTextJSON(const IColumn & column, size_t row_num, WriteBuffer & ostr, bool force_quoting_64bit_integers) const override
 	{
 		writeCString("null", ostr);
 	}
@@ -132,5 +130,4 @@ public:
 		assertString("null", istr);
 	}
 };
-
 }

@@ -1,23 +1,22 @@
 #pragma once
 
-#include <DB/Dictionaries/IDictionary.h>
-#include <DB/Common/Exception.h>
-#include <DB/Common/setThreadName.h>
-#include <DB/Common/randomSeed.h>
-#include <common/MultiVersion.h>
-#include <common/logger_useful.h>
-#include <Poco/Event.h>
-#include <unistd.h>
-#include <time.h>
+#include <chrono>
 #include <mutex>
+#include <random>
 #include <thread>
 #include <unordered_map>
-#include <chrono>
-#include <random>
+#include <time.h>
+#include <unistd.h>
+#include <Poco/Event.h>
+#include <common/MultiVersion.h>
+#include <common/logger_useful.h>
+#include <DB/Common/Exception.h>
+#include <DB/Common/randomSeed.h>
+#include <DB/Common/setThreadName.h>
+#include <DB/Dictionaries/IDictionary.h>
 
 namespace DB
 {
-
 class Context;
 
 /** Manages user-defined dictionaries.
@@ -71,7 +70,7 @@ private:
 	  */
 	std::unordered_map<std::string, std::chrono::system_clock::time_point> update_times;
 
-	std::mt19937_64 rnd_engine{randomSeed()};
+	std::mt19937_64 rnd_engine{ randomSeed() };
 
 	Context & context;
 
@@ -100,8 +99,7 @@ private:
 
 public:
 	/// Dictionaries will be loaded immediately and then will be updated in separate thread, each 'reload_period' seconds.
-	ExternalDictionaries(Context & context, const bool throw_on_error)
-		: context(context), log(&Logger::get("ExternalDictionaries"))
+	ExternalDictionaries(Context & context, const bool throw_on_error) : context(context), log(&Logger::get("ExternalDictionaries"))
 	{
 		{
 			/** During synchronous loading of external dictionaries at moment of query execution,
@@ -112,7 +110,7 @@ public:
 			reloadImpl(throw_on_error);
 		}
 
-		reloading_thread = std::thread{&ExternalDictionaries::reloadPeriodically, this};
+		reloading_thread = std::thread{ &ExternalDictionaries::reloadPeriodically, this };
 	}
 
 	~ExternalDictionaries()
@@ -123,5 +121,4 @@ public:
 
 	MultiVersion<IDictionaryBase>::Version getDictionary(const std::string & name) const;
 };
-
 }

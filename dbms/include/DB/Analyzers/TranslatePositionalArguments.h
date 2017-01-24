@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 class Context;
 class WriteBuffer;
 
@@ -17,5 +16,4 @@ struct TranslatePositionalArguments
 {
 	void process(ASTPtr & ast);
 };
-
 }

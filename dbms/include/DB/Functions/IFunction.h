@@ -2,16 +2,15 @@
 
 #include <memory>
 
-#include <DB/Core/Names.h>
 #include <DB/Core/Block.h>
 #include <DB/Core/ColumnNumbers.h>
 #include <DB/Core/ColumnsWithTypeAndName.h>
+#include <DB/Core/Names.h>
 #include <DB/DataTypes/IDataType.h>
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int ILLEGAL_TYPE_OF_ARGUMENT;
@@ -50,7 +49,10 @@ public:
 	virtual String getName() const = 0;
 
 	/// Override and return true if function could take different number of arguments.
-	virtual bool isVariadic() const { return false; }
+	virtual bool isVariadic() const
+	{
+		return false;
+	}
 
 	/// For non-variadic functions, return number of arguments; otherwise return zero (that should be ignored).
 	virtual size_t getNumberOfArguments() const = 0;
@@ -63,7 +65,10 @@ public:
 	  * Usually this is true. Notable counterexample is function 'sleep'.
 	  * If we will call it during query analysis, we will sleep extra amount of time.
 	  */
-	virtual bool isSuitableForConstantFolding() const { return true; }
+	virtual bool isSuitableForConstantFolding() const
+	{
+		return true;
+	}
 
 	/** Function is called "injective" if it returns different result for different values of arguments.
 	  * Example: hex, negate, tuple...
@@ -87,7 +92,10 @@ public:
 	  *
 	  * sample_block should contain data types of arguments and values of constants, if relevant.
 	  */
-	virtual bool isInjective(const Block & sample_block) { return false; }
+	virtual bool isInjective(const Block & sample_block)
+	{
+		return false;
+	}
 
 	/** Function is called "deterministic", if it returns same result for same values of arguments.
 	  * Most of functions are deterministic. Notable counterexample is rand().
@@ -95,7 +103,10 @@ public:
 	  *  (even for distributed query), but not deterministic it general.
 	  * Example: now(). Another example: functions that work with periodically updated dictionaries.
 	  */
-	virtual bool isDeterministicInScopeOfQuery() { return true; }
+	virtual bool isDeterministicInScopeOfQuery()
+	{
+		return true;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	/// Перегрузка для тех, кому не нужны prerequisites и значения константных аргументов. Снаружи не вызывается.
@@ -113,14 +124,10 @@ public:
 	  * Осмысленные типы элементов в out_prerequisites: APPLY_FUNCTION, ADD_COLUMN.
 	  */
 	void getReturnTypeAndPrerequisites(
-		const ColumnsWithTypeAndName & arguments,
-		DataTypePtr & out_return_type,
-		std::vector<ExpressionAction> & out_prerequisites);
+		const ColumnsWithTypeAndName & arguments, DataTypePtr & out_return_type, std::vector<ExpressionAction> & out_prerequisites);
 
 	virtual void getReturnTypeAndPrerequisitesImpl(
-		const ColumnsWithTypeAndName & arguments,
-		DataTypePtr & out_return_type,
-		std::vector<ExpressionAction> & out_prerequisites)
+		const ColumnsWithTypeAndName & arguments, DataTypePtr & out_return_type, std::vector<ExpressionAction> & out_prerequisites)
 	{
 		DataTypes types(arguments.size());
 		for (size_t i = 0; i < arguments.size(); ++i)
@@ -158,23 +165,30 @@ public:
 
 	/// Returns true if the function implementation directly handles the arguments
 	/// that correspond to nullable columns and null columns.
-	virtual bool hasSpecialSupportForNulls() const { return false; }
+	virtual bool hasSpecialSupportForNulls() const
+	{
+		return false;
+	}
 
 	/** Позволяет узнать, является ли функция монотонной в некотором диапазоне значений.
 	  * Это используется для работы с индексом в сортированном куске данных.
 	  * И позволяет использовать индекс не только, когда написано, например date >= const, но и, например, toMonth(date) >= 11.
 	  * Всё это рассматривается только для функций одного аргумента.
 	  */
-	virtual bool hasInformationAboutMonotonicity() const { return false; }
+	virtual bool hasInformationAboutMonotonicity() const
+	{
+		return false;
+	}
 
 	/// Свойство монотонности на некотором диапазоне.
 	struct Monotonicity
 	{
-		bool is_monotonic = false;	/// Является ли функция монотонной (неубывающей или невозрастающей).
-		bool is_positive = true;	/// true, если функция неубывающая, false, если невозрастающая. Если is_monotonic = false, то не важно.
+		bool is_monotonic = false; /// Является ли функция монотонной (неубывающей или невозрастающей).
+		bool is_positive = true; /// true, если функция неубывающая, false, если невозрастающая. Если is_monotonic = false, то не важно.
 
-		Monotonicity(bool is_monotonic_ = false, bool is_positive_ = true)
-			: is_monotonic(is_monotonic_), is_positive(is_positive_) {}
+		Monotonicity(bool is_monotonic_ = false, bool is_positive_ = true) : is_monotonic(is_monotonic_), is_positive(is_positive_)
+		{
+		}
 	};
 
 	/** Получить информацию о монотонности на отрезке значений. Вызывайте только если hasInformationAboutMonotonicity.
@@ -185,7 +199,9 @@ public:
 		throw Exception("Function " + getName() + " has no information about its monotonicity.", ErrorCodes::NOT_IMPLEMENTED);
 	}
 
-	virtual ~IFunction() {}
+	virtual ~IFunction()
+	{
+	}
 
 protected:
 	/// Returns the copy of a given block in which each column specified in
@@ -216,16 +232,12 @@ private:
 
 	/// If required by the specified strategy, process the given block, then
 	/// return the processed block. Otherwise return an empty block.
-	Block preProcessBlock(Strategy strategy, const Block & block, const ColumnNumbers & args,
-		size_t result);
+	Block preProcessBlock(Strategy strategy, const Block & block, const ColumnNumbers & args, size_t result);
 
 	/// If required by the specified strategy, post-process the result column.
-	void postProcessResult(Strategy strategy, Block & block, const Block & processed_block,
-		const ColumnNumbers & args, size_t result);
+	void postProcessResult(Strategy strategy, Block & block, const Block & processed_block, const ColumnNumbers & args, size_t result);
 };
 
 
 using FunctionPtr = std::shared_ptr<IFunction>;
-
-
 }

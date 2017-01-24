@@ -7,15 +7,13 @@
 
 namespace mysqlxx
 {
-
 /** RAII для транзакции. При инициализации, транзакция стартует.
   * При уничтожении, если не был вызван метод commit(), будет произведёт rollback.
   */
 class Transaction : private boost::noncopyable
 {
 public:
-	Transaction(Connection & conn_)
-		: conn(conn_), finished(false)
+	Transaction(Connection & conn_) : conn(conn_), finished(false)
 	{
 		conn.query("START TRANSACTION").execute();
 	}
@@ -42,6 +40,4 @@ private:
 	Connection & conn;
 	bool finished;
 };
-
-
 }

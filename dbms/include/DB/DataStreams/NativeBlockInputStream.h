@@ -6,7 +6,6 @@
 
 namespace DB
 {
-
 class CompressedReadBufferFromFile;
 
 
@@ -39,7 +38,9 @@ struct IndexForNativeFormat
 	using Blocks = std::vector<IndexOfBlockForNativeFormat>;
 	Blocks blocks;
 
-	IndexForNativeFormat() {}
+	IndexForNativeFormat()
+	{
+	}
 
 	IndexForNativeFormat(ReadBuffer & istr, const NameSet & required_columns)
 	{
@@ -65,13 +66,16 @@ public:
 	  *
 	  * index - не обязательный параметр. Если задан, то будут читаться только указанные в индексе кусочки столбцов.
 	  */
-	NativeBlockInputStream(
-		ReadBuffer & istr_, UInt64 server_revision_ = 0,
+	NativeBlockInputStream(ReadBuffer & istr_,
+		UInt64 server_revision_ = 0,
 		bool use_index_ = false,
 		IndexForNativeFormat::Blocks::const_iterator index_block_it_ = IndexForNativeFormat::Blocks::const_iterator{},
 		IndexForNativeFormat::Blocks::const_iterator index_block_end_ = IndexForNativeFormat::Blocks::const_iterator{});
 
-	String getName() const override { return "Native"; }
+	String getName() const override
+	{
+		return "Native";
+	}
 
 	String getID() const override
 	{
@@ -97,5 +101,4 @@ private:
 	/// Если задан индекс, то istr должен быть CompressedReadBufferFromFile.
 	CompressedReadBufferFromFile * istr_concrete;
 };
-
 }

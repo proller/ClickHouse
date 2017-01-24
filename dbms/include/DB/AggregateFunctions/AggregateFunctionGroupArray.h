@@ -1,13 +1,13 @@
 #pragma once
 
-#include <DB/IO/WriteHelpers.h>
 #include <DB/IO/ReadHelpers.h>
+#include <DB/IO/WriteHelpers.h>
 
 #include <DB/DataTypes/DataTypeArray.h>
 #include <DB/DataTypes/DataTypesNumberFixed.h>
 
-#include <DB/Columns/ColumnVector.h>
 #include <DB/Columns/ColumnArray.h>
+#include <DB/Columns/ColumnVector.h>
 
 #include <DB/AggregateFunctions/IUnaryAggregateFunction.h>
 
@@ -16,7 +16,6 @@
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int TOO_LARGE_ARRAY_SIZE;
@@ -40,7 +39,10 @@ class AggregateFunctionGroupArrayNumeric final
 	: public IUnaryAggregateFunction<AggregateFunctionGroupArrayDataNumeric<T>, AggregateFunctionGroupArrayNumeric<T>>
 {
 public:
-	String getName() const override { return "groupArray"; }
+	String getName() const override
+	{
+		return "groupArray";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -99,23 +101,25 @@ public:
 };
 
 
-
 /// Общий случай (неэффективно). NOTE Можно ещё реализовать частный случай для строк.
 struct AggregateFunctionGroupArrayDataGeneric
 {
-	Array value;	/// TODO Добавить MemoryTracker
+	Array value; /// TODO Добавить MemoryTracker
 };
 
 
 /// Складывает все значения в массив, общий случай. Реализовано неэффективно.
 class AggregateFunctionGroupArrayGeneric final
-: public IUnaryAggregateFunction<AggregateFunctionGroupArrayDataGeneric, AggregateFunctionGroupArrayGeneric>
+	: public IUnaryAggregateFunction<AggregateFunctionGroupArrayDataGeneric, AggregateFunctionGroupArrayGeneric>
 {
 private:
 	DataTypePtr type;
 
 public:
-	String getName() const override { return "groupArray"; }
+	String getName() const override
+	{
+		return "groupArray";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -171,5 +175,4 @@ public:
 
 
 #undef AGGREGATE_FUNCTION_GROUP_ARRAY_MAX_ARRAY_SIZE
-
 }

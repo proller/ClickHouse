@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 class IColumn;
 class IDataType;
 class WriteBuffer;
@@ -22,11 +21,12 @@ public:
 
 	void flush() override;
 
-	String getContentType() const override { return "application/octet-stream"; }
+	String getContentType() const override
+	{
+		return "application/octet-stream";
+	}
 
 protected:
 	WriteBuffer & ostr;
 };
-
 }
-

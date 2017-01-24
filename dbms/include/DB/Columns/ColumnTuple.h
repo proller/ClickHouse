@@ -1,13 +1,12 @@
 #pragma once
 
-#include <DB/Core/Block.h>
 #include <ext/map.hpp>
 #include <ext/range.hpp>
+#include <DB/Core/Block.h>
 
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int NOT_IMPLEMENTED;
@@ -28,7 +27,9 @@ private:
 	Columns columns;
 
 public:
-	ColumnTuple() {}
+	ColumnTuple()
+	{
+	}
 
 	ColumnTuple(Block data_) : data(data_)
 	{
@@ -38,7 +39,10 @@ public:
 			columns[i] = data.getByPosition(i).column;
 	}
 
-	std::string getName() const override { return "Tuple"; }
+	std::string getName() const override
+	{
+		return "Tuple";
+	}
 
 	ColumnPtr cloneEmpty() const override
 	{
@@ -52,7 +56,7 @@ public:
 
 	Field operator[](size_t n) const override
 	{
-		return Tuple{ext::map<TupleBackend>(columns, [n] (const auto & column) { return (*column)[n]; })};
+		return Tuple{ ext::map<TupleBackend>(columns, [n](const auto & column) { return (*column)[n]; }) };
 	}
 
 	void get(size_t n, Field & res) const override
@@ -80,7 +84,8 @@ public:
 
 		const size_t size = columns.size();
 		if (tuple.size() != size)
-			throw Exception("Cannot insert value of different size into tuple", ErrorCodes::CANNOT_INSERT_VALUE_OF_DIFFERENT_SIZE_INTO_TUPLE);
+			throw Exception(
+				"Cannot insert value of different size into tuple", ErrorCodes::CANNOT_INSERT_VALUE_OF_DIFFERENT_SIZE_INTO_TUPLE);
 
 		for (size_t i = 0; i < size; ++i)
 			columns[i]->insert(tuple[i]);
@@ -92,7 +97,8 @@ public:
 
 		size_t size = columns.size();
 		if (src.columns.size() != size)
-			throw Exception("Cannot insert value of different size into tuple", ErrorCodes::CANNOT_INSERT_VALUE_OF_DIFFERENT_SIZE_INTO_TUPLE);
+			throw Exception(
+				"Cannot insert value of different size into tuple", ErrorCodes::CANNOT_INSERT_VALUE_OF_DIFFERENT_SIZE_INTO_TUPLE);
 
 		for (size_t i = 0; i < size; ++i)
 			columns[i]->insertFrom(*src.columns[i], n);
@@ -138,8 +144,7 @@ public:
 	{
 		for (size_t i = 0; i < columns.size(); ++i)
 			data.getByPosition(i).column->insertRangeFrom(
-				*static_cast<const ColumnTuple &>(src).data.getByPosition(i).column.get(),
-				start, length);
+				*static_cast<const ColumnTuple &>(src).data.getByPosition(i).column.get(), start, length);
 	}
 
 	ColumnPtr filter(const Filter & filt, ssize_t result_size_hint) const override
@@ -193,7 +198,7 @@ public:
 				plain_columns.push_back(column.get());
 		}
 
-		bool operator() (size_t a, size_t b) const
+		bool operator()(size_t a, size_t b) const
 		{
 			for (ConstColumnPlainPtrs::const_iterator it = plain_columns.begin(); it != plain_columns.end(); ++it)
 			{
@@ -266,11 +271,23 @@ public:
 	}
 
 
-	const Block & getData() const { return data; }
-	Block & getData() { return data; }
+	const Block & getData() const
+	{
+		return data;
+	}
+	Block & getData()
+	{
+		return data;
+	}
 
-	const Columns & getColumns() const { return columns; }
-	Columns & getColumns() { return columns; }
+	const Columns & getColumns() const
+	{
+		return columns;
+	}
+	Columns & getColumns()
+	{
+		return columns;
+	}
 
 	void getExtremes(Field & min, Field & max) const override
 	{
@@ -286,6 +303,4 @@ public:
 			columns[i]->getExtremes(min_backend[i], max_backend[i]);
 	}
 };
-
-
 }

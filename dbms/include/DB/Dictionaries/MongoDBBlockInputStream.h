@@ -7,30 +7,31 @@
 
 namespace Poco
 {
-	namespace MongoDB
-	{
-		class Connection;
-		class Cursor;
-	}
+namespace MongoDB
+{
+	class Connection;
+	class Cursor;
+}
 }
 
 
 namespace DB
 {
-
 /// Converts MongoDB Cursor to a stream of Blocks
 class MongoDBBlockInputStream final : public IProfilingBlockInputStream
 {
 public:
-	MongoDBBlockInputStream(
-		std::shared_ptr<Poco::MongoDB::Connection> & connection_,
+	MongoDBBlockInputStream(std::shared_ptr<Poco::MongoDB::Connection> & connection_,
 		std::unique_ptr<Poco::MongoDB::Cursor> cursor_,
 		const Block & sample_block,
 		const size_t max_block_size);
 
-    ~MongoDBBlockInputStream() override;
+	~MongoDBBlockInputStream() override;
 
-	String getName() const override { return "MongoDB"; }
+	String getName() const override
+	{
+		return "MongoDB";
+	}
 
 	String getID() const override;
 
@@ -48,5 +49,4 @@ private:
 	ExternalResultDescription description;
 	bool all_read = false;
 };
-
 }

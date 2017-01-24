@@ -4,14 +4,12 @@
 
 #include <DB/Common/ConcurrentBoundedQueue.h>
 
-#include <DB/DataStreams/IProfilingBlockInputStream.h>
 #include <DB/DataStreams/IBlockOutputStream.h>
+#include <DB/DataStreams/IProfilingBlockInputStream.h>
 
 
 namespace DB
 {
-
-
 /** Является одновременно InputStream и OutputStream.
   * При записи, кладёт блоки в очередь.
   * При чтении, вынимает их из очереди.
@@ -28,10 +26,14 @@ namespace DB
 class QueueBlockIOStream : public IProfilingBlockInputStream, public IBlockOutputStream
 {
 public:
-	QueueBlockIOStream(size_t queue_size_ = std::numeric_limits<int>::max())
-		: queue_size(queue_size_), queue(queue_size) {}
+	QueueBlockIOStream(size_t queue_size_ = std::numeric_limits<int>::max()) : queue_size(queue_size_), queue(queue_size)
+	{
+	}
 
-	String getName() const override { return "QueueBlockIOStream"; }
+	String getName() const override
+	{
+		return "QueueBlockIOStream";
+	}
 
 	String getID() const override
 	{
@@ -65,5 +67,4 @@ private:
 	using Queue = ConcurrentBoundedQueue<Block>;
 	Queue queue;
 };
-
 }

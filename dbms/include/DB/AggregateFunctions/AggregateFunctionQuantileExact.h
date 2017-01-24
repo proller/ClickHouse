@@ -2,11 +2,11 @@
 
 #include <DB/Common/PODArray.h>
 
-#include <DB/IO/WriteHelpers.h>
 #include <DB/IO/ReadHelpers.h>
+#include <DB/IO/WriteHelpers.h>
 
-#include <DB/DataTypes/DataTypesNumberFixed.h>
 #include <DB/DataTypes/DataTypeArray.h>
+#include <DB/DataTypes/DataTypesNumberFixed.h>
 
 #include <DB/AggregateFunctions/IUnaryAggregateFunction.h>
 #include <DB/AggregateFunctions/QuantilesCommon.h>
@@ -16,8 +16,6 @@
 
 namespace DB
 {
-
-
 /** В качестве состояния используется массив, в который складываются все значения.
   * NOTE Если различных значений мало, то это не оптимально.
   * Для 8 и 16-битных значений возможно, было бы лучше использовать lookup-таблицу.
@@ -46,9 +44,14 @@ private:
 	DataTypePtr type;
 
 public:
-	AggregateFunctionQuantileExact(double level_ = 0.5) : level(level_) {}
+	AggregateFunctionQuantileExact(double level_ = 0.5) : level(level_)
+	{
+	}
 
-	String getName() const override { return "quantileExact"; }
+	String getName() const override
+	{
+		return "quantileExact";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -63,7 +66,8 @@ public:
 	void setParameters(const Array & params) override
 	{
 		if (params.size() != 1)
-			throw Exception("Aggregate function " + getName() + " requires exactly one parameter.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+			throw Exception(
+				"Aggregate function " + getName() + " requires exactly one parameter.", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
 		level = applyVisitor(FieldVisitorConvertToNumber<Float64>(), params[0]);
 	}
@@ -106,11 +110,9 @@ public:
 
 		if (!array.empty())
 		{
-			size_t n = level < 1
-				? level * array.size()
-				: (array.size() - 1);
+			size_t n = level < 1 ? level * array.size() : (array.size() - 1);
 
-			std::nth_element(array.begin(), array.begin() + n, array.end());	/// NOTE Можно придумать алгоритм radix-select.
+			std::nth_element(array.begin(), array.begin() + n, array.end()); /// NOTE Можно придумать алгоритм radix-select.
 
 			quantile = array[n];
 		}
@@ -133,7 +135,10 @@ private:
 	DataTypePtr type;
 
 public:
-	String getName() const override { return "quantilesExact"; }
+	String getName() const override
+	{
+		return "quantilesExact";
+	}
 
 	DataTypePtr getReturnType() const override
 	{
@@ -201,9 +206,7 @@ public:
 			{
 				auto level = levels.levels[level_index];
 
-				size_t n = level < 1
-					? level * array.size()
-					: (array.size() - 1);
+				size_t n = level < 1 ? level * array.size() : (array.size() - 1);
 
 				std::nth_element(array.begin() + prev_n, array.begin() + n, array.end());
 
@@ -218,5 +221,4 @@ public:
 		}
 	}
 };
-
 }

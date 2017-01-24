@@ -1,9 +1,9 @@
 #pragma once
 
+#include <Poco/RWLock.h>
 #include <DB/Core/Field.h>
 #include <DB/Core/NamesAndTypes.h>
 #include <DB/Storages/MergeTree/ActiveDataPartSet.h>
-#include <Poco/RWLock.h>
 
 
 class SipHash;
@@ -11,8 +11,6 @@ class SipHash;
 
 namespace DB
 {
-
-
 /// Чексумма одного файла.
 struct MergeTreeDataPartChecksum
 {
@@ -23,11 +21,20 @@ struct MergeTreeDataPartChecksum
 	size_t uncompressed_size;
 	uint128 uncompressed_hash;
 
-	MergeTreeDataPartChecksum() {}
-	MergeTreeDataPartChecksum(size_t file_size_, uint128 file_hash_) : file_size(file_size_), file_hash(file_hash_) {}
+	MergeTreeDataPartChecksum()
+	{
+	}
+	MergeTreeDataPartChecksum(size_t file_size_, uint128 file_hash_) : file_size(file_size_), file_hash(file_hash_)
+	{
+	}
 	MergeTreeDataPartChecksum(size_t file_size_, uint128 file_hash_, size_t uncompressed_size_, uint128 uncompressed_hash_)
-		: file_size(file_size_), file_hash(file_hash_), is_compressed(true),
-		uncompressed_size(uncompressed_size_), uncompressed_hash(uncompressed_hash_) {}
+		: file_size(file_size_),
+		  file_hash(file_hash_),
+		  is_compressed(true),
+		  uncompressed_size(uncompressed_size_),
+		  uncompressed_hash(uncompressed_hash_)
+	{
+	}
 
 	void checkEqual(const MergeTreeDataPartChecksum & rhs, bool have_uncompressed, const String & name) const;
 	void checkSize(const String & path) const;
@@ -83,7 +90,9 @@ struct MergeTreeDataPart : public ActiveDataPartSet::Part
 {
 	using Checksums = MergeTreeDataPartChecksums;
 
-	MergeTreeDataPart(MergeTreeData & storage_) : storage(storage_) {}
+	MergeTreeDataPart(MergeTreeData & storage_) : storage(storage_)
+	{
+	}
 
 	/// Returns the size of .bin file for column `name` if found, zero otherwise
 	std::size_t getColumnSize(const String & name) const;
@@ -94,9 +103,9 @@ struct MergeTreeDataPart : public ActiveDataPartSet::Part
 
 	MergeTreeData & storage;
 
-	size_t size = 0;				/// в количестве засечек.
-	std::atomic<size_t> size_in_bytes {0}; 	/// размер в байтах, 0 - если не посчитано;
-											/// используется из нескольких потоков без блокировок (изменяется при ALTER).
+	size_t size = 0; /// в количестве засечек.
+	std::atomic<size_t> size_in_bytes{ 0 }; /// размер в байтах, 0 - если не посчитано;
+	/// используется из нескольких потоков без блокировок (изменяется при ALTER).
 	time_t modification_time = 0;
 	mutable time_t remove_time = std::numeric_limits<time_t>::max(); /// Когда кусок убрали из рабочего набора.
 
@@ -164,5 +173,4 @@ struct MergeTreeDataPart : public ActiveDataPartSet::Part
 	size_t getIndexSizeInBytes() const;
 	size_t getIndexSizeInAllocatedBytes() const;
 };
-
 }

@@ -11,7 +11,6 @@
 
 namespace DB
 {
-
 class QuotaForIntervals;
 struct ProcessListElement;
 class IProfilingBlockInputStream;
@@ -44,7 +43,10 @@ public:
 	void readSuffix() override;
 
 	/// Get information about execution speed.
-	const BlockStreamProfileInfo & getProfileInfo() const { return info; }
+	const BlockStreamProfileInfo & getProfileInfo() const
+	{
+		return info;
+	}
 
 	/** Получить "тотальные" значения.
 	  * Реализация по-умолчанию берёт их из себя или из первого дочернего источника, в котором они есть.
@@ -96,7 +98,10 @@ public:
 
 	/** Установить информацию о приблизительном общем количестве строк, которых нужно прочитать.
 	  */
-	void setTotalRowsApprox(size_t value) { total_rows_approx = value; }
+	void setTotalRowsApprox(size_t value)
+	{
+		total_rows_approx = value;
+	}
 
 
 	/** Попросить прервать получение данных как можно скорее.
@@ -158,11 +163,14 @@ public:
 	}
 
 	/// Включить рассчёт минимумов и максимумов по столбцам результата.
-	void enableExtremes() { enabled_extremes = true; }
+	void enableExtremes()
+	{
+		enabled_extremes = true;
+	}
 
 protected:
 	BlockStreamProfileInfo info;
-	std::atomic<bool> is_cancelled{false};
+	std::atomic<bool> is_cancelled{ false };
 	ProgressCallback progress_callback;
 	ProcessListElement * process_list_elem = nullptr;
 
@@ -186,17 +194,21 @@ protected:
 
 	LocalLimits limits;
 
-	QuotaForIntervals * quota = nullptr;	/// Если nullptr - квота не используется.
+	QuotaForIntervals * quota = nullptr; /// Если nullptr - квота не используется.
 	double prev_elapsed = 0;
 
 	/// Наследники должны реализовать эту функцию.
 	virtual Block readImpl() = 0;
 
 	/// Здесь можно делать предварительную инициализацию.
-	virtual void readPrefixImpl() {}
+	virtual void readPrefixImpl()
+	{
+	}
 
 	/// Здесь необходимо делать финализацию, которая может привести к исключению.
-	virtual void readSuffixImpl() {}
+	virtual void readSuffixImpl()
+	{
+	}
 
 	void updateExtremes(Block & block);
 
@@ -214,5 +226,4 @@ protected:
 	  */
 	void collectAndSendTotalRowsApprox();
 };
-
 }

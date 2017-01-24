@@ -1,15 +1,13 @@
 #pragma once
 
-#include <DB/DataStreams/IBlockOutputStream.h>
 #include <DB/DataStreams/BlockIO.h>
+#include <DB/DataStreams/IBlockOutputStream.h>
 #include <DB/Interpreters/Context.h>
 #include <DB/Interpreters/IInterpreter.h>
 
 
 namespace DB
 {
-
-
 /** Интерпретирует запрос INSERT.
   */
 class InterpreterInsertQuery : public IInterpreter
@@ -32,6 +30,4 @@ private:
 	ASTPtr query_ptr;
 	Context context;
 };
-
-
 }

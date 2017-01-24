@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 class ExpressionActions;
 
 
@@ -19,12 +18,17 @@ private:
 	using ExpressionActionsPtr = std::shared_ptr<ExpressionActions>;
 
 public:
-	TotalsHavingBlockInputStream(
-		BlockInputStreamPtr input_,
-		bool overflow_row_, ExpressionActionsPtr expression_,
-		const std::string & filter_column_, TotalsMode totals_mode_, double auto_include_threshold_);
+	TotalsHavingBlockInputStream(BlockInputStreamPtr input_,
+		bool overflow_row_,
+		ExpressionActionsPtr expression_,
+		const std::string & filter_column_,
+		TotalsMode totals_mode_,
+		double auto_include_threshold_);
 
-	String getName() const override { return "TotalsHaving"; }
+	String getName() const override
+	{
+		return "TotalsHaving";
+	}
 
 	String getID() const override;
 
@@ -53,5 +57,4 @@ private:
 	/// Если filter == nullptr - прибавлять все строки. Иначе - только строки, проходящие фильтр (HAVING).
 	void addToTotals(Block & totals, Block & block, const IColumn::Filter * filter);
 };
-
 }

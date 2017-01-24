@@ -1,17 +1,15 @@
 #pragma once
 
-#include <DB/DataStreams/copyData.h>
 #include <DB/DataStreams/IBlockOutputStream.h>
-#include <DB/DataStreams/OneBlockInputStream.h>
 #include <DB/DataStreams/MaterializingBlockInputStream.h>
+#include <DB/DataStreams/OneBlockInputStream.h>
+#include <DB/DataStreams/copyData.h>
 #include <DB/Interpreters/InterpreterSelectQuery.h>
 #include <DB/Storages/StorageView.h>
 
 
 namespace DB
 {
-
-
 /** Записывает данные в указанную таблицу, при этом рекурсивно вызываясь от всех зависимых вьюшек.
   * Если вьюшка не материализованная, то в нее данные не записываются, лишь перенаправляются дальше.
   */
@@ -32,8 +30,10 @@ public:
 		Dependencies dependencies = context.getDependencies(database, table);
 		for (size_t i = 0; i < dependencies.size(); ++i)
 		{
-			children.push_back(std::make_shared<PushingToViewsBlockOutputStream>(dependencies[i].first, dependencies[i].second, context, ASTPtr()));
-			queries.push_back(dynamic_cast<StorageView &>(*context.getTable(dependencies[i].first, dependencies[i].second)).getInnerQuery());
+			children.push_back(
+				std::make_shared<PushingToViewsBlockOutputStream>(dependencies[i].first, dependencies[i].second, context, ASTPtr()));
+			queries.push_back(
+				dynamic_cast<StorageView &>(*context.getTable(dependencies[i].first, dependencies[i].second)).getInnerQuery());
 		}
 
 		if (storage->getName() != "View")
@@ -80,6 +80,4 @@ private:
 	std::vector<BlockOutputStreamPtr> children;
 	std::vector<ASTPtr> queries;
 };
-
-
 }

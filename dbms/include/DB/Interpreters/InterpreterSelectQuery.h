@@ -1,17 +1,19 @@
 #pragma once
 
 #include <DB/Core/QueryProcessingStage.h>
-#include <DB/Interpreters/Context.h>
-#include <DB/Interpreters/IInterpreter.h>
-#include <DB/Interpreters/ExpressionActions.h>
 #include <DB/DataStreams/IBlockInputStream.h>
+#include <DB/Interpreters/Context.h>
+#include <DB/Interpreters/ExpressionActions.h>
+#include <DB/Interpreters/IInterpreter.h>
 
 
-namespace Poco { class Logger; }
+namespace Poco
+{
+class Logger;
+}
 
 namespace DB
 {
-
 class ExpressionAnalyzer;
 class ASTSelectQuery;
 struct SubqueryForSet;
@@ -40,23 +42,20 @@ public:
 	 *   Используется, например, совместно с указанием input.
 	 */
 
-	InterpreterSelectQuery(
-		ASTPtr query_ptr_,
+	InterpreterSelectQuery(ASTPtr query_ptr_,
 		const Context & context_,
 		QueryProcessingStage::Enum to_stage_ = QueryProcessingStage::Complete,
 		size_t subquery_depth_ = 0,
 		BlockInputStreamPtr input = nullptr);
 
-	InterpreterSelectQuery(
-		ASTPtr query_ptr_,
+	InterpreterSelectQuery(ASTPtr query_ptr_,
 		const Context & context_,
 		const Names & required_column_names,
 		QueryProcessingStage::Enum to_stage_ = QueryProcessingStage::Complete,
 		size_t subquery_depth_ = 0,
 		BlockInputStreamPtr input = nullptr);
 
-	InterpreterSelectQuery(
-		ASTPtr query_ptr_,
+	InterpreterSelectQuery(ASTPtr query_ptr_,
 		const Context & context_,
 		const Names & required_column_names,
 		const NamesAndTypesList & table_column_names_,
@@ -78,20 +77,17 @@ public:
 	DataTypes getReturnTypes();
 	Block getSampleBlock();
 
-	static Block getSampleBlock(
-		ASTPtr query_ptr_,
-		const Context & context_);
+	static Block getSampleBlock(ASTPtr query_ptr_, const Context & context_);
 
 private:
 	/**
 	 * - Оптимизация, если объект создаётся только, чтобы вызвать getSampleBlock(): учитываем только первый SELECT цепочки UNION ALL, потому что
 	 *   первый SELECT достаточен для определения нужных столбцов.
 	 */
-	struct OnlyAnalyzeTag {};
-	InterpreterSelectQuery(
-		OnlyAnalyzeTag,
-		ASTPtr query_ptr_,
-		const Context & context_);
+	struct OnlyAnalyzeTag
+	{
+	};
+	InterpreterSelectQuery(OnlyAnalyzeTag, ASTPtr query_ptr_, const Context & context_);
 
 	void init(BlockInputStreamPtr input, const Names & required_column_names = Names{});
 	void basicInit(BlockInputStreamPtr input);
@@ -169,7 +165,8 @@ private:
 	ASTSelectQuery & query;
 	Context context;
 	Settings settings;
-	size_t original_max_threads; /// В settings настройка max_threads может быть изменена. В original_max_threads сохраняется изначальное значение.
+	size_t
+		original_max_threads; /// В settings настройка max_threads может быть изменена. В original_max_threads сохраняется изначальное значение.
 	QueryProcessingStage::Enum to_stage;
 	size_t subquery_depth;
 	std::unique_ptr<ExpressionAnalyzer> query_analyzer;
@@ -206,5 +203,4 @@ private:
 
 	Poco::Logger * log;
 };
-
 }

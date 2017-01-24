@@ -1,12 +1,12 @@
 #pragma once
 
-#include <mysqlxx/Connection.h>
-#include <mysqlxx/Transaction.h>
-#include <mysqlxx/Manip.h>
-#include <mysqlxx/Pool.h>
 #include <common/LocalDate.h>
 #include <common/LocalDateTime.h>
+#include <mysqlxx/Connection.h>
+#include <mysqlxx/Manip.h>
 #include <mysqlxx/Null.h>
+#include <mysqlxx/Pool.h>
+#include <mysqlxx/Transaction.h>
 
 
 /** mysqlxx - чрезвычайно простая библиотека для замены библиотеки mysql++.

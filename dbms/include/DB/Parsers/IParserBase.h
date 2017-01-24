@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 /** Базовый класс для большинства парсеров
   */
 class IParserBase : public IParser
@@ -16,5 +15,4 @@ public:
 protected:
 	virtual bool parseImpl(Pos & pos, Pos end, ASTPtr & node, Pos & max_parsed_pos, Expected & expected) = 0;
 };
-
 }

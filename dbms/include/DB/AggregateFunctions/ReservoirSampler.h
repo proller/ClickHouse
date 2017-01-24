@@ -1,16 +1,16 @@
 #pragma once
 
-#include <limits>
 #include <algorithm>
 #include <climits>
+#include <limits>
 #include <sstream>
+#include <boost/random.hpp>
+#include <Poco/Exception.h>
 #include <common/Common.h>
+#include <DB/Common/PODArray.h>
 #include <DB/IO/ReadBuffer.h>
 #include <DB/IO/ReadHelpers.h>
 #include <DB/IO/WriteHelpers.h>
-#include <DB/Common/PODArray.h>
-#include <Poco/Exception.h>
-#include <boost/random.hpp>
 
 
 /// Реализация алгоритма Reservoir Sampling. Инкрементально выбирает из добавленных объектов случайное подмножество размера sample_count.
@@ -23,14 +23,14 @@ const size_t DEFAULT_SAMPLE_COUNT = 8192;
 /// Что делать, если нет ни одного значения - кинуть исключение, или вернуть 0 или NaN в случае double?
 namespace ReservoirSamplerOnEmpty
 {
-	enum Enum
-	{
-		THROW,
-		RETURN_NAN_OR_ZERO,
-	};
+enum Enum
+{
+	THROW,
+	RETURN_NAN_OR_ZERO,
+};
 }
 
-template<typename ResultType, bool IsFloatingPoint>
+template <typename ResultType, bool IsFloatingPoint>
 struct NanLikeValueConstructor
 {
 	static ResultType getValue()
@@ -38,7 +38,7 @@ struct NanLikeValueConstructor
 		return std::numeric_limits<ResultType>::quiet_NaN();
 	}
 };
-template<typename ResultType>
+template <typename ResultType>
 struct NanLikeValueConstructor<ResultType, false>
 {
 	static ResultType getValue()
@@ -47,12 +47,11 @@ struct NanLikeValueConstructor<ResultType, false>
 	}
 };
 
-template<typename T, ReservoirSamplerOnEmpty::Enum OnEmpty = ReservoirSamplerOnEmpty::THROW, typename Comparer = std::less<T> >
+template <typename T, ReservoirSamplerOnEmpty::Enum OnEmpty = ReservoirSamplerOnEmpty::THROW, typename Comparer = std::less<T>>
 class ReservoirSampler
 {
 public:
-	ReservoirSampler(size_t sample_count_ = DEFAULT_SAMPLE_COUNT)
-		: sample_count(sample_count_)
+	ReservoirSampler(size_t sample_count_ = DEFAULT_SAMPLE_COUNT) : sample_count(sample_count_)
 	{
 		rng.seed(123456);
 	}

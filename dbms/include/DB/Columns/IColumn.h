@@ -5,8 +5,8 @@
 #include <DB/Common/PODArray.h>
 #include <DB/Common/typeid_cast.h>
 
-#include <DB/Core/Field.h>
 #include <DB/Common/Exception.h>
+#include <DB/Core/Field.h>
 #include <DB/Core/StringRef.h>
 
 
@@ -15,7 +15,6 @@ class SipHash;
 
 namespace DB
 {
-
 namespace ErrorCodes
 {
 	extern const int CANNOT_GET_SIZE_OF_FIELD;
@@ -43,20 +42,35 @@ public:
 
 	/** Столбец представляет собой вектор чисел или числовую константу.
 	  */
-	virtual bool isNumeric() const { return false; }
+	virtual bool isNumeric() const
+	{
+		return false;
+	}
 
 	/// Is this column numeric and not nullable?
-	virtual bool isNumericNotNullable() const { return isNumeric(); }
+	virtual bool isNumericNotNullable() const
+	{
+		return isNumeric();
+	}
 
 	/** Столбец представляет собой константу.
 	  */
-	virtual bool isConst() const { return false; }
+	virtual bool isConst() const
+	{
+		return false;
+	}
 
 	/// Is this column a container for nullable values?
-	virtual bool isNullable() const { return false; }
+	virtual bool isNullable() const
+	{
+		return false;
+	}
 
 	/// Is this a null column?
-	virtual bool isNull() const { return false; }
+	virtual bool isNull() const
+	{
+		return false;
+	}
 
 	/** Если столбец не константа - возвращает nullptr (либо может вернуть самого себя).
 	  * Если столбец константа, то превращает его в полноценный столбец (если тип столбца предполагает такую возможность) и возвращает его.
@@ -65,32 +79,53 @@ public:
 	  *  и он может содержать как константные, так и полноценные столбцы,
 	  *  то превратить в нём все константные столбцы в полноценные, и вернуть результат.
 	  */
-	virtual ColumnPtr convertToFullColumnIfConst() const { return {}; }
+	virtual ColumnPtr convertToFullColumnIfConst() const
+	{
+		return {};
+	}
 
 	/** Значения имеют фиксированную длину.
 	  */
-	virtual bool isFixed() const { return false; }
+	virtual bool isFixed() const
+	{
+		return false;
+	}
 
 	/** Для столбцов фиксированной длины - вернуть длину значения.
 	  */
-	virtual size_t sizeOfField() const { throw Exception("Cannot get sizeOfField() for column " + getName(), ErrorCodes::CANNOT_GET_SIZE_OF_FIELD); }
+	virtual size_t sizeOfField() const
+	{
+		throw Exception("Cannot get sizeOfField() for column " + getName(), ErrorCodes::CANNOT_GET_SIZE_OF_FIELD);
+	}
 
 	/** Создать столбец с такими же данными. */
-	virtual ColumnPtr clone() const { return cut(0, size()); }
+	virtual ColumnPtr clone() const
+	{
+		return cut(0, size());
+	}
 
 	/** Создать пустой столбец такого же типа */
-	virtual ColumnPtr cloneEmpty() const { return cloneResized(0); }
+	virtual ColumnPtr cloneEmpty() const
+	{
+		return cloneResized(0);
+	}
 
 	/** Создать столбец такого же типа и указанного размера.
 	  * Если размер меньше текущего, данные обрезаются.
 	  * Если больше - добавляются значения по умолчанию.
 	  */
-	virtual ColumnPtr cloneResized(size_t size) const { throw Exception("Cannot cloneResized() column " + getName(), ErrorCodes::NOT_IMPLEMENTED); }
+	virtual ColumnPtr cloneResized(size_t size) const
+	{
+		throw Exception("Cannot cloneResized() column " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+	}
 
 	/** Количество значений в столбце. */
 	virtual size_t size() const = 0;
 
-	bool empty() const { return size() == 0; }
+	bool empty() const
+	{
+		return size() == 0;
+	}
 
 	/** Получить значение n-го элемента.
 	  * Используется в редких случаях, так как создание временного объекта типа Field может быть дорогим.
@@ -142,7 +177,10 @@ public:
 	/** Вставить значение в конец столбца из другого столбца такого же типа, по заданному индексу.
 	  * Используется для merge-sort. Может быть реализована оптимальнее, чем реализация по-умолчанию.
 	  */
-	virtual void insertFrom(const IColumn & src, size_t n) { insert(src[n]); }
+	virtual void insertFrom(const IColumn & src, size_t n)
+	{
+		insert(src[n]);
+	}
 
 	/** Вставить в конец столбца диапазон элементов из другого столбца.
 	  * Может использоваться для склейки столбцов.
@@ -257,7 +295,7 @@ public:
 	/** Если возможно - зарезервировать место для указанного количества элементов. Если невозможно или не поддерживается - ничего не делать.
 	  * Функция влияет только на производительность.
 	  */
-	virtual void reserve(size_t n) {};
+	virtual void reserve(size_t n){};
 
 	/** Size of column data in memory (may be approximate) - for profiling. Zero, if could not be determined. */
 	virtual size_t byteSize() const = 0;
@@ -268,8 +306,8 @@ public:
 	  */
 	virtual size_t allocatedSize() const = 0;
 
-	virtual ~IColumn() {}
+	virtual ~IColumn()
+	{
+	}
 };
-
-
 }

@@ -3,30 +3,29 @@
 #include <functional>
 #include <memory>
 
-#include <DB/Core/Types.h>
 #include <DB/Core/NamesAndTypes.h>
-#include <DB/Interpreters/Settings.h>
-#include <DB/Interpreters/ClientInfo.h>
+#include <DB/Core/Types.h>
 #include <DB/IO/CompressedStream.h>
+#include <DB/Interpreters/ClientInfo.h>
+#include <DB/Interpreters/Settings.h>
 
 
 namespace Poco
 {
-	namespace Net
-	{
-		class IPAddress;
-	}
+namespace Net
+{
+	class IPAddress;
+}
 }
 
 namespace zkutil
 {
-	class ZooKeeper;
+class ZooKeeper;
 }
 
 
 namespace DB
 {
-
 struct ContextShared;
 class QuotaForIntervals;
 class TableFunctionFactory;
@@ -84,18 +83,18 @@ private:
 
 	ClientInfo client_info;
 
-	std::shared_ptr<QuotaForIntervals> quota;	/// Current quota. By default - empty quota, that have no limits.
+	std::shared_ptr<QuotaForIntervals> quota; /// Current quota. By default - empty quota, that have no limits.
 	String current_database;
-	Settings settings;							/// Setting for query execution.
+	Settings settings; /// Setting for query execution.
 	using ProgressCallback = std::function<void(const Progress & progress)>;
-	ProgressCallback progress_callback;			/// Callback for tracking progress of query execution.
-	ProcessListElement * process_list_elem = nullptr;	/// For tracking total resource usage for query.
+	ProgressCallback progress_callback; /// Callback for tracking progress of query execution.
+	ProcessListElement * process_list_elem = nullptr; /// For tracking total resource usage for query.
 
-	String default_format;	/// Format, used when server formats data by itself and if query does not have FORMAT specification.
-							/// Thus, used in HTTP interface. If not specified - then some globally default format is used.
-	Tables external_tables;					/// Temporary tables.
-	Context * session_context = nullptr;	/// Session context or nullptr. Could be equal to this.
-	Context * global_context = nullptr;		/// Global context or nullptr. Could be equal to this.
+	String default_format; /// Format, used when server formats data by itself and if query does not have FORMAT specification.
+	/// Thus, used in HTTP interface. If not specified - then some globally default format is used.
+	Tables external_tables; /// Temporary tables.
+	Context * session_context = nullptr; /// Session context or nullptr. Could be equal to this.
+	Context * global_context = nullptr; /// Global context or nullptr. Could be equal to this.
 
 	using DatabasePtr = std::shared_ptr<IDatabase>;
 	using Databases = std::map<String, std::shared_ptr<IDatabase>>;
@@ -124,8 +123,14 @@ public:
 	/// Must be called before getClientInfo.
 	void setUser(const String & name, const String & password, const Poco::Net::SocketAddress & address, const String & quota_key);
 
-	ClientInfo & getClientInfo() { return client_info; };
-	const ClientInfo & getClientInfo() const { return client_info; };
+	ClientInfo & getClientInfo()
+	{
+		return client_info;
+	};
+	const ClientInfo & getClientInfo() const
+	{
+		return client_info;
+	};
 
 	void setQuota(const String & name, const String & quota_key, const String & user_name, const Poco::Net::IPAddress & address);
 	QuotaForIntervals & getQuota();
@@ -168,7 +173,7 @@ public:
 	void setCurrentDatabase(const String & name);
 	void setCurrentQueryId(const String & query_id);
 
-	String getDefaultFormat() const;	/// Если default_format не задан - возвращается некоторый глобальный формат по-умолчанию.
+	String getDefaultFormat() const; /// Если default_format не задан - возвращается некоторый глобальный формат по-умолчанию.
 	void setDefaultFormat(const String & name);
 
 	const Macros & getMacros() const;
@@ -225,11 +230,23 @@ public:
 	const Context & getGlobalContext() const;
 	Context & getGlobalContext();
 
-	void setSessionContext(Context & context_)								{ session_context = &context_; }
-	void setGlobalContext(Context & context_)								{ global_context = &context_; }
+	void setSessionContext(Context & context_)
+	{
+		session_context = &context_;
+	}
+	void setGlobalContext(Context & context_)
+	{
+		global_context = &context_;
+	}
 
-	const Settings & getSettingsRef() const { return settings; };
-	Settings & getSettingsRef() { return settings; };
+	const Settings & getSettingsRef() const
+	{
+		return settings;
+	};
+	Settings & getSettingsRef()
+	{
+		return settings;
+	};
 
 
 	void setProgressCallback(ProgressCallback callback);
@@ -294,9 +311,9 @@ public:
 
 	enum class ApplicationType
 	{
-		SERVER,			/// The program is run as clickhouse-server daemon (default behavior)
-		CLIENT,			/// clickhouse-client
-		LOCAL_SERVER	/// clickhouse-local
+		SERVER, /// The program is run as clickhouse-server daemon (default behavior)
+		CLIENT, /// clickhouse-client
+		LOCAL_SERVER /// clickhouse-local
 	};
 
 	ApplicationType getApplicationType() const;
@@ -332,5 +349,4 @@ public:
 	DDLGuard(Map & map_, std::mutex & mutex_, std::unique_lock<std::mutex> && lock, const String & elem, const String & message);
 	~DDLGuard();
 };
-
 }

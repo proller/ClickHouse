@@ -7,8 +7,8 @@
 
 #include <common/singleton.h>
 
-#include <mysqlxx/Query.h>
 #include <mysqlxx/Exception.h>
+#include <mysqlxx/Query.h>
 
 #define MYSQLXX_DEFAULT_TIMEOUT 60
 #define MYSQLXX_DEFAULT_RW_TIMEOUT 1800
@@ -16,8 +16,6 @@
 
 namespace mysqlxx
 {
-
-
 /** Для корректной инициализации и деинициализации MySQL библиотеки.
   * Обеспечивает единственный и thread-safe вызов mysql_library_init().
   * Использование:
@@ -25,7 +23,8 @@ namespace mysqlxx
   */
 class LibrarySingleton : public Singleton<LibrarySingleton>
 {
-friend class Singleton<LibrarySingleton>;
+	friend class Singleton<LibrarySingleton>;
+
 private:
 	LibrarySingleton();
 	~LibrarySingleton();
@@ -51,11 +50,10 @@ public:
 	Connection();
 
 	/// Создать соединение.
-	Connection(
-		const char* db,
-		const char* server,
-		const char* user = 0,
-		const char* password = 0,
+	Connection(const char * db,
+		const char * server,
+		const char * user = 0,
+		const char * password = 0,
 		unsigned port = 0,
 		unsigned timeout = MYSQLXX_DEFAULT_TIMEOUT,
 		unsigned rw_timeout = MYSQLXX_DEFAULT_RW_TIMEOUT);
@@ -80,21 +78,15 @@ public:
 	{
 		Poco::Util::LayeredConfiguration & cfg = Poco::Util::Application::instance().config();
 
-		std::string db 			= cfg.getString(config_name + ".db", "");
-		std::string server 		= cfg.getString(config_name + ".host");
-		std::string user 		= cfg.getString(config_name + ".user");
-		std::string password	= cfg.getString(config_name + ".password");
-		unsigned port			= cfg.getInt(config_name + ".port");
+		std::string db = cfg.getString(config_name + ".db", "");
+		std::string server = cfg.getString(config_name + ".host");
+		std::string user = cfg.getString(config_name + ".user");
+		std::string password = cfg.getString(config_name + ".password");
+		unsigned port = cfg.getInt(config_name + ".port");
 
-		unsigned timeout =
-			cfg.getInt(config_name + ".connect_timeout",
-				cfg.getInt("mysql_connect_timeout",
-					MYSQLXX_DEFAULT_TIMEOUT));
+		unsigned timeout = cfg.getInt(config_name + ".connect_timeout", cfg.getInt("mysql_connect_timeout", MYSQLXX_DEFAULT_TIMEOUT));
 
-		unsigned rw_timeout =
-			cfg.getInt(config_name + ".rw_timeout",
-				cfg.getInt("mysql_rw_timeout",
-					MYSQLXX_DEFAULT_RW_TIMEOUT));
+		unsigned rw_timeout = cfg.getInt(config_name + ".rw_timeout", cfg.getInt("mysql_rw_timeout", MYSQLXX_DEFAULT_RW_TIMEOUT));
 
 		connect(db.c_str(), server.c_str(), user.c_str(), password.c_str(), port, timeout, rw_timeout);
 	}
@@ -118,6 +110,4 @@ private:
 	std::unique_ptr<MYSQL> driver;
 	bool is_connected;
 };
-
-
 }

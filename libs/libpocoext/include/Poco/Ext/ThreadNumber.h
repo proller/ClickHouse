@@ -5,10 +5,8 @@
   */
 namespace Poco
 {
-
 namespace ThreadNumber
 {
 	unsigned get();
 }
-
 }

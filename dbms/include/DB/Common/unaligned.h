@@ -1,13 +1,13 @@
 #pragma once
 
-#include <DB/Core/Defines.h>
 #include <string.h>
+#include <DB/Core/Defines.h>
 
 
 template <typename T>
 inline T unalignedLoad(const void * address)
 {
-	T res {};
+	T res{};
 	memcpy(&res, address, sizeof(res));
 	return res;
 }

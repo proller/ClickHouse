@@ -1,12 +1,11 @@
 #pragma once
 
-#include <DB/Storages/IStorage.h>
 #include <common/singleton.h>
+#include <DB/Storages/IStorage.h>
 
 
 namespace DB
 {
-
 class Context;
 
 
@@ -15,8 +14,7 @@ class Context;
 class StorageFactory : public Singleton<StorageFactory>
 {
 public:
-	StoragePtr get(
-		const String & name,
+	StoragePtr get(const String & name,
 		const String & data_path,
 		const String & table_name,
 		const String & database_name,
@@ -30,5 +28,4 @@ public:
 		bool attach,
 		bool has_force_restore_data_flag) const;
 };
-
 }

@@ -5,9 +5,9 @@
 
 namespace mysqlxx
 {
-
-
-struct NullType {};
+struct NullType
+{
+};
 const NullType null = {};
 
 
@@ -24,70 +24,101 @@ public:
 	T data;
 	bool is_null;
 
-	Null() : is_null(true) {}
-	Null(NullType data) : is_null(true) {}
-	explicit Null(const T & data_) : data(data_), is_null(false) {}
+	Null() : is_null(true)
+	{
+	}
+	Null(NullType data) : is_null(true)
+	{
+	}
+	explicit Null(const T & data_) : data(data_), is_null(false)
+	{
+	}
 
-	operator T & ()
+	operator T &()
 	{
 		if (is_null)
 			throw Exception("Value is NULL");
 		return data;
 	}
 
-	operator const T & () const
+	operator const T &() const
 	{
 		if (is_null)
 			throw Exception("Value is NULL");
 		return data;
 	}
 
-	Null<T> & operator= (const T & data_) { is_null = false; data = data_; return *this; }
-	Null<T> & operator= (const Null<T> & other) { is_null = other.is_null; data = other.data; return *this; }
-	Null<T> & operator= (const NullType other) { is_null = true; data = T(); return *this; }
-
-	bool isNull() const { return is_null; }
-
-	bool operator< (const Null<T> & other) const
+	Null<T> & operator=(const T & data_)
 	{
-		return is_null < other.is_null
-			|| (is_null == other.is_null && data < other.data);
+		is_null = false;
+		data = data_;
+		return *this;
+	}
+	Null<T> & operator=(const Null<T> & other)
+	{
+		is_null = other.is_null;
+		data = other.data;
+		return *this;
+	}
+	Null<T> & operator=(const NullType other)
+	{
+		is_null = true;
+		data = T();
+		return *this;
 	}
 
-	bool operator< (const NullType other) const { return false; }
+	bool isNull() const
+	{
+		return is_null;
+	}
 
-	bool operator== (const Null<T> & other) const
+	bool operator<(const Null<T> & other) const
+	{
+		return is_null < other.is_null || (is_null == other.is_null && data < other.data);
+	}
+
+	bool operator<(const NullType other) const
+	{
+		return false;
+	}
+
+	bool operator==(const Null<T> & other) const
 	{
 		return is_null == other.is_null && data == other.data;
 	}
 
-	bool operator== (const T & other) const
+	bool operator==(const T & other) const
 	{
 		return !is_null && data == other;
 	}
 
-	bool operator== (const NullType other) const { return is_null; }
+	bool operator==(const NullType other) const
+	{
+		return is_null;
+	}
 
-	bool operator!= (const Null<T> & other) const
+	bool operator!=(const Null<T> & other) const
 	{
 		return !(*this == other);
 	}
 
-	bool operator!= (const NullType other) const { return !is_null; }
+	bool operator!=(const NullType other) const
+	{
+		return !is_null;
+	}
 
-	bool operator!= (const T & other) const
+	bool operator!=(const T & other) const
 	{
 		return is_null || data != other;
 	}
 };
 
 
-template<typename T>
+template <typename T>
 T getValueFromNull(const Null<T> & maybe)
 {
 	if (maybe.isNull())
 		return {};
 	return maybe;
 }
-
 }

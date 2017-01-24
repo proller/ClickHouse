@@ -1,25 +1,28 @@
 #pragma once
 
+#include <string>
+#include <mysqlxx/PoolWithFailover.h>
+#include <mysqlxx/Query.h>
 #include <DB/Core/Block.h>
 #include <DB/DataStreams/IProfilingBlockInputStream.h>
 #include <DB/Dictionaries/ExternalResultDescription.h>
-#include <mysqlxx/Query.h>
-#include <mysqlxx/PoolWithFailover.h>
-#include <string>
 
 
 namespace DB
 {
-
 /// Allows processing results of a MySQL query as a sequence of Blocks, simplifies chaining
 class MySQLBlockInputStream final : public IProfilingBlockInputStream
 {
 public:
-	MySQLBlockInputStream(
-		const mysqlxx::PoolWithFailover::Entry & entry, const std::string & query_str, const Block & sample_block,
+	MySQLBlockInputStream(const mysqlxx::PoolWithFailover::Entry & entry,
+		const std::string & query_str,
+		const Block & sample_block,
 		const size_t max_block_size);
 
-	String getName() const override { return "MySQL"; }
+	String getName() const override
+	{
+		return "MySQL";
+	}
 
 	String getID() const override;
 
@@ -37,5 +40,4 @@ private:
 	const size_t max_block_size;
 	ExternalResultDescription description;
 };
-
 }

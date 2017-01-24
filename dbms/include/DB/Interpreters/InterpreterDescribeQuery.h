@@ -6,15 +6,14 @@
 
 namespace DB
 {
-
-
 /** Вернуть названия и типы столбцов указанной таблицы.
 	*/
 class InterpreterDescribeQuery : public IInterpreter
 {
 public:
-	InterpreterDescribeQuery(ASTPtr query_ptr_, const Context & context_)
-		: query_ptr(query_ptr_), context(context_) {}
+	InterpreterDescribeQuery(ASTPtr query_ptr_, const Context & context_) : query_ptr(query_ptr_), context(context_)
+	{
+	}
 
 	BlockIO execute() override;
 
@@ -25,6 +24,4 @@ private:
 	Block getSampleBlock();
 	BlockInputStreamPtr executeImpl();
 };
-
-
 }

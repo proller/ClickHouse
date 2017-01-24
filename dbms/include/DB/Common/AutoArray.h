@@ -7,7 +7,6 @@
 
 namespace DB
 {
-
 /** Массив (почти) неизменяемого размера:
   *  размер задаётся в конструкторе;
   *  метод resize приводит к удалению старых данных и нужен лишь для того,
@@ -36,7 +35,9 @@ namespace DB
 
 const size_t empty_auto_array_helper = 0;
 
-struct DontInitElemsTag {};
+struct DontInitElemsTag
+{
+};
 
 template <typename T>
 class AutoArray
@@ -47,12 +48,12 @@ public:
 	{
 		setEmpty();
 	}
-	
+
 	AutoArray(size_t size_)
 	{
 		init(size_, false);
 	}
-	
+
 	/** Не будут вызваны конструкторы по-умолчанию для элементов.
 	  * В этом случае, вы должны вставить все элементы с помощью функции place и placement new,
 	  *  так как для них потом будут вызваны деструкторы.
@@ -61,13 +62,13 @@ public:
 	{
 		init(size_, true);
 	}
-	
+
 	/** Инициализирует все элементы копирующим конструктором с параметром value.
 	  */
 	AutoArray(size_t size_, const T & value)
 	{
 		init(size_, true);
-		
+
 		for (size_t i = 0; i < size_; ++i)
 		{
 			new (place(i)) T(value);
@@ -84,7 +85,7 @@ public:
 
 	/** Премещение.
 	  */
-    AutoArray(AutoArray && src)
+	AutoArray(AutoArray && src)
 	{
 		if (this == &src)
 			return;
@@ -93,7 +94,7 @@ public:
 		src.setEmpty();
 	}
 
-	AutoArray & operator= (AutoArray && src)
+	AutoArray & operator=(AutoArray && src)
 	{
 		if (this == &src)
 			return *this;
@@ -134,7 +135,7 @@ public:
 	{
 		return elem(i);
 	}
-	
+
 	const T & operator[](size_t i) const
 	{
 		return elem(i);
@@ -153,13 +154,25 @@ public:
 	using iterator = T *;
 	using const_iterator = const T *;
 
-	iterator begin() { return &elem(0); }
-	iterator end() { return &elem(size()); }
+	iterator begin()
+	{
+		return &elem(0);
+	}
+	iterator end()
+	{
+		return &elem(size());
+	}
 
-	const_iterator begin() const { return &elem(0); }
-	const_iterator end() const { return &elem(size()); }
+	const_iterator begin() const
+	{
+		return &elem(0);
+	}
+	const_iterator end() const
+	{
+		return &elem(size());
+	}
 
-	bool operator== (const AutoArray<T> & rhs) const
+	bool operator==(const AutoArray<T> & rhs) const
 	{
 		size_t s = size();
 
@@ -173,12 +186,12 @@ public:
 		return true;
 	}
 
-	bool operator!= (const AutoArray<T> & rhs) const
+	bool operator!=(const AutoArray<T> & rhs) const
 	{
 		return !(*this == rhs);
 	}
 
-	bool operator< (const AutoArray<T> & rhs) const
+	bool operator<(const AutoArray<T> & rhs) const
 	{
 		size_t s = size();
 		size_t rhs_s = rhs.size();
@@ -234,7 +247,7 @@ private:
 			setEmpty();
 			return;
 		}
-		
+
 		data = new char[size_ * sizeof(T) + sizeof(size_t)];
 		data += sizeof(size_t);
 		m_size() = size_;
@@ -258,5 +271,4 @@ private:
 		}
 	}
 };
-
 }

@@ -2,24 +2,23 @@
 
 #include <ext/shared_ptr_helper.hpp>
 
+#include <DB/Common/Increment.h>
+#include <DB/Storages/MergeTree/BackgroundProcessingPool.h>
+#include <DB/Storages/MergeTree/DiskSpaceMonitor.h>
 #include <DB/Storages/MergeTree/MergeTreeData.h>
+#include <DB/Storages/MergeTree/MergeTreeDataMerger.h>
 #include <DB/Storages/MergeTree/MergeTreeDataSelectExecutor.h>
 #include <DB/Storages/MergeTree/MergeTreeDataWriter.h>
-#include <DB/Storages/MergeTree/MergeTreeDataMerger.h>
-#include <DB/Storages/MergeTree/DiskSpaceMonitor.h>
-#include <DB/Storages/MergeTree/BackgroundProcessingPool.h>
-#include <DB/Common/Increment.h>
 
 
 namespace DB
 {
-
 /** См. описание структуры данных в MergeTreeData.
   */
 class StorageMergeTree : private ext::shared_ptr_helper<StorageMergeTree>, public IStorage
 {
-friend class ext::shared_ptr_helper<StorageMergeTree>;
-friend class MergeTreeBlockOutputStream;
+	friend class ext::shared_ptr_helper<StorageMergeTree>;
+	friend class MergeTreeBlockOutputStream;
 
 public:
 	/** Подцепить таблицу с соответствующим именем, по соответствующему пути (с / на конце),
@@ -30,8 +29,7 @@ public:
 	  * date_column_name 	- имя столбца с датой;
 	  * index_granularity 	- на сколько строчек пишется одно значение индекса.
 	  */
-	static StoragePtr create(
-		const String & path_,
+	static StoragePtr create(const String & path_,
 		const String & database_name_,
 		const String & table_name_,
 		NamesAndTypesListPtr columns_,
@@ -55,13 +53,31 @@ public:
 		return data.merging_params.getModeName() + "MergeTree";
 	}
 
-	std::string getTableName() const override { return table_name; }
-	bool supportsSampling() const override { return data.supportsSampling(); }
-	bool supportsFinal() const override { return data.supportsFinal(); }
-	bool supportsPrewhere() const override { return data.supportsPrewhere(); }
-	bool supportsParallelReplicas() const override { return true; }
+	std::string getTableName() const override
+	{
+		return table_name;
+	}
+	bool supportsSampling() const override
+	{
+		return data.supportsSampling();
+	}
+	bool supportsFinal() const override
+	{
+		return data.supportsFinal();
+	}
+	bool supportsPrewhere() const override
+	{
+		return data.supportsPrewhere();
+	}
+	bool supportsParallelReplicas() const override
+	{
+		return true;
+	}
 
-	const NamesAndTypesList & getColumnsListImpl() const override { return data.getColumnsListNonMaterialized(); }
+	const NamesAndTypesList & getColumnsListImpl() const override
+	{
+		return data.getColumnsListNonMaterialized();
+	}
 
 	NameAndTypePair getColumn(const String & column_name) const override
 	{
@@ -73,8 +89,7 @@ public:
 		return data.hasColumn(column_name);
 	}
 
-	BlockInputStreams read(
-		const Names & column_names,
+	BlockInputStreams read(const Names & column_names,
 		ASTPtr query,
 		const Context & context,
 		const Settings & settings,
@@ -101,9 +116,15 @@ public:
 
 	void alter(const AlterCommands & params, const String & database_name, const String & table_name, const Context & context) override;
 
-	bool supportsIndexForIn() const override { return true; }
+	bool supportsIndexForIn() const override
+	{
+		return true;
+	}
 
-	MergeTreeData & getData() { return data; }
+	MergeTreeData & getData()
+	{
+		return data;
+	}
 
 private:
 	String path;
@@ -120,7 +141,7 @@ private:
 	MergeTreeDataMerger merger;
 
 	/// For block numbers.
-	SimpleIncrement increment{0};
+	SimpleIncrement increment{ 0 };
 
 	/// For clearOldParts, clearOldTemporaryDirectories.
 	StopwatchWithLock time_after_previous_cleanup;
@@ -130,14 +151,13 @@ private:
 
 	Logger * log;
 
-	std::atomic<bool> shutdown_called {false};
+	std::atomic<bool> shutdown_called{ false };
 
 	BackgroundProcessingPool::TaskHandle merge_task_handle;
 
 	friend struct CurrentlyMergingPartsTagger;
 
-	StorageMergeTree(
-		const String & path_,
+	StorageMergeTree(const String & path_,
 		const String & database_name_,
 		const String & table_name_,
 		NamesAndTypesListPtr columns_,
@@ -161,5 +181,4 @@ private:
 
 	bool mergeTask();
 };
-
 }

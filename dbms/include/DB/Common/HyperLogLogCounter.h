@@ -1,15 +1,15 @@
 #pragma once
 
 #include <common/Common.h>
-#include <DB/Common/HyperLogLogBiasEstimator.h>
 #include <DB/Common/CompactArray.h>
 #include <DB/Common/HashTable/Hash.h>
+#include <DB/Common/HyperLogLogBiasEstimator.h>
 
-#include <DB/IO/ReadBuffer.h>
-#include <DB/IO/WriteBuffer.h>
-#include <DB/IO/ReadHelpers.h>
-#include <DB/IO/WriteHelpers.h>
 #include <DB/Core/Defines.h>
+#include <DB/IO/ReadBuffer.h>
+#include <DB/IO/ReadHelpers.h>
+#include <DB/IO/WriteBuffer.h>
+#include <DB/IO/WriteHelpers.h>
 
 #include <cmath>
 #include <cstring>
@@ -26,9 +26,8 @@ namespace ErrorCodes
 
 namespace details
 {
-
 /// Look-up table логарифмов от целых чисел для использования в HyperLogLogCounter.
-template<UInt8 K>
+template <UInt8 K>
 struct LogLUT
 {
 	LogLUT()
@@ -52,40 +51,56 @@ private:
 	double log_table[M + 1];
 };
 
-template<UInt8 K> struct MinCounterTypeHelper;
-template<> struct MinCounterTypeHelper<0>	{ using Type = UInt8; };
-template<> struct MinCounterTypeHelper<1>	{ using Type = UInt16; };
-template<> struct MinCounterTypeHelper<2>	{ using Type = UInt32; };
-template<> struct MinCounterTypeHelper<3>	{ using Type = UInt64; };
+template <UInt8 K>
+struct MinCounterTypeHelper;
+template <>
+struct MinCounterTypeHelper<0>
+{
+	using Type = UInt8;
+};
+template <>
+struct MinCounterTypeHelper<1>
+{
+	using Type = UInt16;
+};
+template <>
+struct MinCounterTypeHelper<2>
+{
+	using Type = UInt32;
+};
+template <>
+struct MinCounterTypeHelper<3>
+{
+	using Type = UInt64;
+};
 
 /// Вспомогательная структура для автоматического определения
 /// минимального размера типа счетчика в зависимости от максимального значения.
 /// Используется там, где нужна максимальная экономия памяти,
 /// например, в HyperLogLogCounter
-template<UInt64 MaxValue> struct MinCounterType
+template <UInt64 MaxValue>
+struct MinCounterType
 {
-	typedef typename MinCounterTypeHelper<
-		(MaxValue >= 1 << 8) +
-		(MaxValue >= 1 << 16) +
-		(MaxValue >= 1ULL << 32)
-		>::Type Type;
+	typedef typename MinCounterTypeHelper<(MaxValue >= 1 << 8) + (MaxValue >= 1 << 16) + (MaxValue >= 1ULL << 32)>::Type Type;
 };
 
 /** Знаменатель формулы алгоритма HyperLogLog
   */
-template<UInt8 precision, int max_rank, typename HashValueType, typename DenominatorType,
-	bool stable_denominator_if_big, typename Enable = void>
-class __attribute__ ((packed)) Denominator;
+template <UInt8 precision,
+	int max_rank,
+	typename HashValueType,
+	typename DenominatorType,
+	bool stable_denominator_if_big,
+	typename Enable = void>
+class __attribute__((packed)) Denominator;
 
 namespace
 {
-
-/// Возвращает true, если хранилище для рангов большое.
-constexpr bool isBigRankStore(UInt8 precision)
-{
-	return precision >= 12;
-}
-
+	/// Возвращает true, если хранилище для рангов большое.
+	constexpr bool isBigRankStore(UInt8 precision)
+	{
+		return precision >= 12;
+	}
 }
 
 /** Тип употребляемый для вычисления знаменателя.
@@ -109,9 +124,11 @@ struct IntermediateDenominator<UInt64>
   * Занимает минимальный объём памяти, зато вычисления могут быть неустойчивы.
   * Подходит, когда хранилище для рангов небольшое.
   */
-template<UInt8 precision, int max_rank, typename HashValueType, typename DenominatorType,
-	bool stable_denominator_if_big>
-class __attribute__ ((packed)) Denominator<precision, max_rank, HashValueType, DenominatorType,
+template <UInt8 precision, int max_rank, typename HashValueType, typename DenominatorType, bool stable_denominator_if_big>
+class __attribute__((packed)) Denominator<precision,
+	max_rank,
+	HashValueType,
+	DenominatorType,
 	stable_denominator_if_big,
 	typename std::enable_if<!details::isBigRankStore(precision) || !stable_denominator_if_big>::type>
 {
@@ -119,8 +136,7 @@ private:
 	using T = typename IntermediateDenominator<HashValueType>::Type;
 
 public:
-	Denominator(DenominatorType initial_value)
-		: denominator(initial_value)
+	Denominator(DenominatorType initial_value) : denominator(initial_value)
 	{
 	}
 
@@ -154,9 +170,11 @@ private:
   * Занимает больший объём памяти, чем лёгкая версия, зато вычисления всегда устойчивы.
   * Подходит, когда хранилище для рангов довольно большое.
   */
-template<UInt8 precision, int max_rank, typename HashValueType, typename DenominatorType,
-	bool stable_denominator_if_big>
-class __attribute__ ((packed)) Denominator<precision, max_rank, HashValueType, DenominatorType,
+template <UInt8 precision, int max_rank, typename HashValueType, typename DenominatorType, bool stable_denominator_if_big>
+class __attribute__((packed)) Denominator<precision,
+	max_rank,
+	HashValueType,
+	DenominatorType,
 	stable_denominator_if_big,
 	typename std::enable_if<details::isBigRankStore(precision) && stable_denominator_if_big>::type>
 {
@@ -243,17 +261,16 @@ struct RankWidth<UInt64>
 		return 6;
 	}
 };
-
 }
 
 /** Поведение класса HyperLogLogCounter.
   */
 enum class HyperLogLogMode
 {
-	Raw,            /// Применить алгоритм HyperLogLog без исправления погрешности
+	Raw, /// Применить алгоритм HyperLogLog без исправления погрешности
 	LinearCounting, /// Исправить погрешность по алгоритму LinearCounting
-	BiasCorrected,  /// Исправить погрешность по алгоритму HyperLogLog++
-	FullFeatured    /// Исправить погрешность по алгоритму LinearCounting или HyperLogLog++
+	BiasCorrected, /// Исправить погрешность по алгоритму HyperLogLog++
+	FullFeatured /// Исправить погрешность по алгоритму LinearCounting или HyperLogLog++
 };
 
 /** Подсчёт уникальных значений алгоритмом HyperLogLog.
@@ -266,15 +283,14 @@ enum class HyperLogLogMode
   * (P. Flajolet et al., AOFA '07: Proceedings of the 2007 International Conference on Analysis
   * of Algorithms)
   */
-template <
-	UInt8 precision,
+template <UInt8 precision,
 	typename Hash = IntHash32<UInt64>,
 	typename HashValueType = UInt32,
 	typename DenominatorType = double,
 	typename BiasEstimator = TrivialBiasEstimator,
 	HyperLogLogMode mode = HyperLogLogMode::FullFeatured,
 	bool stable_denominator_if_big = true>
-class __attribute__ ((packed)) HyperLogLogCounter : private Hash
+class __attribute__((packed)) HyperLogLogCounter : private Hash
 {
 private:
 	/// Число ячеек.
@@ -304,13 +320,12 @@ public:
 	UInt32 size() const
 	{
 		/// Нормализующий коэффициент, входящий в среднее гармоническое.
-		static constexpr double alpha_m =
-			bucket_count == 2 	? 0.351 :
-			bucket_count == 4  ? 0.532 :
-			bucket_count == 8  ? 0.626 :
-			bucket_count == 16 ? 0.673 :
-			bucket_count == 32 ? 0.697 :
-			bucket_count == 64 ? 0.709 : 0.7213 / (1 + 1.079 / bucket_count);
+		static constexpr double alpha_m = bucket_count == 2 ? 0.351
+															: bucket_count == 4 ? 0.532
+																				: bucket_count == 8
+					? 0.626
+					: bucket_count == 16 ? 0.673
+										 : bucket_count == 32 ? 0.697 : bucket_count == 64 ? 0.709 : 0.7213 / (1 + 1.079 / bucket_count);
 
 		/** Среднее гармоническое по всем корзинам из величин 2^rank равно:
 		  *  bucket_count / ∑ 2^-rank_i.
@@ -523,7 +538,7 @@ private:
 
 	/// Знаменатель формулы алгоритма HyperLogLog.
 	using DenominatorCalculatorType = details::Denominator<precision, max_rank, HashValueType, DenominatorType, stable_denominator_if_big>;
-	DenominatorCalculatorType denominator{bucket_count};
+	DenominatorCalculatorType denominator{ bucket_count };
 
 	/// Число нулей в хранилище для рангов.
 	using ZerosCounterType = typename details::MinCounterType<bucket_count>::Type;
@@ -537,36 +552,17 @@ private:
 
 
 /// Определения статических переменных, нужные во время линковки.
-template
-<
-	UInt8 precision,
+template <UInt8 precision,
 	typename Hash,
 	typename HashValueType,
 	typename DenominatorType,
 	typename BiasEstimator,
 	HyperLogLogMode mode,
-	bool stable_denominator_if_big
->
-details::LogLUT<precision> HyperLogLogCounter
-<
-	precision,
-	Hash,
-	HashValueType,
-	DenominatorType,
-	BiasEstimator,
-	mode,
-	stable_denominator_if_big
->::log_lut;
+	bool stable_denominator_if_big>
+details::LogLUT<precision>
+	HyperLogLogCounter<precision, Hash, HashValueType, DenominatorType, BiasEstimator, mode, stable_denominator_if_big>::log_lut;
 
 
 /// Для Metrage, используется лёгкая реализация знаменателя формулы HyperLogLog,
 /// чтобы формат сериализации не изменился.
-typedef HyperLogLogCounter<
-	12,
-	IntHash32<UInt64>,
-	UInt32,
-	double,
-	TrivialBiasEstimator,
-	HyperLogLogMode::FullFeatured,
-	false
-> HLL12;
+typedef HyperLogLogCounter<12, IntHash32<UInt64>, UInt32, double, TrivialBiasEstimator, HyperLogLogMode::FullFeatured, false> HLL12;

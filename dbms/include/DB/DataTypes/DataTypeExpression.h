@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 /** Special data type, representing lambda expression.
   */
 class DataTypeExpression final : public IDataTypeDummy
@@ -17,7 +16,9 @@ private:
 public:
 	/// Some types could be still unknown.
 	DataTypeExpression(DataTypes argument_types_ = DataTypes(), DataTypePtr return_type_ = nullptr)
-		: argument_types(argument_types_), return_type(return_type_) {}
+		: argument_types(argument_types_), return_type(return_type_)
+	{
+	}
 
 	std::string getName() const override;
 
@@ -36,5 +37,4 @@ public:
 		return return_type;
 	}
 };
-
 }

@@ -5,7 +5,6 @@
 
 namespace DB
 {
-
 class Context;
 
 /// Отвечает "Ok.\n", если все реплики на этом сервере не слишком сильно отстают. Иначе выводит информацию об отставании.
@@ -19,6 +18,4 @@ public:
 
 	void handleRequest(Poco::Net::HTTPServerRequest & request, Poco::Net::HTTPServerResponse & response) override;
 };
-
-
 }

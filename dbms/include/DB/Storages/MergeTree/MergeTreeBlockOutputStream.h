@@ -1,18 +1,18 @@
 #pragma once
 
-#include <DB/Storages/StorageMergeTree.h>
-#include <DB/DataStreams/IBlockOutputStream.h>
 #include <iomanip>
+#include <DB/DataStreams/IBlockOutputStream.h>
+#include <DB/Storages/StorageMergeTree.h>
 
 
 namespace DB
 {
-
 class MergeTreeBlockOutputStream : public IBlockOutputStream
 {
 public:
-	MergeTreeBlockOutputStream(StorageMergeTree & storage_)
-		: storage(storage_) {}
+	MergeTreeBlockOutputStream(StorageMergeTree & storage_) : storage(storage_)
+	{
+	}
 
 	void write(const Block & block) override
 	{
@@ -33,5 +33,4 @@ public:
 private:
 	StorageMergeTree & storage;
 };
-
 }

@@ -1,14 +1,13 @@
 #pragma once
 
-#include <DB/DataTypes/DataTypesNumberFixed.h>
-#include <DB/Functions/IFunction.h>
 #include <DB/Common/HashTable/Hash.h>
 #include <DB/Common/randomSeed.h>
+#include <DB/DataTypes/DataTypesNumberFixed.h>
+#include <DB/Functions/IFunction.h>
 
 
 namespace DB
 {
-
 /** Функции генерации псевдослучайных чисел.
   * Функция может быть вызвана без аргументов или с одним аргументом.
   * Аргумент игнорируется и служит лишь для того, чтобы несколько вызовов одной функции считались разными и не склеивались.
@@ -46,8 +45,12 @@ namespace detail
 		/// А эта - из head -c8 /dev/urandom | xxd -p
 		UInt64 current = 0x09826f4a081cee35ULL;
 
-		LinearCongruentialGenerator() {}
-		LinearCongruentialGenerator(UInt64 value) : current(value) {}
+		LinearCongruentialGenerator()
+		{
+		}
+		LinearCongruentialGenerator(UInt64 value) : current(value)
+		{
+		}
 
 		void seed(UInt64 value)
 		{
@@ -150,7 +153,10 @@ private:
 
 public:
 	static constexpr auto name = Name::name;
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionRandom>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionRandom>();
+	}
 
 	/// Получить имя функции.
 	String getName() const override
@@ -158,16 +164,25 @@ public:
 		return name;
 	}
 
-	bool isVariadic() const override { return true; }
-	size_t getNumberOfArguments() const override { return 0; }
-	bool isDeterministicInScopeOfQuery() override { return false; }
+	bool isVariadic() const override
+	{
+		return true;
+	}
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
+	bool isDeterministicInScopeOfQuery() override
+	{
+		return false;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
 		if (arguments.size() > 1)
-			throw Exception("Number of arguments for function " + getName() + " doesn't match: passed "
-				+ toString(arguments.size()) + ", should be 0 or 1.",
+			throw Exception("Number of arguments for function " + getName() + " doesn't match: passed " + toString(arguments.size())
+					+ ", should be 0 or 1.",
 				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
 		return std::make_shared<typename DataTypeFromFieldType<typename Impl::ReturnType>::Type>();
@@ -200,7 +215,10 @@ private:
 
 public:
 	static constexpr auto name = Name::name;
-	static FunctionPtr create(const Context & context) { return std::make_shared<FunctionRandomConstant>(); }
+	static FunctionPtr create(const Context & context)
+	{
+		return std::make_shared<FunctionRandomConstant>();
+	}
 
 	/// Получить имя функции.
 	String getName() const override
@@ -208,15 +226,21 @@ public:
 		return name;
 	}
 
-	bool isVariadic() const override { return true; }
-	size_t getNumberOfArguments() const override { return 0; }
+	bool isVariadic() const override
+	{
+		return true;
+	}
+	size_t getNumberOfArguments() const override
+	{
+		return 0;
+	}
 
 	/// Получить тип результата по типам аргументов. Если функция неприменима для данных аргументов - кинуть исключение.
 	DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
 	{
 		if (arguments.size() > 1)
-			throw Exception("Number of arguments for function " + getName() + " doesn't match: passed "
-				+ toString(arguments.size()) + ", should be 0 or 1.",
+			throw Exception("Number of arguments for function " + getName() + " doesn't match: passed " + toString(arguments.size())
+					+ ", should be 0 or 1.",
 				ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
 		return std::make_shared<typename DataTypeFromFieldType<typename Impl::ReturnType>::Type>();
@@ -238,13 +262,20 @@ public:
 };
 
 
-struct NameRand 		{ static constexpr auto name = "rand"; };
-struct NameRand64 		{ static constexpr auto name = "rand64"; };
-struct NameRandConstant { static constexpr auto name = "randConstant"; };
+struct NameRand
+{
+	static constexpr auto name = "rand";
+};
+struct NameRand64
+{
+	static constexpr auto name = "rand64";
+};
+struct NameRandConstant
+{
+	static constexpr auto name = "randConstant";
+};
 
-using FunctionRand = FunctionRandom<RandImpl,	NameRand> ;
-using FunctionRand64 = FunctionRandom<Rand64Impl,	NameRand64>;
+using FunctionRand = FunctionRandom<RandImpl, NameRand>;
+using FunctionRand64 = FunctionRandom<Rand64Impl, NameRand64>;
 using FunctionRandConstant = FunctionRandomConstant<RandImpl, NameRandConstant>;
-
-
 }

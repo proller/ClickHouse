@@ -15,7 +15,6 @@
 
 namespace DB
 {
-
 struct Limits;
 
 
@@ -64,10 +63,16 @@ struct Limits;
 class Join
 {
 public:
-	Join(const Names & key_names_left_, const Names & key_names_right_,
-		 const Limits & limits, ASTTableJoin::Kind kind_, ASTTableJoin::Strictness strictness_);
+	Join(const Names & key_names_left_,
+		const Names & key_names_right_,
+		const Limits & limits,
+		ASTTableJoin::Kind kind_,
+		ASTTableJoin::Strictness strictness_);
 
-	bool empty() { return type == Type::EMPTY; }
+	bool empty()
+	{
+		return type == Type::EMPTY;
+	}
 
 	/** Передать информацию о структуре блока.
 	  * Следует обязательно вызвать до вызовов insertFromBlock.
@@ -85,8 +90,14 @@ public:
 
 	/** Запомнить тотальные значения для последующего использования.
 	  */
-	void setTotals(const Block & block) { totals = block; }
-	bool hasTotals() const { return totals; };
+	void setTotals(const Block & block)
+	{
+		totals = block;
+	}
+	bool hasTotals() const
+	{
+		return totals;
+	};
 
 	void joinTotals(Block & block) const;
 
@@ -101,7 +112,10 @@ public:
 	/// Считает суммарный размер в байтах буфферов всех Join'ов + размер string_pool'а
 	size_t getTotalByteCount() const;
 
-	ASTTableJoin::Kind getKind() const { return kind; }
+	ASTTableJoin::Kind getKind() const
+	{
+		return kind;
+	}
 
 
 	/// Ссылка на строку в блоке.
@@ -110,8 +124,12 @@ public:
 		const Block * block;
 		size_t row_num;
 
-		RowRef() {}
-		RowRef(const Block * block_, size_t row_num_) : block(block_), row_num(row_num_) {}
+		RowRef()
+		{
+		}
+		RowRef(const Block * block_, size_t row_num_) : block(block_), row_num(row_num_)
+		{
+		}
 	};
 
 	/// Односвязный список ссылок на строки.
@@ -119,8 +137,12 @@ public:
 	{
 		RowRefList * next = nullptr;
 
-		RowRefList() {}
-		RowRefList(const Block * block_, size_t row_num_) : RowRef(block_, row_num_) {}
+		RowRefList()
+		{
+		}
+		RowRefList(const Block * block_, size_t row_num_) : RowRef(block_, row_num_)
+		{
+		}
 	};
 
 
@@ -137,8 +159,14 @@ public:
 		mutable bool used = false;
 		using Base::Base;
 		using Base_t = Base;
-		void setUsed() const { used = true; }	/// Может выполняться из разных потоков.
-		bool getUsed() const { return used; }
+		void setUsed() const
+		{
+			used = true;
+		} /// Может выполняться из разных потоков.
+		bool getUsed() const
+		{
+			return used;
+		}
 	};
 
 	template <typename Base>
@@ -146,8 +174,13 @@ public:
 	{
 		using Base::Base;
 		using Base_t = Base;
-		void setUsed() const {}
-		bool getUsed() const { return true; }
+		void setUsed() const
+		{
+		}
+		bool getUsed() const
+		{
+			return true;
+		}
 	};
 
 
@@ -194,10 +227,10 @@ private:
 	  */
 	BlocksList blocks;
 
-	MapsAny maps_any;			/// Для ANY LEFT|INNER JOIN
-	MapsAll maps_all;			/// Для ALL LEFT|INNER JOIN
-	MapsAnyFull maps_any_full;	/// Для ANY RIGHT|FULL JOIN
-	MapsAllFull maps_all_full;	/// Для ALL RIGHT|FULL JOIN
+	MapsAny maps_any; /// Для ANY LEFT|INNER JOIN
+	MapsAll maps_all; /// Для ALL LEFT|INNER JOIN
+	MapsAnyFull maps_any_full; /// Для ANY RIGHT|FULL JOIN
+	MapsAllFull maps_all_full; /// Для ALL RIGHT|FULL JOIN
 
 	/// Дополнительные данные - строки, а также продолжения односвязных списков строк.
 	Arena pool;
@@ -258,6 +291,4 @@ private:
 
 using JoinPtr = std::shared_ptr<Join>;
 using Joins = std::vector<JoinPtr>;
-
-
 }

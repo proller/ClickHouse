@@ -1,43 +1,42 @@
 #pragma once
 
-#include <boost/program_options.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/program_options.hpp>
+#include <Poco/Net/HTMLForm.h>
+#include <Poco/Net/MessageHeader.h>
+#include <Poco/Net/PartHandler.h>
+#include <DB/Client/Connection.h>
+#include <DB/Common/HTMLForm.h>
 #include <DB/DataStreams/AsynchronousBlockInputStream.h>
 #include <DB/DataTypes/DataTypeFactory.h>
-#include <DB/Interpreters/Context.h>
-#include <DB/IO/copyData.h>
-#include <DB/IO/ReadBufferFromIStream.h>
 #include <DB/IO/ReadBufferFromFile.h>
+#include <DB/IO/ReadBufferFromIStream.h>
+#include <DB/IO/copyData.h>
+#include <DB/Interpreters/Context.h>
 #include <DB/Storages/StorageMemory.h>
-#include <DB/Client/Connection.h>
-#include <Poco/Net/HTMLForm.h>
-#include <Poco/Net/PartHandler.h>
-#include <Poco/Net/MessageHeader.h>
-#include <DB/Common/HTMLForm.h>
 
 
 namespace DB
 {
-
 /// Базовый класс содержащий основную информацию о внешней таблице и
 /// основные функции для извлечения этой информации из текстовых полей.
 class BaseExternalTable
 {
 public:
-	std::string file; 		/// Файл с данными или '-' если stdin
-	std::string name; 		/// Имя таблицы
-	std::string format; 	/// Название формата хранения данных
+	std::string file; /// Файл с данными или '-' если stdin
+	std::string name; /// Имя таблицы
+	std::string format; /// Название формата хранения данных
 
 	/// Описание структуры таблицы: (имя столбца, имя типа данных)
-	std::vector<std::pair<std::string, std::string> > structure;
+	std::vector<std::pair<std::string, std::string>> structure;
 
 	std::unique_ptr<ReadBuffer> read_buffer;
 	Block sample_block;
 
-	virtual ~BaseExternalTable() {};
+	virtual ~BaseExternalTable(){};
 
 	/// Инициализировать read_buffer в зависимости от источника данных. По умолчанию не делает ничего.
-	virtual void initReadBuffer() {};
+	virtual void initReadBuffer(){};
 
 	/// Инициализировать sample_block по структуре таблицы сохраненной в structure
 	virtual void initSampleBlock(const Context & context)
@@ -59,8 +58,9 @@ public:
 	{
 		initReadBuffer();
 		initSampleBlock(context);
-		ExternalTableData res = std::make_pair(std::make_shared<AsynchronousBlockInputStream>(context.getInputFormat(
-			format, *read_buffer, sample_block, DEFAULT_BLOCK_SIZE)), name);
+		ExternalTableData res = std::make_pair(
+			std::make_shared<AsynchronousBlockInputStream>(context.getInputFormat(format, *read_buffer, sample_block, DEFAULT_BLOCK_SIZE)),
+			name);
 		return res;
 	}
 
@@ -164,7 +164,9 @@ class ExternalTablesHandler : public Poco::Net::PartHandler, BaseExternalTable
 public:
 	std::vector<std::string> names;
 
-	ExternalTablesHandler(Context & context_, Poco::Net::NameValueCollection params_) : context(context_), params(params_) { }
+	ExternalTablesHandler(Context & context_, Poco::Net::NameValueCollection params_) : context(context_), params(params_)
+	{
+	}
 
 	void handlePart(const Poco::Net::MessageHeader & header, std::istream & stream)
 	{
@@ -185,7 +187,11 @@ public:
 		else if (params.has(name + "_types"))
 			parseStructureFromTypesField(params.get(name + "_types"));
 		else
-			throw Exception("Neither structure nor types have not been provided for external table " + name + ". Use fields " + name + "_structure or " + name + "_types to do so.", ErrorCodes::BAD_ARGUMENTS);
+			throw Exception("Neither structure nor types have not been provided for external table " + name + ". Use fields " + name
+					+ "_structure or "
+					+ name
+					+ "_types to do so.",
+				ErrorCodes::BAD_ARGUMENTS);
 
 		ExternalTableData data = getData(context);
 
@@ -198,7 +204,7 @@ public:
 		/// Записываем данные
 		data.first->readPrefix();
 		output->writePrefix();
-		while(Block block = data.first->read())
+		while (Block block = data.first->read())
 			output->write(block);
 		data.first->readSuffix();
 		output->writeSuffix();
@@ -212,6 +218,4 @@ private:
 	Context & context;
 	Poco::Net::NameValueCollection params;
 };
-
-
 }
