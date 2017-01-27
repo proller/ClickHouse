@@ -41,6 +41,7 @@
 #include <DB/Storages/System/StorageSystemClusters.h>
 #include <DB/Storages/System/StorageSystemMetrics.h>
 #include <DB/Storages/System/StorageSystemAsynchronousMetrics.h>
+#include <DB/Storages/System/StorageSystemBuildOptions.h>
 #include <DB/Storages/StorageReplicatedMergeTree.h>
 #include <DB/Storages/MergeTree/ReshardingWorker.h>
 #include <DB/Databases/DatabaseOrdinary.h>
@@ -233,10 +234,9 @@ int Server::main(const std::vector<std::string> & args)
 			rlim.rlim_cur = config().getUInt("max_open_files", rlim.rlim_max);
 			int rc = setrlimit(RLIMIT_NOFILE, &rlim);
 			if (rc != 0)
-				//throwFromErrno(std::string("Cannot setrlimit (tried rlim_cur = ") + std::to_string(rlim.rlim_cur) + "). Try to specify max_open_files according to your system limits");
-				throw DB::Exception(std::string("Cannot setrlimit (tried rlim_cur = ") + std::to_string(rlim.rlim_cur) + "). Try to specify max_open_files according to your system limits. error: " + strerror(errno));
-
-			LOG_DEBUG(log, "Set rlimit on number of file descriptors to " << rlim.rlim_cur << " (was " << old << ").");
+				LOG_WARNING(log, std::string("Cannot setrlimit (tried rlim_cur = ") + std::to_string(rlim.rlim_cur) + "). Try to specify max_open_files according to your system limits. error: " + strerror(errno));
+			else
+				LOG_DEBUG(log, "Set rlimit on number of file descriptors to " << rlim.rlim_cur << " (was " << old << ").");
 		}
 	}
 
@@ -367,6 +367,7 @@ int Server::main(const std::vector<std::string> & args)
 	system_database->attachTable("columns",   	StorageSystemColumns::create("columns"));
 	system_database->attachTable("functions", 	StorageSystemFunctions::create("functions"));
 	system_database->attachTable("clusters", 	StorageSystemClusters::create("clusters", *global_context));
+	system_database->attachTable("build_options", 	StorageSystemBuildOptions::create("build_options"));
 
 	if (has_zookeeper)
 		system_database->attachTable("zookeeper", StorageSystemZooKeeper::create("zookeeper"));
