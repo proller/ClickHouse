@@ -776,7 +776,7 @@ There is official JDBC driver for ClickHouse. See <a href="https://github.com/ya
 
 ==Third-party client libraries==
 
-There exist third-party client libraries for Python (<a href="https://github.com/Infinidat/infi.clickhouse_orm">1</a>, <a href="https://github.com/cloudflare/sqlalchemy-clickhouse">2</a>), PHP (<a href="https://github.com/8bitov/clickhouse-php-client">1</a>, <a href="https://github.com/SevaCode/PhpClickHouseClient">2</a>, <a href="https://github.com/smi2/phpClickHouse">3</a>), Go (<a href="https://github.com/kshvakov/clickhouse/">1</a>, <a href="https://github.com/roistat/go-clickhouse">2</a>), Node.js (<a href="https://github.com/TimonKK/clickhouse">1</a>, <a href="https://github.com/apla/node-clickhouse">2</a>), Perl (<a href="https://github.com/elcamlost/perl-DBD-ClickHouse">1</a>, <a href="https://metacpan.org/release/HTTP-ClickHouse">2</a>, <a href="https://metacpan.org/release/AnyEvent-ClickHouse">3</a>), Ruby (<a href="https://github.com/archan937/clickhouse">1</a>), R (<a href="https://github.com/hannesmuehleisen/clickhouse-r">1</a>).
+There exist third-party client libraries for Python (<a href="https://github.com/Infinidat/infi.clickhouse_orm">1</a>, <a href="https://github.com/cloudflare/sqlalchemy-clickhouse">2</a>), PHP (<a href="https://github.com/8bitov/clickhouse-php-client">1</a>, <a href="https://github.com/SevaCode/PhpClickHouseClient">2</a>, <a href="https://github.com/smi2/phpClickHouse">3</a>), Go (<a href="https://github.com/kshvakov/clickhouse/">1</a>, <a href="https://github.com/roistat/go-clickhouse">2</a>), Node.js (<a href="https://github.com/TimonKK/clickhouse">1</a>, <a href="https://github.com/apla/node-clickhouse">2</a>), Perl (<a href="https://github.com/elcamlost/perl-DBD-ClickHouse">1</a>, <a href="https://metacpan.org/release/HTTP-ClickHouse">2</a>, <a href="https://metacpan.org/release/AnyEvent-ClickHouse">3</a>), Ruby (<a href="https://github.com/archan937/clickhouse">1</a>), R (<a href="https://github.com/hannesmuehleisen/clickhouse-r">1</a>), .NET (<a href="https://github.com/killwort/ClickHouse-Net">1</a>).
 
 Libraries was not tested by us. Ordering is arbitrary.
 
@@ -2168,12 +2168,6 @@ Example:
 
 The columns to the left and right of the %%IN%% operator should have the same type.
 
-Exception: If there is an array to the left of IN, it checks that at least one array item belongs to the data set.
-For example, %%[1, 2, 3] IN (3, 4, 5)%% returns 1. This is somewhat illogical, but it is convenient for implementing certain Yandex.Metrica functionality.
-
-If there is an array to the left of NOT IN, it checks that at least one array item does not belong to the data set.
-For example, %%[1, 2, 3] NOT IN (3, 4, 5)%% returns 1. This is completely illogical, so don&#39;t rely on this behavior. We recommend using higher-order functions instead. Example: <span class="inline-example">arrayAll(x -> x IN (3, 4, 5), [1, 2, 3])</span> returns 0 - it checks whether all the array items belong to the data set.
-
 The IN operator and subquery may occur in any part of the query, including in aggregate functions and lambda functions.
 Example:
 
@@ -2292,6 +2286,19 @@ You can put an asterisk in any part of a query instead of an expression. When th
 - In subqueries (since columns that aren&#39;t needed for the external query are excluded from subqueries).
 In all other cases, we don&#39;t recommend using the asterisk, since it only gives you the drawbacks of a columnar DBMS instead of the advantages.
 
+===KILL QUERY===
+%%KILL QUERY WHERE &lt;where expression to SELECT FROM system.processes query&gt; [SYNC|ASYNC|TEST] [FORMAT format]%%
+Tries to finish currently executing queries.
+Queries to be finished are selected from %%system.processes%% table according to expression after WHERE term.
+
+Examples:
+%%KILL QUERY WHERE query_id='2-857d-4a57-9ee0-327da5d60a90'%%
+Finishes all queries with specified %%query_id%%.
+
+%%KILL QUERY WHERE user='username' SYNC%%
+Synchronously finishes all queries of user %%username%%.
+
+Readonly users can kill only own queries.
 
 </div>
 <div class="island">
@@ -5741,30 +5748,6 @@ Example: %%regionHierarchy(toUInt32(213)) = [213,1,3,225,10001,10000]%%.
 Accepts a UInt32 number - the region ID from the Yandex geobase. A string with the name of the language can be passed as a second argument. Supported languages are: ru, en, ua, uk, by, kz, tr. If the second argument is omitted, the language &#39;ru&#39; is used. If the language is not supported, an exception is thrown. Returns a string - the name of the region in the corresponding language. If the region with the specified ID doesn&#39;t exist, an empty string is returned.
 
 &#39;ua&#39; and &#39;uk&#39; mean the same thing - Ukrainian.
-
-===OSToRoot===
-
-Accepts a UInt8 number - the ID of the operating system from the Yandex.Metrica dictionary. If any OS matches the passed number, it returns a UInt8 number - the ID of the corresponding root OS (for example, it converts Windows Vista to Windows). Otherwise, returns 0.
-
-===OSIn(lhs, rhs)===
-
-Checks whether the &#39;lhs&#39; operating system belongs to the &#39;rhs&#39; operating system.
-
-===OSHierarchy===
-
-Accepts a UInt8 number - the ID of the operating system from the Yandex.Metrica dictionary. Returns an array with a hierarchy of operating systems. Similar to the &#39;regionHierarchy&#39; function.
-
-===SEToRoot===
-
-Accepts a UInt8 number - the ID of the search engine from the Yandex.Metrica dictionary. If any search engine matches the passed number, it returns a UInt8 number - the ID of the corresponding root search engine (for example, it converts Yandex.Images to Yandex). Otherwise, returns 0.
-
-===SEIn(lhs, rhs)===
-
-Checks whether the &#39;lhs&#39; search engine belongs to the &#39;rhs&#39; search engine.
-
-===SEHierarchy===
-
-Accepts a UInt8 number - the ID of the search engine from the Yandex.Metrica dictionary. Returns an array with a hierarchy of search engines. Similar to the &#39;regionHierarchy&#39; function.
 
 
 ==Functions for working with external dictionaries==
