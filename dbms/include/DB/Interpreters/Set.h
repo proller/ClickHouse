@@ -3,6 +3,7 @@
 #include <Poco/RWLock.h>
 #include <DB/Columns/ColumnArray.h>
 #include <DB/Columns/ColumnConst.h>
+#include <DB/Columns/ColumnNullable.h>
 #include <DB/DataStreams/IBlockInputStream.h>
 #include <DB/Interpreters/Limits.h>
 #include <DB/Interpreters/SetVariants.h>
@@ -55,8 +56,6 @@ public:
 
 	size_t getTotalRowCount() const { return data.getTotalRowCount(); }
 	size_t getTotalByteCount() const { return data.getTotalByteCount(); }
-
-	using ConstNullMapPtr = const PaddedPODArray<UInt8> *;
 
 private:
 	Sizes key_sizes;

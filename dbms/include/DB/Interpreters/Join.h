@@ -12,6 +12,7 @@
 
 #include <DB/Columns/ColumnString.h>
 #include <DB/Columns/ColumnFixedString.h>
+#include <DB/Columns/ColumnNullable.h>
 
 #include <DB/DataStreams/IBlockInputStream.h>
 
@@ -162,47 +163,53 @@ struct JoinKeyGetterHashed
 struct Limits;
 
 
-/** Структура данных для реализации JOIN-а.
-  * По сути, хэш-таблица: ключи -> строки присоединяемой таблицы.
-  * Исключение - CROSS JOIN, где вместо хэш-таблицы просто набор блоков без ключей.
+/** Data structure for implementation of JOIN.
+  * It is just a hash table: keys -> rows of joined ("right") table.
+  * Additionally, CROSS JOIN is supported: instead of hash table, it use just set of blocks without keys.
   *
-  * JOIN-ы бывают девяти типов: ANY/ALL × LEFT/INNER/RIGHT/FULL, а также CROSS.
+  * JOIN-s could be of nine types: ANY/ALL × LEFT/INNER/RIGHT/FULL, and also CROSS.
   *
-  * Если указано ANY - выбрать из "правой" таблицы только одну, первую попавшуюся строку, даже если там более одной соответствующей строки.
-  * Если указано ALL - обычный вариант JOIN-а, при котором строки могут размножаться по числу соответствующих строк "правой" таблицы.
-  * Вариант ANY работает более оптимально.
+  * If ANY is specified - then select only one row from the "right" table, (first encountered row), even if there was more matching rows.
+  * If ALL is specified - usual JOIN, when rows are multiplied by number of matching rows from the "right" table.
+  * ANY is more efficient.
   *
-  * Если указано INNER - оставить только строки, для которых есть хотя бы одна строка "правой" таблицы.
-  * Если указано LEFT - в случае, если в "правой" таблице нет соответствующей строки, заполнить её значениями "по-умолчанию".
-  * Если указано RIGHT - выполнить так же, как INNER, запоминая те строки из правой таблицы, которые были присоединены,
-  *  в конце добавить строки из правой таблицы, которые не были присоединены, подставив в качестве значений для левой таблицы, значения "по-умолчанию".
-  * Если указано FULL - выполнить так же, как LEFT, запоминая те строки из правой таблицы, которые были присоединены,
-  *  в конце добавить строки из правой таблицы, которые не были присоединены, подставив в качестве значений для левой таблицы, значения "по-умолчанию".
+  * If INNER is specified - leave only rows that have matching rows from "right" table.
+  * If LEFT is specified - in case when there is no matching row in "right" table, fill it with default values instead.
+  * If RIGHT is specified - first process as INNER, but track what rows from the right table was joined,
+  *  and at the end, add rows from right table that was not joined and substitute default values for columns of left table.
+  * If FULL is specified - first process as LEFT, but track what rows from the right table was joined,
+  *  and at the end, add rows from right table that was not joined and substitute default values for columns of left table.
   *
-  * То есть, LEFT и RIGHT JOIN-ы не являются симметричными с точки зрения реализации.
+  * Thus, LEFT and RIGHT JOINs are not symmetric in terms of implementation.
   *
-  * Все соединения делаются по равенству кортежа столбцов "ключей" (эквисоединение).
-  * Неравенства и прочие условия не поддерживаются.
+  * All JOINs (except CROSS) are done by equality condition on keys (equijoin).
+  * Non-equality and other conditions are not supported.
   *
-  * Реализация такая:
+  * Implementation:
   *
-  * 1. "Правая" таблица засовывается в хэш-таблицу в оперативке.
-  * Она имеет вид keys -> row в случае ANY или keys -> [rows...] в случае ALL.
-  * Это делается в функции insertFromBlock.
+  * 1. Build hash table in memory from "right" table.
+  * This hash table is in form of keys -> row in case of ANY or keys -> [rows...] in case of ALL.
+  * This is done in insertFromBlock method.
   *
-  * 2. При обработке "левой" таблицы, присоединяем к ней данные из сформированной хэш-таблицы.
-  * Это делается в функции joinBlock.
+  * 2. Process "left" table and join corresponding rows from "right" table by lookups in the map.
+  * This is done in joinBlock methods.
   *
-  * В случае ANY LEFT JOIN - формируем новые столбцы с найденной строкой или значениями по-умолчанию.
-  * Самый простой вариант. Количество строк при JOIN-е не меняется.
+  * In case of ANY LEFT JOIN - form new columns with found values or default values.
+  * This is the most simple. Number of rows in left table does not change.
   *
-  * В случае ANY INNER JOIN - формируем новые столбцы с найденной строкой;
-  *  а также заполняем фильтр - для каких строк значения не нашлось.
-  * После чего, фильтруем столбцы "левой" таблицы.
+  * In case of ANY INNER JOIN - form new columns with found values,
+  *  and also build a filter - in what rows nothing was found.
+  * Then filter columns of "left" table.
   *
-  * В случае ALL ... JOIN - формируем новые столбцы со всеми найденными строками;
-  *  а также заполняем массив offsets, описывающий, во сколько раз надо размножить строки "левой" таблицы.
-  * После чего, размножаем столбцы "левой" таблицы.
+  * In case of ALL ... JOIN - form new columns with all found rows,
+  *  and also fill 'offsets' array, describing how many times we need to replicate values of "left" table.
+  * Then replicate columns of "left" table.
+  *
+  * How Nullable keys are processed:
+  *
+  * NULLs never join to anything, even to each other.
+  * During building of map, we just skip keys with NULL value of any component.
+  * During joining, we simply treat rows with any NULLs in key as non joined.
   */
 class Join
 {
@@ -212,42 +219,43 @@ public:
 
 	bool empty() { return type == Type::EMPTY; }
 
-	/** Передать информацию о структуре блока.
-	  * Следует обязательно вызвать до вызовов insertFromBlock.
+	/** Set information about structure of right hand of JOIN (joined data).
+	  * You must call this method before subsequent calls to insertFromBlock.
 	  */
 	void setSampleBlock(const Block & block);
 
-	/** Добавить в отображение для соединения блок "правой" таблицы.
-	  * Возвращает false, если превышено какое-нибудь ограничение, и больше не нужно вставлять.
+	/** Add block of data from right hand of JOIN to the map.
+	  * Returns false, if some limit was exceeded and you should not insert more data.
 	  */
 	bool insertFromBlock(const Block & block);
 
-	/** Присоединить к блоку "левой" таблицы новые столбцы из сформированного отображения.
+	/** Join data from the map (that was previously built by calls to insertFromBlock) to the block with data from "left" table.
+	  * Could be called from different threads in parallel.
 	  */
 	void joinBlock(Block & block) const;
 
-	/** Запомнить тотальные значения для последующего использования.
+	/** Keep "totals" (separate part of dataset, see WITH TOTALS) to use later.
 	  */
 	void setTotals(const Block & block) { totals = block; }
 	bool hasTotals() const { return totals; };
 
 	void joinTotals(Block & block) const;
 
-	/** Для RIGHT и FULL JOIN-ов.
-	  * Поток, в котором значения по-умолчанию из левой таблицы соединены с неприсоединёнными ранее строками из правой таблицы.
-	  * Использовать только после того, как были сделаны все вызовы joinBlock.
+	/** For RIGHT and FULL JOINs.
+	  * A stream that will contain default values from left table, joined with rows from right table, that was not joined before.
+	  * Use only after all calls to joinBlock was done.
 	  */
 	BlockInputStreamPtr createStreamWithNonJoinedRows(Block & left_sample_block, size_t max_block_size) const;
 
-	/// Считает суммарное число ключей во всех Join'ах
+	/// Number of keys in all built JOIN maps.
 	size_t getTotalRowCount() const;
-	/// Считает суммарный размер в байтах буфферов всех Join'ов + размер string_pool'а
+	/// Sum size in bytes of all buffers, used for JOIN maps and for all memory pools.
 	size_t getTotalByteCount() const;
 
 	ASTTableJoin::Kind getKind() const { return kind; }
 
 
-	/// Ссылка на строку в блоке.
+	/// Reference to the row in block.
 	struct RowRef
 	{
 		const Block * block;
@@ -257,7 +265,7 @@ public:
 		RowRef(const Block * block_, size_t row_num_) : block(block_), row_num(row_num_) {}
 	};
 
-	/// Односвязный список ссылок на строки.
+	/// Single linked list of references to rows. Used for ALL JOINs (non-unique JOINs)
 	struct RowRefList : RowRef
 	{
 		RowRefList * next = nullptr;
@@ -267,9 +275,9 @@ public:
 	};
 
 
-	/** Добавляет или не добавляет флаг - был ли элемент использован.
-	  * Для реализации RIGHT и FULL JOIN-ов.
-	  * NOTE: Можно сохранять флаг в один из бит указателя block или номера row_num.
+	/** Depending on template parameter, adds or doesn't add a flag, that element was used (row was joined).
+	  * For implementation of RIGHT and FULL JOINs.
+	  * NOTE: It is possible to store the flag in one bit of pointer to block or row_num. It seems not reasonable, because memory saving is minimal.
 	  */
 	template <bool enable, typename Base>
 	struct WithUsedFlag;
@@ -277,10 +285,10 @@ public:
 	template <typename Base>
 	struct WithUsedFlag<true, Base> : Base
 	{
-		mutable bool used = false;
+		mutable std::atomic<bool> used {};
 		using Base::Base;
 		using Base_t = Base;
-		void setUsed() const { used = true; }	/// Может выполняться из разных потоков.
+		void setUsed() const { used.store(true, std::memory_order_relaxed); }	/// Could be set simultaneously from different threads.
 		bool getUsed() const { return used; }
 	};
 
@@ -294,6 +302,7 @@ public:
 	};
 
 
+	/// Different types of keys for maps.
 	#define APPLY_FOR_JOIN_VARIANTS(M) \
 		M(key8) 			\
 		M(key16) 			\
@@ -315,7 +324,7 @@ public:
 	};
 
 
-	/** Разные структуры данных, которые могут использоваться для соединения.
+	/** Different data structures, that are used to perform JOIN.
 	  */
 	template <typename Mapped>
 	struct MapsTemplate
@@ -342,21 +351,21 @@ private:
 	ASTTableJoin::Kind kind;
 	ASTTableJoin::Strictness strictness;
 
-	/// Имена ключевых столбцов (по которым производится соединение) в "левой" таблице.
+	/// Names of key columns (columns for equi-JOIN) in "left" table.
 	const Names key_names_left;
-	/// Имена ключевых столбцов (по которым производится соединение) в "правой" таблице.
+	/// Names of key columns (columns for equi-JOIN) in "right" table.
 	const Names key_names_right;
 
-	/** Блоки данных таблицы, с которой идёт соединение.
+	/** Blocks of "right" table.
 	  */
 	BlocksList blocks;
 
-	MapsAny maps_any;			/// Для ANY LEFT|INNER JOIN
-	MapsAll maps_all;			/// Для ALL LEFT|INNER JOIN
-	MapsAnyFull maps_any_full;	/// Для ANY RIGHT|FULL JOIN
-	MapsAllFull maps_all_full;	/// Для ALL RIGHT|FULL JOIN
+	MapsAny maps_any;			/// For ANY LEFT|INNER JOIN
+	MapsAll maps_all;			/// For ALL LEFT|INNER JOIN
+	MapsAnyFull maps_any_full;	/// For ANY RIGHT|FULL JOIN
+	MapsAllFull maps_all_full;	/// For ALL RIGHT|FULL JOIN
 
-	/// Дополнительные данные - строки, а также продолжения односвязных списков строк.
+	/// Additional data - strings for string keys and continuation elements of single-linked lists of references to rows.
 	Arena pool;
 
 private:
@@ -364,7 +373,6 @@ private:
 
 	static Type chooseMethod(const ConstColumnPlainPtrs & key_columns, Sizes & key_sizes);
 
-	bool keys_fit_128_bits;
 	Sizes key_sizes;
 
 	Block sample_block_with_columns_to_add;
@@ -372,45 +380,31 @@ private:
 
 	Poco::Logger * log;
 
-	/// Ограничения на максимальный размер множества
+	/// Limits for maximum map size.
 	size_t max_rows;
 	size_t max_bytes;
 	OverflowMode overflow_mode;
 
 	Block totals;
 
-	/** Защищает работу с состоянием в функциях insertFromBlock и joinBlock.
-	  * Эти функции могут вызываться одновременно из разных потоков только при использовании StorageJoin,
-	  *  и StorageJoin вызывает только эти две функции.
-	  * Поэтому остальные функции не защинены.
+	/** Protect state for concurrent use in insertFromBlock and joinBlock.
+	  * Note that these methods could be called simultaneously only while use of StorageJoin,
+	  *  and StorageJoin only calls these two methods.
+	  * That's why another methods are not guarded.
 	  */
 	mutable Poco::RWLock rwlock;
 
 	void init(Type type_);
 
-	template <ASTTableJoin::Strictness STRICTNESS, typename Maps>
-	void insertFromBlockImpl(Maps & maps, size_t rows, const ConstColumnPlainPtrs & key_columns, size_t keys_size, Block * stored_block);
+	bool checkSizeLimits() const;
 
-	template <ASTTableJoin::Strictness STRICTNESS, typename KeyGetter, typename Map>
-	void insertFromBlockImplType(Map & map, size_t rows, const ConstColumnPlainPtrs & key_columns, size_t keys_size, Block * stored_block);
+	/// Throw an exception if blocks have different types of key columns.
+	void checkTypesOfKeys(const Block & block_left, const Block & block_right) const;
 
 	template <ASTTableJoin::Kind KIND, ASTTableJoin::Strictness STRICTNESS, typename Maps>
 	void joinBlockImpl(Block & block, const Maps & maps) const;
 
-	template <ASTTableJoin::Kind KIND, ASTTableJoin::Strictness STRICTNESS, typename KeyGetter, typename Map>
-	void joinBlockImplType(
-		Block & block, const Map & map, size_t rows, const ConstColumnPlainPtrs & key_columns, size_t keys_size,
-		size_t num_columns_to_add, size_t num_columns_to_skip, ColumnPlainPtrs & added_columns,
-		std::unique_ptr<IColumn::Filter> & filter,
-		IColumn::Offset_t & current_offset, std::unique_ptr<IColumn::Offsets_t> & offsets_to_replicate) const;
-
 	void joinBlockImplCross(Block & block) const;
-
-	/// Проверить не превышены ли допустимые размеры множества
-	bool checkSizeLimits() const;
-
-	/// Кинуть исключение, если в блоках не совпадают типы ключей.
-	void checkTypesOfKeys(const Block & block_left, const Block & block_right) const;
 };
 
 using JoinPtr = std::shared_ptr<Join>;
