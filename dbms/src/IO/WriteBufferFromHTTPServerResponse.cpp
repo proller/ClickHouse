@@ -28,6 +28,7 @@ void WriteBufferFromHTTPServerResponse::startSendHeaders()
             response.set("Access-Control-Allow-Origin", "*");
 
         setResponseDefaultHeaders(response);
+std::cerr << "startsend hdrs!\n";
 
 #if POCO_CLICKHOUSE_PATCH
         std::tie(response_header_ostr, response_body_ostr) = response.beginSend();
@@ -60,6 +61,7 @@ void WriteBufferFromHTTPServerResponse::nextImpl()
     {
         std::lock_guard<std::mutex> lock(mutex);
 
+//std::cerr << "WriteBufferFromHTTPServerResponse::nextImpl st\n";
         startSendHeaders();
 
         if (!out)
@@ -140,6 +142,7 @@ void WriteBufferFromHTTPServerResponse::onProgress(const Progress & progress)
     {
         progress_watch.restart();
 
+std::cerr << "WriteBufferFromHTTPServerResponse::onppp st\n";
         /// Send all common headers before our special progress headers.
         startSendHeaders();
 
@@ -166,6 +169,7 @@ void WriteBufferFromHTTPServerResponse::finalize()
     {
         /// If no remaining data, just send headers.
         std::lock_guard<std::mutex> lock(mutex);
+std::cerr << "WriteBufferFromHTTPServerResponse::fin st\n";
         startSendHeaders();
         finishSendHeaders();
     }

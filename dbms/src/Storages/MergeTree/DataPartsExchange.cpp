@@ -4,6 +4,8 @@
 #include <DB/Common/NetException.h>
 #include <DB/IO/ReadBufferFromHTTP.h>
 #include <Poco/File.h>
+#include <ext/scope_guard.hpp>
+#include <Poco/Net/HTTPServerResponse.h>
 
 
 namespace CurrentMetrics
@@ -19,6 +21,7 @@ namespace ErrorCodes
 {
     extern const int ABORTED;
     extern const int BAD_SIZE_OF_FILE_IN_DATA_PART;
+    extern const int TOO_MUCH_SIMULTANEOUS_QUERIES;
 }
 
 namespace DataPartsExchange
@@ -39,7 +42,7 @@ std::string Service::getId(const std::string & node_id) const
     return getEndpointId(node_id);
 }
 
-void Service::processQuery(const Poco::Net::HTMLForm & params, ReadBuffer & body, WriteBuffer & out)
+void Service::processQuery(const Poco::Net::HTMLForm & params, ReadBuffer & body, WriteBuffer & out, Poco::Net::HTTPServerResponse & response)
 {
     if (is_cancelled)
         throw Exception("Transferring part to replica was cancelled", ErrorCodes::ABORTED);
@@ -48,6 +51,35 @@ void Service::processQuery(const Poco::Net::HTMLForm & params, ReadBuffer & body
     String shard_str = params.get("shard");
 
     bool send_sharded_part = !shard_str.empty();
+
+
+    static std::atomic_uint total_fetches {0};
+std::cerr << " total_fetches?=" << total_fetches 
+//<< " " << StackTrace().toString()
+<<"\n";
+    if (total_fetches >= 1)
+//      1 /*data.settings.replicated_max_parallel_fetches*/)
+    {
+std::cerr << " total_fetches==" << total_fetches 
+<< StackTrace().toString()
+<< "\n";
+
+//throw Exception("Too much fetches", ErrorCodes::TOO_MUCH_SIMULTANEOUS_QUERIES);
+
+			response.setStatus(std::to_string(509));
+			response.setChunkedTransferEncoding(false);
+			response.setContentLength(0);
+			response.setReason("toooooooooooooooooomanyfeeeeeeethesssssssss");
+			if (!response.sent())
+				response.send();
+
+
+        return;
+    }
+    ++total_fetches;
+    SCOPE_EXIT({--total_fetches;});
+
+
 
     LOG_TRACE(log, "Sending part " << part_name);
 

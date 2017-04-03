@@ -5,6 +5,7 @@
 #include <DB/IO/HashingWriteBuffer.h>
 #include <DB/IO/copyData.h>
 
+//namespace Poco { namespace Net {class HTTPServerResponse; } }
 
 namespace DB
 {
@@ -24,7 +25,7 @@ public:
     Service & operator=(const Service &) = delete;
 
     std::string getId(const std::string & node_id) const override;
-    void processQuery(const Poco::Net::HTMLForm & params, ReadBuffer & body, WriteBuffer & out) override;
+    void processQuery(const Poco::Net::HTMLForm & params, ReadBuffer & body, WriteBuffer & out, Poco::Net::HTTPServerResponse & response) override;
 
 private:
     MergeTreeData::DataPartPtr findPart(const String & name);
