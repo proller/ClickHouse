@@ -61,6 +61,7 @@ void Service::processQuery(const Poco::Net::HTMLForm & params, ReadBuffer & body
 	
 	std::cerr << " total_fetches?=" << total_fetches  << "/" << data.settings.replicated_max_parallel_sends
 //<< " " << StackTrace().toString()
+ << "table=" << data.getTableName()
 <<"\n";
 
     if (total_fetches >= data.settings.replicated_max_parallel_sends)
