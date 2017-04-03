@@ -54,11 +54,17 @@ void Service::processQuery(const Poco::Net::HTMLForm & params, ReadBuffer & body
 
 
     static std::atomic_uint total_fetches {0};
-std::cerr << " total_fetches?=" << total_fetches 
+
+	for (auto & p : params) {
+	std::cerr << "p " << p.first << "=" << p.second << "\n";
+	}
+	
+	std::cerr << " total_fetches?=" << total_fetches  << "/" << data.settings.replicated_max_parallel_sends
 //<< " " << StackTrace().toString()
 <<"\n";
-// replicated_max_parallel_sends
-    if (total_fetches >= 1)
+
+    if (total_fetches >= data.settings.replicated_max_parallel_sends)
+
 //      1 /*data.settings.replicated_max_parallel_fetches*/)
     {
 std::cerr << " total_fetches==" << total_fetches 
