@@ -2,25 +2,25 @@
 #include <iomanip>
 #include <vector>
 
-#include <DB/Common/Stopwatch.h>
+#include <Common/Stopwatch.h>
 
 //#define DBMS_HASH_MAP_COUNT_COLLISIONS
 #define DBMS_HASH_MAP_DEBUG_RESIZES
 
-#include <DB/Core/Types.h>
-#include <DB/IO/ReadBufferFromFile.h>
-#include <DB/IO/ReadHelpers.h>
-#include <DB/IO/CompressedReadBuffer.h>
-#include <DB/Core/StringRef.h>
-#include <DB/Common/HashTable/HashMap.h>
-#include <DB/Interpreters/AggregationCommon.h>
+#include <Core/Types.h>
+#include <IO/ReadBufferFromFile.h>
+#include <IO/ReadHelpers.h>
+#include <IO/CompressedReadBuffer.h>
+#include <Core/StringRef.h>
+#include <Common/HashTable/HashMap.h>
+#include <Interpreters/AggregationCommon.h>
 
 #if __SSE4_1__
     #include <smmintrin.h>
 #endif
 
 
-/** Выполнять так:
+/** Do this:
 for file in MobilePhoneModel PageCharset Params URLDomain UTMSource Referer URL Title; do
  for size in 30000 100000 300000 1000000 5000000; do
   echo
@@ -207,7 +207,7 @@ inline bool compare_byIntSSE(const char * p1, const char * p2)
 
 inline bool compare_byFloatSSE(const char * p1, const char * p2)
 {
-    return !_mm_movemask_ps(_mm_cmpneq_ps(                    /// Кажется, некорректно при сравнении субнормальных float-ов.
+    return !_mm_movemask_ps(_mm_cmpneq_ps(                    /// Looks like incorrect while comparing subnormal floats.
         _mm_loadu_ps(reinterpret_cast<const float *>(p1)),
         _mm_loadu_ps(reinterpret_cast<const float *>(p2))));
 }

@@ -1,14 +1,14 @@
-#include <DB/Core/Block.h>
-#include <DB/Columns/ColumnConst.h>
-#include <DB/Columns/ColumnsNumber.h>
-#include <DB/Parsers/IAST.h>
-#include <DB/Parsers/ASTIdentifier.h>
-#include <DB/Parsers/ASTLiteral.h>
-#include <DB/DataTypes/DataTypesNumber.h>
-#include <DB/Interpreters/Context.h>
-#include <DB/Interpreters/ExpressionAnalyzer.h>
-#include <DB/Interpreters/ExpressionActions.h>
-#include <DB/Interpreters/evaluateConstantExpression.h>
+#include <Core/Block.h>
+#include <Columns/ColumnConst.h>
+#include <Columns/ColumnsNumber.h>
+#include <Parsers/IAST.h>
+#include <Parsers/ASTIdentifier.h>
+#include <Parsers/ASTLiteral.h>
+#include <DataTypes/DataTypesNumber.h>
+#include <Interpreters/Context.h>
+#include <Interpreters/ExpressionAnalyzer.h>
+#include <Interpreters/ExpressionActions.h>
+#include <Interpreters/evaluateConstantExpression.h>
 
 
 namespace DB
@@ -26,7 +26,7 @@ std::pair<Field, std::shared_ptr<IDataType>> evaluateConstantExpression(std::sha
     ExpressionActionsPtr expr_for_constant_folding = ExpressionAnalyzer(
         node, context, nullptr, NamesAndTypesList{{ "_dummy", std::make_shared<DataTypeUInt8>() }}).getConstActions();
 
-    /// В блоке должен быть хотя бы один столбец, чтобы у него было известно число строк.
+    /// There must be at least one column in the block so that it knows the number of rows.
     Block block_with_constants{{ std::make_shared<ColumnConstUInt8>(1, 0), std::make_shared<DataTypeUInt8>(), "_dummy" }};
 
     expr_for_constant_folding->execute(block_with_constants);

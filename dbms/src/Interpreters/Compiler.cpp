@@ -1,18 +1,18 @@
 #include <Poco/DirectoryIterator.h>
-#include <DB/Common/ClickHouseRevision.h>
+#include <Common/ClickHouseRevision.h>
 #include <ext/unlock_guard.hpp>
 
-#include <DB/Common/SipHash.h>
-#include <DB/Common/ShellCommand.h>
-#include <DB/Common/StringUtils.h>
+#include <Common/SipHash.h>
+#include <Common/ShellCommand.h>
+#include <Common/StringUtils.h>
 
-#include <DB/IO/Operators.h>
-#include <DB/IO/ReadBufferFromString.h>
-#include <DB/IO/ReadBufferFromFileDescriptor.h>
-#include <DB/IO/WriteBufferFromFile.h>
+#include <IO/Operators.h>
+#include <IO/ReadBufferFromString.h>
+#include <IO/ReadBufferFromFileDescriptor.h>
+#include <IO/WriteBufferFromFile.h>
 
-#include <DB/Interpreters/Compiler.h>
-#include <DB/Interpreters/config_compile.h>
+#include <Interpreters/Compiler.h>
+#include <Interpreters/config_compile.h>
 
 
 namespace ProfileEvents
@@ -64,7 +64,7 @@ static Compiler::HashedKey getHash(const std::string & key)
 }
 
 
-/// Без расширения .so.
+/// Without .so extension.
 static std::string hashedKeyToFileName(Compiler::HashedKey hashed_key)
 {
     std::string file_name;
@@ -91,19 +91,19 @@ SharedLibraryPtr Compiler::getOrCount(
 
     UInt32 count = ++counts[hashed_key];
 
-    /// Есть готовая открытая библиотека? Или, если библиотека в процессе компиляции, там будет nullptr.
+    /// Is there a ready open library? Or, if the library is in the process of compiling, there will be nullptr.
     Libraries::iterator it = libraries.find(hashed_key);
     if (libraries.end() != it)
     {
         if (!it->second)
             LOG_INFO(log, "Library " << hashedKeyToFileName(hashed_key) << " is already compiling or compilation was failed.");
 
-        /// TODO В этом случае, после окончания компиляции, не будет дёрнут колбэк.
+        /// TODO In this case, after the compilation is finished, the callback will not be called.
 
         return it->second;
     }
 
-    /// Есть файл с библиотекой, оставшийся от предыдущего запуска?
+    /// Is there a file with the library left over from the previous launch?
     std::string file_name = hashedKeyToFileName(hashed_key);
     if (files.count(file_name))
     {
@@ -115,15 +115,15 @@ SharedLibraryPtr Compiler::getOrCount(
         return lib;
     }
 
-    /// Достигнуто ли min_count_to_compile?
+    /// Has min_count_to_compile been reached?
     if (count >= min_count_to_compile)
     {
-        /// Значение min_count_to_compile, равное нулю, обозначает необходимость синхронной компиляции.
+        /// The min_count_to_compile value of zero indicates the need for synchronous compilation.
 
-        /// Есть ли свободные потоки.
+        /// Are there any free threads?
         if (min_count_to_compile == 0 || pool.active() < pool.size())
         {
-            /// Обозначает, что библиотека в процессе компиляции.
+            /// Indicates that the library is in the process of compiling.
             libraries[hashed_key] = nullptr;
 
             LOG_INFO(log, "Compiling code " << file_name << ", key: " << key);
@@ -181,7 +181,7 @@ void Compiler::compile(
 
     std::stringstream command;
 
-    /// Слегка неудобно.
+    /// Slightly uncomfortable.
     command <<
         "LD_LIBRARY_PATH=" PATH_SHARE "/clickhouse/bin/"
         " " INTERNAL_COMPILER_EXECUTABLE
@@ -196,7 +196,7 @@ void Compiler::compile(
         " -isystem " INTERNAL_COMPILER_HEADERS_ROOT "/usr/include/x86_64-linux-gnu/c++/*/"
         " -isystem " INTERNAL_COMPILER_HEADERS_ROOT "/usr/local/lib/clang/*/include/"
 #endif
-        " -I " INTERNAL_COMPILER_HEADERS "/dbms/include/"
+        " -I " INTERNAL_COMPILER_HEADERS "/dbms/src/"
         " -I " INTERNAL_COMPILER_HEADERS "/contrib/libcityhash/include/"
         " -I " INTERNAL_DOUBLE_CONVERSION_INCLUDE_DIR
         " -I " INTERNAL_Poco_Foundation_INCLUDE_DIR
@@ -219,7 +219,7 @@ void Compiler::compile(
     if (!compile_result.empty())
         throw Exception("Cannot compile code:\n\n" + command.str() + "\n\n" + compile_result);
 
-    /// Если до этого была ошибка, то файл с кодом остаётся для возможности просмотра.
+    /// If there was an error before, the file with the code remains for viewing.
     Poco::File(cpp_file_path).remove();
 
     Poco::File(so_tmp_file_path).renameTo(so_file_path);

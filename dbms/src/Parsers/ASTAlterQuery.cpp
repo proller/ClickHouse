@@ -1,4 +1,4 @@
-#include <DB/Parsers/ASTAlterQuery.h>
+#include <Parsers/ASTAlterQuery.h>
 #include <mysqlxx/Manip.h>
 
 namespace DB
@@ -48,7 +48,7 @@ ASTAlterQuery::ASTAlterQuery(StringRange range_) : IAST(range_)
 {
 }
 
-/** Получить текст, который идентифицирует этот элемент. */
+/** Get the text that identifies this element. */
 String ASTAlterQuery::getID() const
 {
     return ("AlterQuery_" + database + "_" + table);

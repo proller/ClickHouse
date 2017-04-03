@@ -1,8 +1,8 @@
-#include <DB/Interpreters/ExternalDictionaries.h>
-#include <DB/Dictionaries/DictionaryFactory.h>
-#include <DB/Dictionaries/DictionaryStructure.h>
-#include <DB/Dictionaries/IDictionarySource.h>
-#include <DB/Common/StringUtils.h>
+#include <Interpreters/ExternalDictionaries.h>
+#include <Dictionaries/DictionaryFactory.h>
+#include <Dictionaries/DictionaryStructure.h>
+#include <Dictionaries/IDictionarySource.h>
+#include <Common/StringUtils.h>
 #include <ext/scope_guard.hpp>
 #include <Poco/Util/Application.h>
 #include <Poco/Glob.h>
@@ -139,7 +139,7 @@ void ExternalDictionaries::reloadImpl(const bool throw_on_error)
 
         try
         {
-            /// Если словарь не удалось ни разу загрузить или даже не удалось инициализировать из конфига.
+            /// If the dictionary failed to load or even failed to initialize from the config.
             if (!dictionary.second.dict)
                 continue;
 
@@ -250,7 +250,7 @@ void ExternalDictionaries::reloadFromFile(const std::string & config_path, const
 
                     auto dict_ptr = DictionaryFactory::instance().create(name, *config, key, context);
 
-                    /// Если словарь не удалось загрузить.
+                    /// If the dictionary could not be loaded.
                     if (const auto exception_ptr = dict_ptr->getCreationException())
                     {
                         const auto failed_dict_it = failed_dictionaries.find(name);
@@ -308,8 +308,8 @@ void ExternalDictionaries::reloadFromFile(const std::string & config_path, const
                 {
                     if (!name.empty())
                     {
-                        /// Если для словаря не удалось загрузить данные или даже не удалось инициализировать из конфига.
-                        /// - всё-равно вставляем информацию в dictionaries, с нулевым указателем dict.
+                        /// If the dictionary could not load data or even failed to initialize from the config.
+                        /// - all the same we insert information into the `dictionaries`, with the zero pointer `dict`.
 
                         const std::lock_guard<std::mutex> lock{dictionaries_mutex};
 

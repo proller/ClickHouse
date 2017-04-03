@@ -1,14 +1,14 @@
 #include <memory>
-#include <DB/Parsers/ASTSelectQuery.h>
-#include <DB/Parsers/ASTIdentifier.h>
-#include <DB/Parsers/IParserBase.h>
-#include <DB/Parsers/CommonParsers.h>
-#include <DB/Parsers/ExpressionElementParsers.h>
-#include <DB/Parsers/ExpressionListParsers.h>
-#include <DB/Parsers/ParserSetQuery.h>
-#include <DB/Parsers/ParserSampleRatio.h>
-#include <DB/Parsers/ParserSelectQuery.h>
-#include <DB/Parsers/ParserTablesInSelectQuery.h>
+#include <Parsers/ASTSelectQuery.h>
+#include <Parsers/ASTIdentifier.h>
+#include <Parsers/IParserBase.h>
+#include <Parsers/CommonParsers.h>
+#include <Parsers/ExpressionElementParsers.h>
+#include <Parsers/ExpressionListParsers.h>
+#include <Parsers/ParserSetQuery.h>
+#include <Parsers/ParserSampleRatio.h>
+#include <Parsers/ParserSelectQuery.h>
+#include <Parsers/ParserTablesInSelectQuery.h>
 
 #include <iostream>
 
@@ -71,7 +71,7 @@ bool ParserSelectQuery::parseImpl(Pos & pos, Pos end, ASTPtr & node, Pos & max_p
         ws.ignore(pos, end);
     }
 
-    /// FROM database.table или FROM table или FROM (subquery) или FROM tableFunction
+    /// FROM database.table or FROM table or FROM (subquery) or FROM tableFunction
     if (s_from.ignore(pos, end, max_parsed_pos, expected))
     {
         ws.ignore(pos, end);

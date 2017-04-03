@@ -1,8 +1,8 @@
-#include <DB/Interpreters/ClusterProxy/DescribeQueryConstructor.h>
-#include <DB/Interpreters/InterpreterDescribeQuery.h>
-#include <DB/DataStreams/MaterializingBlockInputStream.h>
-#include <DB/DataStreams/BlockExtraInfoInputStream.h>
-#include <DB/DataStreams/RemoteBlockInputStream.h>
+#include <Interpreters/ClusterProxy/DescribeQueryConstructor.h>
+#include <Interpreters/InterpreterDescribeQuery.h>
+#include <DataStreams/MaterializingBlockInputStream.h>
+#include <DataStreams/BlockExtraInfoInputStream.h>
+#include <DataStreams/RemoteBlockInputStream.h>
 
 namespace DB
 {
@@ -33,10 +33,10 @@ BlockInputStreamPtr DescribeQueryConstructor::createLocal(ASTPtr query_ast, cons
     InterpreterDescribeQuery interpreter{query_ast, context};
     BlockInputStreamPtr stream = interpreter.execute().in;
 
-    /** Материализация нужна, так как с удалённых серверов константы приходят материализованными.
-    * Если этого не делать, то в разных потоках будут получаться разные типы (Const и не-Const) столбцов,
-    * а это не разрешено, так как весь код исходит из допущения, что в потоке блоков все типы одинаковые.
-    */
+    /** Materialization is needed, since from remote servers the constants come materialized.
+      * If you do not do this, different types (Const and non-Const) columns will be produced in different threads,
+      * And this is not allowed, since all code is based on the assumption that in the block stream all types are the same.
+      */
     BlockInputStreamPtr materialized_stream = std::make_shared<MaterializingBlockInputStream>(stream);
 
     return std::make_shared<BlockExtraInfoInputStream>(materialized_stream, toBlockExtraInfo(address));

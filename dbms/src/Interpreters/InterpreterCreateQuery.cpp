@@ -3,40 +3,40 @@
 #include <Poco/File.h>
 #include <Poco/FileStream.h>
 
-#include <DB/Common/escapeForFileName.h>
+#include <Common/escapeForFileName.h>
 
-#include <DB/IO/WriteBufferFromString.h>
-#include <DB/IO/WriteBufferFromFile.h>
-#include <DB/IO/WriteHelpers.h>
+#include <IO/WriteBufferFromString.h>
+#include <IO/WriteBufferFromFile.h>
+#include <IO/WriteHelpers.h>
 
-#include <DB/DataStreams/NullAndDoCopyBlockInputStream.h>
-#include <DB/DataStreams/ProhibitColumnsBlockOutputStream.h>
-#include <DB/DataStreams/MaterializingBlockOutputStream.h>
-#include <DB/DataStreams/AddingDefaultBlockOutputStream.h>
-#include <DB/DataStreams/PushingToViewsBlockOutputStream.h>
+#include <DataStreams/NullAndDoCopyBlockInputStream.h>
+#include <DataStreams/ProhibitColumnsBlockOutputStream.h>
+#include <DataStreams/MaterializingBlockOutputStream.h>
+#include <DataStreams/AddingDefaultBlockOutputStream.h>
+#include <DataStreams/PushingToViewsBlockOutputStream.h>
 
-#include <DB/Parsers/ASTCreateQuery.h>
-#include <DB/Parsers/ASTNameTypePair.h>
-#include <DB/Parsers/ASTColumnDeclaration.h>
-#include <DB/Parsers/formatAST.h>
-#include <DB/Parsers/ASTIdentifier.h>
-#include <DB/Parsers/ASTLiteral.h>
-#include <DB/Parsers/ParserCreateQuery.h>
-#include <DB/Parsers/parseQuery.h>
+#include <Parsers/ASTCreateQuery.h>
+#include <Parsers/ASTNameTypePair.h>
+#include <Parsers/ASTColumnDeclaration.h>
+#include <Parsers/formatAST.h>
+#include <Parsers/ASTIdentifier.h>
+#include <Parsers/ASTLiteral.h>
+#include <Parsers/ParserCreateQuery.h>
+#include <Parsers/parseQuery.h>
 
-#include <DB/Storages/StorageFactory.h>
-#include <DB/Storages/StorageLog.h>
+#include <Storages/StorageFactory.h>
+#include <Storages/StorageLog.h>
 
-#include <DB/Interpreters/InterpreterSelectQuery.h>
-#include <DB/Interpreters/InterpreterCreateQuery.h>
-#include <DB/Interpreters/ExpressionAnalyzer.h>
+#include <Interpreters/InterpreterSelectQuery.h>
+#include <Interpreters/InterpreterCreateQuery.h>
+#include <Interpreters/ExpressionAnalyzer.h>
 
-#include <DB/DataTypes/DataTypesNumber.h>
-#include <DB/DataTypes/DataTypeNested.h>
-#include <DB/DataTypes/DataTypeFactory.h>
+#include <DataTypes/DataTypesNumber.h>
+#include <DataTypes/DataTypeNested.h>
+#include <DataTypes/DataTypeFactory.h>
 
-#include <DB/Databases/DatabaseFactory.h>
-#include <DB/Databases/IDatabase.h>
+#include <Databases/DatabaseFactory.h>
+#include <Databases/IDatabase.h>
 
 
 namespace DB
@@ -151,7 +151,7 @@ void InterpreterCreateQuery::createDatabase(ASTCreateQuery & create)
 
 using ColumnsAndDefaults = std::pair<NamesAndTypesList, ColumnDefaults>;
 
-/// AST в список столбцов с типами. Столбцы типа Nested развернуты в список настоящих столбцов.
+/// AST to the list of columns with types. Columns of Nested type are expanded into a list of real columns.
 static ColumnsAndDefaults parseColumns(
     ASTPtr expression_list, const Context & context)
 {
@@ -436,7 +436,7 @@ String InterpreterCreateQuery::setEngine(
     }
     else if (!create.as_table.empty())
     {
-        /// NOTE Получение структуры у таблицы, указанной в AS делается не атомарно с созданием таблицы.
+        /// NOTE Getting the structure from the table specified in the AS is done not atomically with the creation of the table.
 
         String as_database_name = create.as_database.empty() ? context.getCurrentDatabase() : create.as_database;
         String as_table_name = create.as_table;
@@ -472,7 +472,7 @@ BlockIO InterpreterCreateQuery::createTable(ASTCreateQuery & create)
 
     std::unique_ptr<InterpreterSelectQuery> interpreter_select;
     Block as_select_sample;
-    /// Для таблиц типа view, чтобы получить столбцы, может понадобиться sample_block.
+    /// For `view` type tables, you may need `sample_block` to get the columns.
     if (create.select && (!create.attach || (!create.columns && (create.is_view || create.is_materialized_view))))
     {
         interpreter_select = std::make_unique<InterpreterSelectQuery>(create.select, context);
@@ -493,7 +493,7 @@ BlockIO InterpreterCreateQuery::createTable(ASTCreateQuery & create)
     /// Set and retrieve list of columns.
     ColumnsInfo columns = setColumns(create, as_select_sample, as_storage);
 
-    /// Выбор нужного движка таблицы
+    /// Select the desired table engine
     String storage_name = setEngine(create, as_storage);
 
     StoragePtr res;
@@ -505,10 +505,10 @@ BlockIO InterpreterCreateQuery::createTable(ASTCreateQuery & create)
         {
             context.assertDatabaseExists(database_name);
 
-            /** Если таблица уже существует, и в запросе указано IF NOT EXISTS,
-              *  то мы разрешаем конкуррентные запросы CREATE (которые ничего не делают).
-              * Иначе конкуррентные запросы на создание таблицы, если таблицы не существует,
-              *  могут кидать исключение, даже если указано IF NOT EXISTS.
+            /** If the table already exists, and the request specifies IF NOT EXISTS,
+              *  then we allow concurrent CREATE queries (which do nothing).
+              * Otherwise, concurrent queries for creating a table, if the table does not exist,
+              *  can throw an exception, even if IF NOT EXISTS is specified.
               */
             guard = context.getDDLGuardIfTableDoesntExist(database_name, table_name,
                 "Table " + database_name + "." + table_name + " is creating or attaching right now");
@@ -533,12 +533,12 @@ BlockIO InterpreterCreateQuery::createTable(ASTCreateQuery & create)
             context.getDatabase(database_name)->createTable(table_name, res, query_ptr, storage_name, context.getSettingsRef());
     }
 
-    /// Если запрос CREATE SELECT, то вставим в таблицу данные
+    /// If the CREATE SELECT query is, insert the data into the table
     if (create.select && storage_name != "View" && (storage_name != "MaterializedView" || create.is_populate))
     {
         auto table_lock = res->lockStructure(true);
 
-        /// Также см. InterpreterInsertQuery.
+        /// Also see InterpreterInsertQuery.
         BlockOutputStreamPtr out =
             std::make_shared<ProhibitColumnsBlockOutputStream>(
                 std::make_shared<AddingDefaultBlockOutputStream>(

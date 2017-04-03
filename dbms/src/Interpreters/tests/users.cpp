@@ -1,5 +1,5 @@
-#include <DB/Common/ConfigProcessor.h>
-#include <DB/Interpreters/Users.h>
+#include <Common/ConfigProcessor.h>
+#include <Interpreters/Users.h>
 
 #include <boost/filesystem.hpp>
 
@@ -35,7 +35,7 @@ struct TestDescriptor
 
 using TestSet = std::vector<TestDescriptor>;
 
-/// Описание тестов.
+/// Tests description.
 
 TestSet test_set =
 {

@@ -1,9 +1,9 @@
-#include <DB/DataStreams/RemoteBlockInputStream.h>
-#include <DB/DataStreams/OneBlockInputStream.h>
-#include <DB/Common/VirtualColumnUtils.h>
-#include <DB/Common/NetException.h>
-#include <DB/Interpreters/Context.h>
-#include <DB/Storages/IStorage.h>
+#include <DataStreams/RemoteBlockInputStream.h>
+#include <DataStreams/OneBlockInputStream.h>
+#include <Common/VirtualColumnUtils.h>
+#include <Common/NetException.h>
+#include <Interpreters/Context.h>
+#include <Storages/IStorage.h>
 
 
 namespace DB
@@ -203,7 +203,6 @@ void RemoteBlockInputStream::readSuffixImpl()
     /** If one of:
       * - nothing started to do;
       * - received all packets before EndOfStream;
-      * - получили с одной реплики эксепшен;
       * - received exception from one replica;
       * - received an unknown packet from one replica;
       * then you do not need to read anything.

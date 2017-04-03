@@ -1,13 +1,13 @@
-#include <DB/Columns/ColumnsNumber.h>
-#include <DB/Columns/ColumnString.h>
-#include <DB/Columns/ColumnFixedString.h>
-#include <DB/DataTypes/DataTypesNumber.h>
-#include <DB/DataTypes/DataTypeDateTime.h>
-#include <DB/DataTypes/DataTypeDate.h>
-#include <DB/DataTypes/DataTypeString.h>
-#include <DB/DataTypes/DataTypeFixedString.h>
-#include <DB/Interpreters/QueryLog.h>
-#include <DB/Common/ClickHouseRevision.h>
+#include <Columns/ColumnsNumber.h>
+#include <Columns/ColumnString.h>
+#include <Columns/ColumnFixedString.h>
+#include <DataTypes/DataTypesNumber.h>
+#include <DataTypes/DataTypeDateTime.h>
+#include <DataTypes/DataTypeDate.h>
+#include <DataTypes/DataTypeString.h>
+#include <DataTypes/DataTypeFixedString.h>
+#include <Interpreters/QueryLog.h>
+#include <Common/ClickHouseRevision.h>
 #include <Poco/Net/IPAddress.h>
 #include <array>
 
@@ -80,7 +80,7 @@ static std::array<char, 16> IPv6ToBinary(const Poco::Net::IPAddress & address)
     }
     else if (Poco::Net::IPAddress::IPv4 == address.family())
     {
-        /// Преобразуем в IPv6-mapped адрес.
+        /// Convert to IPv6-mapped address.
         memset(res.data(), 0, 10);
         res[10] = '\xFF';
         res[11] = '\xFF';

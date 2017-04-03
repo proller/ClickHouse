@@ -1,9 +1,9 @@
-#include <DB/IO/WriteBufferFromOStream.h>
-#include <DB/IO/WriteBufferFromString.h>
-#include <DB/IO/WriteHelpers.h>
-#include <DB/IO/Operators.h>
-#include <DB/Common/SipHash.h>
-#include <DB/Parsers/IAST.h>
+#include <IO/WriteBufferFromOStream.h>
+#include <IO/WriteBufferFromString.h>
+#include <IO/WriteHelpers.h>
+#include <IO/Operators.h>
+#include <Common/SipHash.h>
+#include <Parsers/IAST.h>
 
 
 namespace DB
@@ -24,7 +24,7 @@ const char * IAST::hilite_alias         = "\033[0;32m";
 const char * IAST::hilite_none             = "\033[0m";
 
 
-/// Квотировать идентификатор обратными кавычками, если это требуется.
+/// Quota the identifier with backquotes, if required.
 String backQuoteIfNeed(const String & x)
 {
     String res(x.size(), '\0');

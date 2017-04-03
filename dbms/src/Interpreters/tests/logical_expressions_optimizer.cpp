@@ -1,10 +1,10 @@
-#include <DB/Parsers/ASTSelectQuery.h>
-#include <DB/Parsers/ParserSelectQuery.h>
-#include <DB/Parsers/parseQuery.h>
-#include <DB/Parsers/queryToString.h>
-#include <DB/Interpreters/LogicalExpressionsOptimizer.h>
-#include <DB/Interpreters/Settings.h>
-#include <DB/Common/typeid_cast.h>
+#include <Parsers/ASTSelectQuery.h>
+#include <Parsers/ParserSelectQuery.h>
+#include <Parsers/parseQuery.h>
+#include <Parsers/queryToString.h>
+#include <Interpreters/LogicalExpressionsOptimizer.h>
+#include <Interpreters/Settings.h>
+#include <Common/typeid_cast.h>
 
 #include <iostream>
 #include <vector>
@@ -34,7 +34,7 @@ void reorder(DB::IAST * ast);
 
 void run()
 {
-    /// NOTE: Запросы не всегда реалистичные, однако лишь синтаксис нас интересует.
+    /// NOTE: Queries are not always realistic, but we are only interested in the syntax.
     TestEntries entries =
     {
         {
@@ -204,7 +204,7 @@ TestResult check(const TestEntry & entry)
 {
     try
     {
-        /// Парсить и оптимизировать входящий запрос.
+        /// Parse and optimize the incoming query.
         DB::ASTPtr ast_input;
         if (!parse(ast_input, entry.input))
             return TestResult(false, "parse error");
@@ -217,12 +217,12 @@ TestResult check(const TestEntry & entry)
         DB::LogicalExpressionsOptimizer optimizer(select_query, settings);
         optimizer.perform();
 
-        /// Парсить ожидаемый результат.
+        /// Parse the expected result.
         DB::ASTPtr ast_expected;
         if (!parse(ast_expected, entry.expected_output))
             return TestResult(false, "parse error");
 
-        /// Сравнить оптимизированный запрос и ожидаемый результат.
+        /// Compare the optimized query and the expected result.
         bool res = equals(ast_input, ast_expected);
         std::string output = DB::queryToString(ast_input);
 

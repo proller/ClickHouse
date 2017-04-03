@@ -1,15 +1,15 @@
-#include <DB/Parsers/ASTIdentifier.h>
-#include <DB/Parsers/ASTLiteral.h>
-#include <DB/Parsers/ASTSelectQuery.h>
-#include <DB/Parsers/ASTInsertQuery.h>
+#include <Parsers/ASTIdentifier.h>
+#include <Parsers/ASTLiteral.h>
+#include <Parsers/ASTSelectQuery.h>
+#include <Parsers/ASTInsertQuery.h>
 
-#include <DB/Parsers/CommonParsers.h>
-#include <DB/Parsers/ExpressionElementParsers.h>
-#include <DB/Parsers/ExpressionListParsers.h>
-#include <DB/Parsers/ParserSelectQuery.h>
-#include <DB/Parsers/ParserInsertQuery.h>
+#include <Parsers/CommonParsers.h>
+#include <Parsers/ExpressionElementParsers.h>
+#include <Parsers/ExpressionListParsers.h>
+#include <Parsers/ParserSelectQuery.h>
+#include <Parsers/ParserInsertQuery.h>
 
-#include <DB/Common/typeid_cast.h>
+#include <Common/typeid_cast.h>
 
 
 namespace DB
@@ -46,7 +46,7 @@ bool ParserInsertQuery::parseImpl(Pos & pos, Pos end, ASTPtr & node, Pos & max_p
     ASTPtr format;
     ASTPtr select;
     ASTPtr id;
-    /// Данные для вставки
+    /// Insertion data
     const char * data = nullptr;
 
     ws.ignore(pos, end);
@@ -88,7 +88,7 @@ bool ParserInsertQuery::parseImpl(Pos & pos, Pos end, ASTPtr & node, Pos & max_p
 
     ws.ignore(pos, end);
 
-    /// Есть ли список столбцов
+    /// Is there a list of columns
     if (s_lparen.ignore(pos, end, max_parsed_pos, expected))
     {
         ws.ignore(pos, end);
@@ -106,7 +106,7 @@ bool ParserInsertQuery::parseImpl(Pos & pos, Pos end, ASTPtr & node, Pos & max_p
 
     Pos before_select = pos;
 
-    /// VALUES или FORMAT или SELECT
+    /// VALUES or FORMAT or SELECT
     if (s_values.ignore(pos, end, max_parsed_pos, expected))
     {
         ws.ignore(pos, end);
@@ -120,7 +120,7 @@ bool ParserInsertQuery::parseImpl(Pos & pos, Pos end, ASTPtr & node, Pos & max_p
         if (!name_p.parse(pos, end, format, max_parsed_pos, expected))
             return false;
 
-        /// Данные начинаются после первого перевода строки, если такой есть, или после всех пробельных символов, иначе.
+        /// Data starts after the first newline, if there is one, or after all the whitespace characters, otherwise.
         ParserWhiteSpaceOrComments ws_without_nl(false);
 
         ws_without_nl.ignore(pos, end);

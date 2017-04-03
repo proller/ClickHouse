@@ -1,6 +1,6 @@
-#include <DB/Parsers/ASTIdentifier.h>
-#include <DB/IO/WriteBufferFromOStream.h>
-#include <DB/IO/WriteHelpers.h>
+#include <Parsers/ASTIdentifier.h>
+#include <IO/WriteBufferFromOStream.h>
+#include <IO/WriteHelpers.h>
 
 
 namespace DB
@@ -19,7 +19,7 @@ void ASTIdentifier::formatImplWithoutAlias(const FormatSettings & settings, Form
         settings.ostr << (settings.hilite ? hilite_none : "");
     };
 
-    /// Простой или составной идентификатор?
+    /// A simple or compound identifier?
 
     if (children.size() > 1)
     {

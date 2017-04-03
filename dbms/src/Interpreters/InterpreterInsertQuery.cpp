@@ -1,21 +1,21 @@
-#include <DB/IO/ConcatReadBuffer.h>
+#include <IO/ConcatReadBuffer.h>
 
-#include <DB/DataStreams/ProhibitColumnsBlockOutputStream.h>
-#include <DB/DataStreams/MaterializingBlockOutputStream.h>
-#include <DB/DataStreams/AddingDefaultBlockOutputStream.h>
-#include <DB/DataStreams/PushingToViewsBlockOutputStream.h>
-#include <DB/DataStreams/NullAndDoCopyBlockInputStream.h>
-#include <DB/DataStreams/SquashingBlockOutputStream.h>
-#include <DB/DataStreams/CountingBlockOutputStream.h>
-#include <DB/DataStreams/NullableAdapterBlockInputStream.h>
-#include <DB/DataStreams/copyData.h>
+#include <DataStreams/ProhibitColumnsBlockOutputStream.h>
+#include <DataStreams/MaterializingBlockOutputStream.h>
+#include <DataStreams/AddingDefaultBlockOutputStream.h>
+#include <DataStreams/PushingToViewsBlockOutputStream.h>
+#include <DataStreams/NullAndDoCopyBlockInputStream.h>
+#include <DataStreams/SquashingBlockOutputStream.h>
+#include <DataStreams/CountingBlockOutputStream.h>
+#include <DataStreams/NullableAdapterBlockInputStream.h>
+#include <DataStreams/copyData.h>
 
-#include <DB/Parsers/ASTInsertQuery.h>
-#include <DB/Parsers/ASTSelectQuery.h>
-#include <DB/Parsers/ASTIdentifier.h>
+#include <Parsers/ASTInsertQuery.h>
+#include <Parsers/ASTSelectQuery.h>
+#include <Parsers/ASTIdentifier.h>
 
-#include <DB/Interpreters/InterpreterSelectQuery.h>
-#include <DB/Interpreters/InterpreterInsertQuery.h>
+#include <Interpreters/InterpreterSelectQuery.h>
+#include <Interpreters/InterpreterInsertQuery.h>
 
 
 namespace ProfileEvents
@@ -43,7 +43,7 @@ StoragePtr InterpreterInsertQuery::getTable()
 {
     ASTInsertQuery & query = typeid_cast<ASTInsertQuery &>(*query_ptr);
 
-    /// В какую таблицу писать.
+    /// In what table to write.
     return context.getTable(query.database, query.table);
 }
 
@@ -51,19 +51,19 @@ Block InterpreterInsertQuery::getSampleBlock()
 {
     ASTInsertQuery & query = typeid_cast<ASTInsertQuery &>(*query_ptr);
 
-    /// Если в запросе не указана информация о столбцах
+    /// If the query does not include information about columns
     if (!query.columns)
         return getTable()->getSampleBlockNonMaterialized();
 
     Block table_sample = getTable()->getSampleBlock();
 
-    /// Формируем блок, основываясь на именах столбцов из запроса
+    /// Form the block based on the column names from the query
     Block res;
     for (const auto & identifier : query.columns->children)
     {
         std::string current_name = identifier->getColumnName();
 
-        /// В таблице нет столбца с таким именем
+        /// The table does not have a column with that name
         if (!table_sample.has(current_name))
             throw Exception("No such column " + current_name + " in table " + query.table, ErrorCodes::NO_SUCH_COLUMN_IN_TABLE);
 
@@ -87,7 +87,7 @@ BlockIO InterpreterInsertQuery::execute()
 
     NamesAndTypesListPtr required_columns = std::make_shared<NamesAndTypesList>(table->getColumnsList());
 
-    /// Создаем конвейер из нескольких стримов, в которые будем писать данные.
+    /// We create a pipeline of several streams, into which we will write data.
     BlockOutputStreamPtr out;
 
     out = std::make_shared<PushingToViewsBlockOutputStream>(query.database, query.table, context, query_ptr);
@@ -110,7 +110,7 @@ BlockIO InterpreterInsertQuery::execute()
     BlockIO res;
     res.out_sample = getSampleBlock();
 
-    /// Какой тип запроса: INSERT или INSERT SELECT?
+    /// What type of query: INSERT or INSERT SELECT?
     if (!query.select)
     {
         res.out = out;
