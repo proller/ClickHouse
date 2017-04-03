@@ -103,6 +103,7 @@ namespace ErrorCodes
     extern const int UNFINISHED;
     extern const int METADATA_MISMATCH;
     extern const int RESHARDING_NULLABLE_SHARDING_KEY;
+    extern const int RECEIVED_ERROR_TOO_MANY_REQUESTS;
 }
 
 
@@ -1417,12 +1418,24 @@ bool StorageReplicatedMergeTree::executeLogEntry(const LogEntry & entry)
                 }
             }
 
+try {
             if (!fetchPart(covering_part, zookeeper_path + "/replicas/" + replica, false, entry.quorum))
                 return false;
+} catch (const Exception & e) {
+            // no stacktrace
+            if (e.code() == ErrorCodes::RECEIVED_ERROR_TOO_MANY_REQUESTS)
+            {
+std::cerr << "just toooo many requests, will wait \n";
+                return false;
+            }
+            throw e;
+       }
+
 
             if (entry.type == LogEntry::MERGE_PARTS)
                 ProfileEvents::increment(ProfileEvents::ReplicatedPartFetchesOfMerged);
         }
+
         catch (...)
         {
             /** If you can not download the part you need for some merge, it's better not to try to get other parts for this merge,
@@ -2096,8 +2109,21 @@ bool StorageReplicatedMergeTree::fetchPart(const String & part_name, const Strin
 
     Stopwatch stopwatch;
 
-    MergeTreeData::MutableDataPartPtr part = fetcher.fetchPart(
-        part_name, replica_path, address.host, address.replication_port, to_detached);
+/*    try
+    {
+*/
+        MergeTreeData::MutableDataPartPtr part = fetcher.fetchPart(
+            part_name, replica_path, address.host, address.replication_port, to_detached);
+/*
+    } catch (const Exception & e) {
+        // no stacktrace
+        if (e.code() == ErrorCodes::RECEIVED_ERROR_TOO_MANY_REQUESTS)
+        {
+            return false;
+        }
+        throw e;
+    }
+*/
 
 
     if (!to_detached)

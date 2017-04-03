@@ -215,6 +215,8 @@ MergeTreeData::MutableDataPartPtr Fetcher::fetchPartImpl(
         {"compress", "false"}
     };
 
+std::cerr << "dpe fetch" << part_name <<  "\n"; // << StackTrace().toString() <<"\n";
+
     ReadBufferFromHTTP in(host, port, "", params);
 
     String full_part_name = String(to_detached ? "detached/" : "") + "tmp_" + part_name;
