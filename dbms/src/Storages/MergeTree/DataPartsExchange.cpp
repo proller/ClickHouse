@@ -57,6 +57,7 @@ void Service::processQuery(const Poco::Net::HTMLForm & params, ReadBuffer & body
 std::cerr << " total_fetches?=" << total_fetches 
 //<< " " << StackTrace().toString()
 <<"\n";
+// replicated_max_parallel_sends
     if (total_fetches >= 1)
 //      1 /*data.settings.replicated_max_parallel_fetches*/)
     {
@@ -65,14 +66,15 @@ std::cerr << " total_fetches==" << total_fetches
 << "\n";
 
 //throw Exception("Too much fetches", ErrorCodes::TOO_MUCH_SIMULTANEOUS_QUERIES);
-
 			response.setStatus(std::to_string(509));
 			response.setChunkedTransferEncoding(false);
-			response.setContentLength(0);
+			//!?ertertetresponse.setContentLength(0);
 			response.setReason("toooooooooooooooooomanyfeeeeeeethesssssssss");
-			if (!response.sent())
-				response.send();
+//out.finalize();
+			//if (!response.sent())
+			//	response.send();
 
+std::cerr << " responce sent. " << " \n";
 
         return;
     }

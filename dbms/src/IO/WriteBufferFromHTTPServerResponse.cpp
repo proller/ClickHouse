@@ -44,8 +44,10 @@ void WriteBufferFromHTTPServerResponse::finishSendHeaders()
         headers_finished_sending = true;
 
 #if POCO_CLICKHOUSE_PATCH
+std::cerr << __FILE__ ":" << __LINE__ << " response_header_ostr=" << response_header_ostr << "\n";
         /// Send end of headers delimiter.
-        *response_header_ostr << "\r\n" << std::flush;
+        if (response_header_ostr)
+            *response_header_ostr << "\r\n" << std::flush;
 #else
         /// Newline autosent by response.send()
         /// if nothing to send in body:
