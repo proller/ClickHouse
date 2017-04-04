@@ -53,23 +53,23 @@ void Service::processQuery(const Poco::Net::HTMLForm & params, ReadBuffer & body
     bool send_sharded_part = !shard_str.empty();
 
 
-    static std::atomic_uint total_fetches {0};
+    static std::atomic_uint total_sends {0};
 
 	for (auto & p : params) {
 	std::cerr << "p " << p.first << "=" << p.second << "\n";
 	}
 	
-	std::cerr << " total_fetches?=" << total_fetches  << "/" << data.settings.replicated_max_parallel_sends
+	std::cerr << " total_sends?=" << total_sends  << "/" << data.settings.replicated_max_parallel_sends
 //<< " " << StackTrace().toString()
  << "table=" << data.getTableName()
 <<"\n";
 
-    if (total_fetches >= data.settings.replicated_max_parallel_sends)
+    if (total_sends >= data.settings.replicated_max_parallel_sends)
 
 //      1 /*data.settings.replicated_max_parallel_fetches*/)
     {
-std::cerr << " total_fetches==" << total_fetches 
-<< StackTrace().toString()
+std::cerr << " total_sends==" << total_sends 
+//<< StackTrace().toString()
 << "\n";
 
 //throw Exception("Too much fetches", ErrorCodes::TOO_MUCH_SIMULTANEOUS_QUERIES);
@@ -85,9 +85,25 @@ std::cerr << " responce sent. " << " \n";
 
         return;
     }
-    ++total_fetches;
-    SCOPE_EXIT({--total_fetches;});
+    ++total_sends;
+    SCOPE_EXIT({--total_sends;});
 
+std::cerr << " table_sends?=" << data.current_table_sends 
+<< "/" << data.settings.replicated_max_parallel_sends_for_table
+ << " table=" << data.getTableName()
+<< "\n";
+
+    if (data.current_table_sends >= data.settings.replicated_max_parallel_sends_for_table)
+    {
+
+std::cerr << " table_sends==" << data.current_table_sends
+//<< StackTrace().toString()
+<< "\n";
+            return;
+    }
+
+    ++data.current_table_sends;
+    SCOPE_EXIT({--data.current_table_sends;});
 
 
     LOG_TRACE(log, "Sending part " << part_name);
