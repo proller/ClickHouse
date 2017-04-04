@@ -1426,6 +1426,7 @@ try {
             if (e.code() == ErrorCodes::RECEIVED_ERROR_TOO_MANY_REQUESTS)
             {
 std::cerr << "just toooo many requests, will wait \n";
+                entry.next_executing_time = time(0) + 10;
                 return false;
             }
             throw e;
@@ -1648,6 +1649,9 @@ bool StorageReplicatedMergeTree::queueTask()
 
     /// We will go to sleep if the processing fails and if we have already processed this record recently.
     bool need_sleep = !res && (entry->last_attempt_time - prev_attempt_time < 10);
+
+
+std::cerr << " elt=" << entry->last_attempt_time << " pa=" << prev_attempt_time << "\n";
 
     /// If there was no exception, you do not need to sleep.
     return !need_sleep;

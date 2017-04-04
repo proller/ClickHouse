@@ -456,11 +456,15 @@ bool ReplicatedMergeTreeQueue::shouldExecuteLogEntry(
 {
     /// mutex has already been captured. The function is called only from `selectEntryToProcess`.
 
-    if (entry.next_executing_time && entry.next_executing_time < time()) {
-        return false;
-    } else {
-        entry.next_executing_time = 0;
-    }
+        if (entry.next_executing_time) {
+            if (entry.next_executing_time < time(0)) {
+                //continue;
+                return false;
+            } else {
+                entry.next_executing_time = 0;
+            }
+        }
+
 
     if (entry.type == LogEntry::MERGE_PARTS || entry.type == LogEntry::GET_PART || entry.type == LogEntry::ATTACH_PART)
     {
@@ -562,6 +566,8 @@ ReplicatedMergeTreeQueue::CurrentlyExecuting::CurrentlyExecuting(ReplicatedMerge
     ++entry->num_tries;
     entry->last_attempt_time = time(0);
 
+std::cerr<< " entry tries=" << entry->num_tries << " last_attempt_time=" << entry->last_attempt_time << "\n";
+
     if (!queue.future_parts.insert(entry->new_part_name).second)
         throw Exception("Tagging already tagged future part " + entry->new_part_name + ". This is a bug.", ErrorCodes::LOGICAL_ERROR);
 }
@@ -588,6 +594,14 @@ ReplicatedMergeTreeQueue::SelectedEntry ReplicatedMergeTreeQueue::selectEntryToP
     {
         if ((*it)->currently_executing)
             continue;
+
+/*        if ((*it)->next_executing_time) {
+            if ((*it)->next_executing_time < time(0)) {
+                continue;
+            } else {
+                (*it)->next_executing_time = 0;
+            }
+        }*/
 
         if (shouldExecuteLogEntry(**it, (*it)->postpone_reason, merger, data))
         {

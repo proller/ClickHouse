@@ -85,6 +85,7 @@ struct ReplicatedMergeTreeLogEntryData
     size_t num_postponed = 0;            /// Количество раз, когда действие было отложено.
     String postpone_reason;                /// Причина, по которой действие было отложено, если оно отложено.
     time_t last_postpone_time = 0;        /// Время последнего раза, когда действие было отложено.
+    mutable time_t next_executing_time = 0;      /// defer executing to this time
 
     /// Время создания или время копирования из общего лога в очередь конкретной реплики.
     time_t create_time = 0;

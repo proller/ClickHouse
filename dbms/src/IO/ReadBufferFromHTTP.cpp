@@ -89,7 +89,7 @@ ReadBufferFromHTTP::ReadBufferFromHTTP(
 
     Poco::Net::HTTPResponse::HTTPStatus status = response.getStatus();
 
-std::cerr << "status recd=" << status << "\n";
+std::cerr << "status recd=" << status <<  " reason=" << response.getReason() <<"\n";
     if (status != Poco::Net::HTTPResponse::HTTP_OK)
     {
         std::stringstream error_message;
