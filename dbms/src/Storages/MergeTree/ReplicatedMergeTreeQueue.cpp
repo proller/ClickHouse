@@ -456,6 +456,12 @@ bool ReplicatedMergeTreeQueue::shouldExecuteLogEntry(
 {
     /// mutex has already been captured. The function is called only from `selectEntryToProcess`.
 
+    if (entry.next_executing_time && entry.next_executing_time < time()) {
+        return false;
+    } else {
+        entry.next_executing_time = 0;
+    }
+
     if (entry.type == LogEntry::MERGE_PARTS || entry.type == LogEntry::GET_PART || entry.type == LogEntry::ATTACH_PART)
     {
         /// Let's check if the same part is now being created by another action.
