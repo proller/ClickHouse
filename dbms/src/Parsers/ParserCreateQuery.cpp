@@ -208,6 +208,8 @@ bool ParserCreateQuery::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
     ASTPtr database;
     ASTPtr table;
     ASTPtr columns;
+    ASTPtr to_database;
+    ASTPtr to_table;
     ASTPtr storage;
     ASTPtr as_database;
     ASTPtr as_table;
@@ -254,6 +256,23 @@ bool ParserCreateQuery::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
                 return false;
         }
 
+        // Shortcut for ATTACH a previously detached table
+        if (attach && (!pos.isValid() || pos.get().type == TokenType::Semicolon))
+        {
+            auto query = std::make_shared<ASTCreateQuery>(StringRange(begin, pos));
+            node = query;
+
+            query->attach = attach;
+            query->if_not_exists = if_not_exists;
+
+            if (database)
+                query->database = typeid_cast<ASTIdentifier &>(*database).name;
+            if (table)
+                query->table = typeid_cast<ASTIdentifier &>(*table).name;
+
+            return true;
+        }
+
         /// List of columns.
         if (s_lparen.ignore(pos, expected))
         {
@@ -263,13 +282,12 @@ bool ParserCreateQuery::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
             if (!s_rparen.ignore(pos, expected))
                 return false;
 
-            if (!is_temporary && !storage_p.parse(pos, storage, expected))
+            if (!storage_p.parse(pos, storage, expected) && !is_temporary)
                 return false;
         }
         else
         {
-            if (!is_temporary)
-                storage_p.parse(pos, storage, expected);
+            storage_p.parse(pos, storage, expected);
 
             if (!s_as.ignore(pos, expected))
                 return false;
@@ -288,8 +306,7 @@ bool ParserCreateQuery::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
                 }
 
                 /// Optional - ENGINE can be specified.
-                if (!is_temporary)
-                    storage_p.parse(pos, storage, expected);
+                storage_p.parse(pos, storage, expected);
             }
         }
     }
@@ -343,6 +360,20 @@ bool ParserCreateQuery::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
                 return false;
         }
 
+        // TO [db.]table
+        if (ParserKeyword{"TO"}.ignore(pos, expected))
+        {
+            if (!name_p.parse(pos, to_table, expected))
+                return false;
+
+            if (s_dot.ignore(pos, expected))
+            {
+                to_database = to_table;
+                if (!name_p.parse(pos, to_table, expected))
+                    return false;
+            }
+        }
+
         /// Optional - a list of columns can be specified. It must fully comply with SELECT.
         if (s_lparen.ignore(pos, expected))
         {
@@ -353,7 +384,7 @@ bool ParserCreateQuery::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
                 return false;
         }
 
-        if (is_materialized_view)
+        if (is_materialized_view && !to_table)
         {
             /// Internal ENGINE for MATERIALIZED VIEW must be specified.
             if (!storage_p.parse(pos, storage, expected))
@@ -387,6 +418,11 @@ bool ParserCreateQuery::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
     if (table)
         query->table = typeid_cast<ASTIdentifier &>(*table).name;
     query->cluster = cluster_str;
+
+    if (to_database)
+        query->to_database = typeid_cast<ASTIdentifier &>(*to_database).name;
+    if (to_table)
+        query->to_table = typeid_cast<ASTIdentifier &>(*to_table).name;
 
     query->set(query->columns, columns);
     query->set(query->storage, storage);
