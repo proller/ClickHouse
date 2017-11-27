@@ -6,6 +6,8 @@ endif ()
 option (ENABLE_LIBTCMALLOC "Set to TRUE to enable libtcmalloc" ON)
 option (DEBUG_LIBTCMALLOC "Set to TRUE to use debug version of libtcmalloc" OFF)
 
+set (GPERFTOOLS_USE_CONFIGURE 1) # 0 is broken
+
 if (ENABLE_LIBTCMALLOC)
     if (NOT EXISTS "${ClickHouse_SOURCE_DIR}/contrib/gperftools/src/tcmalloc.h")
         message (WARNING "submodule contrib/gperftools is missing. to fix try run: \n git submodule update --init --recursive")
@@ -31,7 +33,9 @@ endif ()
 
 macro (target_include_gperftools target)
     if (USE_TCMALLOC)
-       add_dependencies (${target} gperftools)
+       if (GPERFTOOLS_USE_CONFIGURE)
+          add_dependencies (${target} gperftools)
+       endif ()
        target_include_directories (${target} BEFORE PRIVATE ${GPERFTOOLS_INCLUDE_DIR})
     endif ()
 endmacro ()
