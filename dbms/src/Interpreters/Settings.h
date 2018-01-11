@@ -75,9 +75,6 @@ struct Settings
     /** Number of threads performing background work for tables (for example, merging in merge tree). \
       * TODO: Now only applies when the server is started. You can make it dynamically variable. */ \
     M(SettingUInt64, background_pool_size, DBMS_DEFAULT_BACKGROUND_POOL_SIZE, "Number of threads performing background work for tables (for example, merging in merge tree).") \
-    /** Number of threads performing background tasks for replicated tables. \
-      * TODO: Now only applies when the server is started. You can make it dynamically variable. */ \
-    M(SettingUInt64, background_schedule_pool_size, DBMS_DEFAULT_BACKGROUND_POOL_SIZE, "Number of threads performing background tasks for replicated tables.") \
     \
     /** Sleep time for StorageDistributed DirectoryMonitors in case there is no work or exception has been thrown */ \
     M(SettingMilliseconds, distributed_directory_monitor_sleep_time_ms, DBMS_DISTRIBUTED_DIRECTORY_MONITOR_SLEEP_TIME_MS, "Sleep time for StorageDistributed DirectoryMonitors in case there is no work or exception has been thrown.") \
@@ -303,7 +300,11 @@ struct Settings
     /* Timeout for flushing data from streaming storages. */ \
     M(SettingMilliseconds, stream_flush_interval_ms, DEFAULT_QUERY_LOG_FLUSH_INTERVAL_MILLISECONDS, "Timeout for flushing data from streaming storages.") \
     /* Schema identifier (used by schema-based formats) */ \
-    M(SettingString, format_schema, "", "Schema identifier (used by schema-based formats)")
+    M(SettingString, format_schema, "", "Schema identifier (used by schema-based formats)") \
+    \
+    M(SettingSeconds, http_connection_timeout, DEFAULT_HTTP_READ_BUFFER_CONNECTION_TIMEOUT, "HTTP connection timeout.") \
+    M(SettingSeconds, http_send_timeout, DEFAULT_HTTP_READ_BUFFER_TIMEOUT, "HTTP send timeout") \
+    M(SettingSeconds, http_receive_timeout, DEFAULT_HTTP_READ_BUFFER_TIMEOUT, "HTTP receive timeout") \
 
 
     /// Possible limits for query execution.

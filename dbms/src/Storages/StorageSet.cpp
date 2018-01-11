@@ -1,4 +1,5 @@
 #include <Storages/StorageSet.h>
+#include <Storages/StorageFactory.h>
 #include <IO/ReadBufferFromFile.h>
 #include <IO/CompressedReadBuffer.h>
 #include <IO/WriteBufferFromFile.h>
@@ -13,6 +14,11 @@
 
 namespace DB
 {
+
+namespace ErrorCodes
+{
+    extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
+}
 
 
 class SetOrJoinBlockOutputStream : public IBlockOutputStream
@@ -76,7 +82,7 @@ BlockOutputStreamPtr StorageSetOrJoinBase::write(const ASTPtr & /*query*/, const
 StorageSetOrJoinBase::StorageSetOrJoinBase(
     const String & path_,
     const String & name_,
-    NamesAndTypesListPtr columns_,
+    const NamesAndTypesList & columns_,
     const NamesAndTypesList & materialized_columns_,
     const NamesAndTypesList & alias_columns_,
     const ColumnDefaults & column_defaults_)
@@ -90,7 +96,7 @@ StorageSetOrJoinBase::StorageSetOrJoinBase(
 StorageSet::StorageSet(
     const String & path_,
     const String & name_,
-    NamesAndTypesListPtr columns_,
+    const NamesAndTypesList & columns_,
     const NamesAndTypesList & materialized_columns_,
     const NamesAndTypesList & alias_columns_,
     const ColumnDefaults & column_defaults_)
@@ -165,6 +171,22 @@ void StorageSetOrJoinBase::rename(const String & new_path_to_db, const String & 
 
     path = new_path + "/";
     name = new_table_name;
+}
+
+
+void registerStorageSet(StorageFactory & factory)
+{
+    factory.registerStorage("Set", [](const StorageFactory::Arguments & args)
+    {
+        if (!args.engine_args.empty())
+            throw Exception(
+                "Engine " + args.engine_name + " doesn't support any arguments (" + toString(args.engine_args.size()) + " given)",
+                ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+
+        return StorageSet::create(
+            args.data_path, args.table_name, args.columns,
+            args.materialized_columns, args.alias_columns, args.column_defaults);
+    });
 }
 
 

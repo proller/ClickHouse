@@ -36,6 +36,7 @@
 #include <AggregateFunctions/registerAggregateFunctions.h>
 #include <Functions/registerFunctions.h>
 #include <TableFunctions/registerTableFunctions.h>
+#include <Storages/registerStorages.h>
 
 #include "ConfigReloader.h"
 #include "HTTPHandlerFactory.h"
@@ -61,6 +62,7 @@ namespace ErrorCodes
 {
     extern const int NO_ELEMENTS_IN_CONFIG;
     extern const int SUPPORT_IS_DISABLED;
+    extern const int ARGUMENT_OUT_OF_BOUND;
 }
 
 
@@ -86,6 +88,7 @@ int Server::main(const std::vector<std::string> & /*args*/)
     registerFunctions();
     registerAggregateFunctions();
     registerTableFunctions();
+    registerStorages();
 
     CurrentMetrics::set(CurrentMetrics::Revision, ClickHouseRevision::get());
 
@@ -152,9 +155,9 @@ int Server::main(const std::vector<std::string> & /*args*/)
             int rc = setrlimit(RLIMIT_NOFILE, &rlim);
             if (rc != 0)
                 LOG_WARNING(log,
-                    std::string("Cannot set max number of file descriptors to ") + std::to_string(rlim.rlim_cur)
-                        + ". Try to specify max_open_files according to your system limits. error: "
-                        + strerror(errno));
+                    "Cannot set max number of file descriptors to " << rlim.rlim_cur
+                        << ". Try to specify max_open_files according to your system limits. error: "
+                        << strerror(errno));
             else
                 LOG_DEBUG(log, "Set max number of file descriptors to " << rlim.rlim_cur << " (was " << old << ").");
         }
@@ -354,8 +357,8 @@ int Server::main(const std::vector<std::string> & /*args*/)
                 {
                     Poco::Net::SocketAddress http_socket_address = make_socket_address(listen_host, config().getInt("http_port"));
                     Poco::Net::ServerSocket http_socket(http_socket_address);
-                    http_socket.setReceiveTimeout(settings.receive_timeout);
-                    http_socket.setSendTimeout(settings.send_timeout);
+                    http_socket.setReceiveTimeout(settings.http_receive_timeout);
+                    http_socket.setSendTimeout(settings.http_send_timeout);
 
                     servers.emplace_back(new Poco::Net::HTTPServer(
                         new HTTPHandlerFactory(*this, "HTTPHandler-factory"),
@@ -373,8 +376,8 @@ int Server::main(const std::vector<std::string> & /*args*/)
                     std::call_once(ssl_init_once, SSLInit);
                     Poco::Net::SocketAddress http_socket_address = make_socket_address(listen_host, config().getInt("https_port"));
                     Poco::Net::SecureServerSocket http_socket(http_socket_address);
-                    http_socket.setReceiveTimeout(settings.receive_timeout);
-                    http_socket.setSendTimeout(settings.send_timeout);
+                    http_socket.setReceiveTimeout(settings.http_receive_timeout);
+                    http_socket.setSendTimeout(settings.http_send_timeout);
 
                     servers.emplace_back(new Poco::Net::HTTPServer(
                         new HTTPHandlerFactory(*this, "HTTPHandler-factory"),
@@ -384,7 +387,7 @@ int Server::main(const std::vector<std::string> & /*args*/)
 
                     LOG_INFO(log, "Listening https://" + http_socket_address.toString());
 #else
-                    throw Exception{"https protocol disabled because poco library built without NetSSL support.",
+                    throw Exception{"HTTPS protocol is disabled because Poco library was built without NetSSL support.",
                         ErrorCodes::SUPPORT_IS_DISABLED};
 #endif
                 }
@@ -421,7 +424,7 @@ int Server::main(const std::vector<std::string> & /*args*/)
                                                                   new Poco::Net::TCPServerParams));
                     LOG_INFO(log, "Listening tcp_ssl: " + tcp_address.toString());
 #else
-                    throw Exception{"tcp_ssl protocol disabled because poco library built without NetSSL support.",
+                    throw Exception{"SSL support for TCP protocol is disabled because Poco library was built without NetSSL support.",
                         ErrorCodes::SUPPORT_IS_DISABLED};
 #endif
                 }
@@ -435,8 +438,8 @@ int Server::main(const std::vector<std::string> & /*args*/)
                 {
                     Poco::Net::SocketAddress interserver_address = make_socket_address(listen_host, config().getInt("interserver_http_port"));
                     Poco::Net::ServerSocket interserver_io_http_socket(interserver_address);
-                    interserver_io_http_socket.setReceiveTimeout(settings.receive_timeout);
-                    interserver_io_http_socket.setSendTimeout(settings.send_timeout);
+                    interserver_io_http_socket.setReceiveTimeout(settings.http_receive_timeout);
+                    interserver_io_http_socket.setSendTimeout(settings.http_send_timeout);
                     servers.emplace_back(new Poco::Net::HTTPServer(
                         new InterserverIOHTTPHandlerFactory(*this, "InterserverIOHTTPHandler-factory"),
                         server_pool,
@@ -491,7 +494,7 @@ int Server::main(const std::vector<std::string> & /*args*/)
 
             LOG_DEBUG(log,
                 "Closed all listening sockets."
-                    << (current_connections ? " Waiting for " + std::to_string(current_connections) + " outstanding connections." : ""));
+                    << (current_connections ? " Waiting for " + toString(current_connections) + " outstanding connections." : ""));
 
             if (current_connections)
             {
@@ -511,7 +514,7 @@ int Server::main(const std::vector<std::string> & /*args*/)
             }
 
             LOG_DEBUG(
-                log, "Closed connections." << (current_connections ? " But " + std::to_string(current_connections) + " remains."
+                log, "Closed connections." << (current_connections ? " But " + toString(current_connections) + " remains."
                     " Tip: To increase wait time add to config: <shutdown_wait_unfinished>60</shutdown_wait_unfinished>" : ""));
 
             main_config_reloader.reset();

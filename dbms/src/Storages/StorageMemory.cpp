@@ -5,10 +5,17 @@
 #include <DataStreams/IProfilingBlockInputStream.h>
 
 #include <Storages/StorageMemory.h>
+#include <Storages/StorageFactory.h>
 
 
 namespace DB
 {
+
+namespace ErrorCodes
+{
+    extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
+}
+
 
 class MemoryBlockInputStream : public IProfilingBlockInputStream
 {
@@ -76,7 +83,7 @@ private:
 
 StorageMemory::StorageMemory(
     const std::string & name_,
-    NamesAndTypesListPtr columns_,
+    const NamesAndTypesList & columns_,
     const NamesAndTypesList & materialized_columns_,
     const NamesAndTypesList & alias_columns_,
     const ColumnDefaults & column_defaults_)
@@ -132,6 +139,20 @@ void StorageMemory::drop()
 {
     std::lock_guard<std::mutex> lock(mutex);
     data.clear();
+}
+
+
+void registerStorageMemory(StorageFactory & factory)
+{
+    factory.registerStorage("Memory", [](const StorageFactory::Arguments & args)
+    {
+        if (!args.engine_args.empty())
+            throw Exception(
+                "Engine " + args.engine_name + " doesn't support any arguments (" + toString(args.engine_args.size()) + " given)",
+                ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+
+        return StorageMemory::create(args.table_name, args.columns, args.materialized_columns, args.alias_columns, args.column_defaults);
+    });
 }
 
 }

@@ -71,27 +71,18 @@ list (APPEND dbms_headers src/Functions/IFunction.h src/Functions/FunctionFactor
 
 list (APPEND dbms_sources
     src/AggregateFunctions/AggregateFunctionFactory.cpp
+    src/AggregateFunctions/AggregateFunctionCombinatorFactory.cpp
     src/AggregateFunctions/AggregateFunctionState.cpp
-    src/AggregateFunctions/AggregateFunctionArray.cpp
-    src/AggregateFunctions/AggregateFunctionNull.cpp
-    src/AggregateFunctions/AggregateFunctionNothing.cpp
-    src/AggregateFunctions/AggregateFunctionForEach.cpp
-    src/AggregateFunctions/AggregateFunctionIf.cpp
-    src/AggregateFunctions/AggregateFunctionMerge.cpp
-    src/AggregateFunctions/AggregateFunctionCount.cpp
+    src/AggregateFunctions/FactoryHelpers.cpp
     src/AggregateFunctions/parseAggregateFunctionParameters.cpp)
 
 list (APPEND dbms_headers
     src/AggregateFunctions/IAggregateFunction.h
+    src/AggregateFunctions/IAggregateFunctionCombinator.h
     src/AggregateFunctions/AggregateFunctionFactory.h
+    src/AggregateFunctions/AggregateFunctionCombinatorFactory.h
     src/AggregateFunctions/AggregateFunctionState.h
-    src/AggregateFunctions/AggregateFunctionArray.h
-    src/AggregateFunctions/AggregateFunctionNull.h
-    src/AggregateFunctions/AggregateFunctionNothing.h
-    src/AggregateFunctions/AggregateFunctionForEach.h
-    src/AggregateFunctions/AggregateFunctionIf.h
-    src/AggregateFunctions/AggregateFunctionMerge.h
-    src/AggregateFunctions/AggregateFunctionCount.h
+    src/AggregateFunctions/FactoryHelpers.h
     src/AggregateFunctions/parseAggregateFunctionParameters.h)
 
 list (APPEND dbms_sources src/TableFunctions/TableFunctionFactory.cpp)
@@ -158,6 +149,7 @@ target_link_libraries (clickhouse_common_io
     ${ZOOKEEPER_LIBRARY}
     ${DOUBLE_CONVERSION_LIBRARIES}
     ${Poco_Net_LIBRARY}
+    ${Poco_Data_LIBRARY}
     ${EXECINFO_LIBRARY}
 )
 
@@ -172,7 +164,6 @@ target_link_libraries (dbms
     ${RE2_ST_LIBRARY}
     ${OPENSSL_CRYPTO_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
-    ${Poco_Data_LIBRARY}
     ${BTRIE_LIBRARIES}
 )
 
@@ -225,8 +216,24 @@ endif ()
 # also for copy_headers.sh:
 target_include_directories (clickhouse_common_io BEFORE PRIVATE ${COMMON_INCLUDE_DIR})
 
+add_subdirectory (tests)
+
 if (ENABLE_TESTS)
-    add_subdirectory (tests)
+    include (${PROJECT_SOURCE_DIR}/cmake/find_gtest.cmake)
+
+    if (USE_INTERNAL_GTEST_LIBRARY)
+        # Google Test from sources
+        add_subdirectory(${ClickHouse_SOURCE_DIR}/contrib/googletest/googletest ${CMAKE_CURRENT_BINARY_DIR}/googletest)
+        # avoid problems with <regexp.h>
+        target_compile_definitions (gtest INTERFACE GTEST_HAS_POSIX_RE=0)
+        target_include_directories (gtest INTERFACE ${ClickHouse_SOURCE_DIR}/contrib/googletest/include)
+    endif ()
+
+    macro(grep_gtest_sources BASE_DIR DST_VAR)
+        # Cold match files that are not in tests/ directories
+        file(GLOB_RECURSE "${DST_VAR}" RELATIVE "${BASE_DIR}" "gtest*.cpp")
+    endmacro()
+
     # attach all dbms gtest sources
     grep_gtest_sources(${ClickHouse_SOURCE_DIR}/dbms dbms_gtest_sources)
     add_executable(unit_tests_dbms ${dbms_gtest_sources})
