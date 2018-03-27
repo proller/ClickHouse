@@ -1,10 +1,10 @@
 FROM ubuntu:16.04
 
-ARG repository="deb https://repo.yandex.ru/clickhouse/xenial/ dists/stable/main/binary-amd64/"
+ARG repository="deb http://repo.yandex.ru/clickhouse/deb/stable/ main/"
 ARG version=\*
 
 RUN apt-get update && \
-    apt-get install -y apt-transport-https tzdata && \
+    apt-get install -y apt-transport-https && \
     mkdir -p /etc/apt/sources.list.d && \
     echo $repository | tee /etc/apt/sources.list.d/clickhouse.list && \
     apt-get update && \

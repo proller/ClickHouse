@@ -98,9 +98,6 @@ Block GraphiteRollupSortedBlockInputStream::readImpl()
         for (size_t i = 0; i < num_columns; ++i)
             if (i != time_column_num && i != value_column_num && i != version_column_num)
                 unmodified_column_numbers.push_back(i);
-
-        if (current_subgroup_newest_row.empty())
-            current_subgroup_newest_row.columns.resize(num_columns);
     }
 
     merge(merged_columns, queue);
@@ -185,10 +182,12 @@ void GraphiteRollupSortedBlockInputStream::merge(MutableColumns & merged_columns
 
         /// Within all rows with same key, we should leave only one row with maximum version;
         /// and for rows with same maximum version - only last row.
-        UInt64 next_version = next_cursor->all_columns[version_column_num]->get64(next_cursor->pos);
-        if (is_new_key || next_version >= current_subgroup_max_version)
+        if (is_new_key
+            || next_cursor->all_columns[version_column_num]->compareAt(
+                next_cursor->pos, current_subgroup_newest_row.row_num,
+                *(*current_subgroup_newest_row.columns)[version_column_num],
+                /* nan_direction_hint = */ 1) >= 0)
         {
-            current_subgroup_max_version = next_version;
             setRowRef(current_subgroup_newest_row, next_cursor);
 
             /// Small hack: group and subgroups have the same path, so we can set current_group_path here instead of startNextGroup
@@ -247,7 +246,8 @@ void GraphiteRollupSortedBlockInputStream::finishCurrentGroup(MutableColumns & m
 {
     /// Insert calculated values of the columns `time`, `value`, `version`.
     merged_columns[time_column_num]->insert(UInt64(current_time_rounded));
-    merged_columns[version_column_num]->insert(current_subgroup_max_version);
+    merged_columns[version_column_num]->insertFrom(
+        *(*current_subgroup_newest_row.columns)[version_column_num], current_subgroup_newest_row.row_num);
 
     if (aggregate_state_created)
     {
@@ -257,14 +257,14 @@ void GraphiteRollupSortedBlockInputStream::finishCurrentGroup(MutableColumns & m
     }
     else
         merged_columns[value_column_num]->insertFrom(
-            *current_subgroup_newest_row.columns[value_column_num], current_subgroup_newest_row.row_num);
+            *(*current_subgroup_newest_row.columns)[value_column_num], current_subgroup_newest_row.row_num);
 }
 
 
 void GraphiteRollupSortedBlockInputStream::accumulateRow(RowRef & row)
 {
     if (aggregate_state_created)
-        current_pattern->function->add(place_for_aggregate_state.data(), &row.columns[value_column_num], row.row_num, nullptr);
+        current_pattern->function->add(place_for_aggregate_state.data(), &(*row.columns)[value_column_num], row.row_num, nullptr);
 }
 
 }

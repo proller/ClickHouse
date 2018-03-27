@@ -56,11 +56,11 @@ DEBIAN_SUITES=($UNSTABLE_CODENAME $TESTING_CODENAME $STABLE_CODENAME $STABLE_BAC
 UBUNTU_SUITES=("bionic" "artful" "zesty" "xenial" "trusty" "devel")
 
 # Mirrors to use. Update these to your preferred mirror.
-DEBIAN_MIRROR="deb.debian.org"
-#UBUNTU_MIRROR="mirrors.kernel.org"
+DEBIAN_MIRROR=${DEBIAN_MIRROR:=deb.debian.org}
+UBUNTU_MIRROR=${UBUNTU_MIRROR:=archive.ubuntu.com}
 
 #DEBIAN_MIRROR="mirror.yandex.ru"
-UBUNTU_MIRROR="mirror.yandex.ru"
+#UBUNTU_MIRROR="mirror.yandex.ru"
 
 # Set a default distribution if none is used. Note that you can set your own default (i.e. ${DIST:="unstable"}).
 HOST_DIST=`lsb_release --short --codename`
@@ -164,11 +164,11 @@ esac
 case "$DIST" in
     "bionic" )
         EXTRAPACKAGES+=" liblld-6.0-dev libclang-6.0-dev liblld-6.0 "
-        export CMAKE_FLAGS="-DUSE_EMBEDDED_COMPILER=1 -DLLVM_VERSION_POSTFIX=-6.0 $CMAKE_FLAGS"
+        export CMAKE_FLAGS="-DENABLE_EMBEDDED_COMPILER=1 -DLLVM_VERSION_POSTFIX=-6.0 $CMAKE_FLAGS"
         ;;
     "artful" | "experimental" | "unstable" | "testing" )
         EXTRAPACKAGES+=" liblld-5.0-dev libclang-5.0-dev liblld-5.0 "
-        export CMAKE_FLAGS="-DUSE_EMBEDDED_COMPILER=1 $CMAKE_FLAGS"
+        export CMAKE_FLAGS="-DENABLE_EMBEDDED_COMPILER=1 $CMAKE_FLAGS"
         ;;
 esac
 
@@ -188,7 +188,7 @@ export DEB_BUILD_OPTIONS=parallel=`nproc`
 
 # Floating bug with permissions:
 [ -n "$CCACHEDIR" ] && sudo mkdir -p $CCACHEDIR
-[ -n "$CCACHEDIR" ] && sudo chmod -R a+rwx $CCACHEDIR
+[ -n "$CCACHEDIR" ] && sudo chmod -R a+rwx $CCACHEDIR || true
 # chown -R $BUILDUSERID:$BUILDUSERID $CCACHEDIR
 
 

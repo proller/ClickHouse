@@ -66,6 +66,12 @@
   * In contrast, COWPtr is intended for the cases when you need to share states of large objects,
   * (when you usually will use std::shared_ptr) but you also want precise control over modification
   * of this shared state.
+  *
+  * Caveats:
+  * - after a call to 'mutate' method, you can still have a reference to immutable ptr somewhere
+  *   and it can still become shared. Also it would be better to make 'mutate' method rvalue-qualified.
+  * - as 'mutable_ptr' should be unique, it's refcount is redundant - probably it would be better
+  *   to use std::unique_ptr for it, but see above.
   */
 template <typename Derived>
 class COWPtr : public boost::intrusive_ref_counter<Derived>
@@ -172,6 +178,11 @@ public:
     {
         return const_cast<COWPtr*>(this)->getPtr();
     }
+
+    Derived & assumeMutableRef() const
+    {
+        return const_cast<Derived &>(*derived());
+    }
 };
 
 
@@ -235,6 +246,6 @@ public:
   * 3. Store subobjects as immutable ptrs. Implement copy-constructor to do shallow copy.
   * But reimplement 'mutate' method, so it will call 'mutate' of all subobjects (do deep mutate).
   * It will guarantee, that mutable object have all subobjects unshared.
-  * From non-const method, you can modify subobjects with 'assumeMutable' method.
+  * From non-const method, you can modify subobjects with 'assumeMutableRef' method.
   * Drawback: it's more complex than other solutions.
   */

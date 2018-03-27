@@ -39,11 +39,11 @@ MergeTreeWhereOptimizer::MergeTreeWhereOptimizer(
     const MergeTreeData & data,
     const Names & column_names,
     Logger * log)
-        : primary_key_columns{ext::map<std::unordered_set>(data.getSortDescription(),
+        : primary_key_columns{ext::map<std::unordered_set>(data.getPrimarySortDescription(),
             [] (const SortColumnDescription & col) { return col.column_name; })},
-        table_columns{ext::map<std::unordered_set>(data.getColumnsList(),
+        table_columns{ext::map<std::unordered_set>(data.getColumns().getAllPhysical(),
             [] (const NameAndTypePair & col) { return col.name; })},
-        block_with_constants{PKCondition::getBlockWithConstants(query_info.query, context, data.getColumnsList())},
+        block_with_constants{PKCondition::getBlockWithConstants(query_info.query, context, data.getColumns().getAllPhysical())},
         prepared_sets(query_info.sets),
         log{log}
 {
