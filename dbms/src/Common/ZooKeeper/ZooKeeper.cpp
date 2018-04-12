@@ -86,6 +86,8 @@ struct ZooKeeperArgs
     {
         Poco::Util::AbstractConfiguration::Keys keys;
         config.keys(config_name, keys);
+        if (!keys.size())
+            throw KeeperException("Zookeeper is not configured in config. key=" + config_name, ZooKeeperImpl::ZooKeeper::ZBADARGUMENTS);
 
         std::vector<std::string> hosts_strings;
 
