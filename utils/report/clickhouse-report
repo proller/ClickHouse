@@ -25,6 +25,10 @@ for i in "$@" ; do
     esac
 done
 
+tail -n200 /var/log/clickhouse-server/clickhouse-server.err.log
+tail -n200 /var/log/clickhouse-server/clickhouse-server.log
+tail -n100 /var/log/clickhouse-server/stderr
+
 clickhouse-client -q 'SELECT * FROM system.events FORMAT PrettyCompactNoEscapes'
 clickhouse-client -q 'SELECT * FROM system.metrics FORMAT PrettyCompactNoEscapes'
 clickhouse-client -q 'SELECT * FROM system.asynchronous_metrics FORMAT PrettyCompactNoEscapes'
@@ -35,6 +39,3 @@ clickhouse-client -q 'SELECT * FROM system.parts FORMAT PrettyCompactNoEscapes'
 clickhouse-client -q 'SELECT * FROM system.replication_queue FORMAT PrettyCompactNoEscapes'
 clickhouse-client -q 'SELECT * FROM system.replicas FORMAT PrettyCompactNoEscapes'
 clickhouse-client -q 'SELECT * FROM system.dictionaries FORMAT PrettyCompactNoEscapes'
-tail -n200 /var/log/clickhouse-server/clickhouse-server.err.log
-tail -n200 /var/log/clickhouse-server/clickhouse-server.log
-tail -n100 /var/log/clickhouse-server/stderr
