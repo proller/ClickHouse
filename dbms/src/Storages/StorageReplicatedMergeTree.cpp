@@ -923,6 +923,14 @@ void StorageReplicatedMergeTree::checkPartChecksumsAndAddCommitOps(const zkutil:
 
         if (replica == replica_name)
             has_been_alredy_added = true;
+
+        /// If we verify checksums in "sequential manner" (i.e. recheck absence of checksums on other replicas when commit)
+        /// then it is enough to verify checksums on at least one replica since checksums on other replicas must be the same.
+        if (absent_replicas_paths)
+        {
+            absent_replicas_paths->clear();
+            break;
+        }
     }
 
     if (!has_been_alredy_added)
@@ -3638,7 +3646,7 @@ void StorageReplicatedMergeTree::clearOldPartsAndRemoveFromZK()
     }
     catch (...)
     {
-        LOG_ERROR(log, "There is a problem with deleting parts from ZooKeeper: " << getCurrentExceptionMessage(false));
+        LOG_ERROR(log, "There is a problem with deleting parts from ZooKeeper: " << getCurrentExceptionMessage(true));
     }
 
     /// Part names that were reliably deleted from ZooKeeper should be deleted from filesystem
