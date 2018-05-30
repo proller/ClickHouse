@@ -7,6 +7,9 @@
 #include <Parsers/ParserSelectWithUnionQuery.h>
 #include <Parsers/ParserSetQuery.h>
 
+#include "iostream_debug_helpers.h"
+
+#define DEFAULT_TABLE_ENGINE "Log"
 
 namespace DB
 {
@@ -123,7 +126,16 @@ bool ParserStorage::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
     ASTPtr settings;
 
     if (!s_engine.ignore(pos, expected))
-        return false;
+    {
+        if (is_table && (pos.get().type == TokenType::EndOfStream || pos.get().type == TokenType::Semicolon))
+        {
+            auto func = std::make_shared<ASTFunction>();
+            func->name = DEFAULT_TABLE_ENGINE;
+            engine = func;
+        } else {
+            return false;
+        }
+   } else {
 
     s_eq.ignore(pos, expected);
 
@@ -164,6 +176,7 @@ bool ParserStorage::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
 
         break;
     }
+   }
 
     auto storage = std::make_shared<ASTStorage>();
     storage->set(storage->engine, engine);
@@ -192,7 +205,8 @@ bool ParserCreateQuery::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
     ParserToken s_dot(TokenType::Dot);
     ParserToken s_lparen(TokenType::OpeningRoundBracket);
     ParserToken s_rparen(TokenType::ClosingRoundBracket);
-    ParserStorage storage_p;
+    ParserStorage table_storage_p(true);
+    ParserStorage database_storage_p;
     ParserIdentifier name_p;
     ParserColumnDeclarationList columns_p;
     ParserSelectWithUnionQuery select_p;
@@ -274,12 +288,12 @@ bool ParserCreateQuery::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
             if (!s_rparen.ignore(pos, expected))
                 return false;
 
-            if (!storage_p.parse(pos, storage, expected) && !is_temporary)
+            if (!table_storage_p.parse(pos, storage, expected) && !is_temporary)
                 return false;
         }
         else
         {
-            storage_p.parse(pos, storage, expected);
+            table_storage_p.parse(pos, storage, expected);
 
             if (!s_as.ignore(pos, expected))
                 return false;
@@ -298,7 +312,7 @@ bool ParserCreateQuery::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
                 }
 
                 /// Optional - ENGINE can be specified.
-                storage_p.parse(pos, storage, expected);
+                table_storage_p.parse(pos, storage, expected);
             }
         }
     }
@@ -318,7 +332,7 @@ bool ParserCreateQuery::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
                 return false;
         }
 
-        storage_p.parse(pos, storage, expected);
+        database_storage_p.parse(pos, storage, expected);
     }
     else
     {
@@ -379,7 +393,7 @@ bool ParserCreateQuery::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
         if (is_materialized_view && !to_table)
         {
             /// Internal ENGINE for MATERIALIZED VIEW must be specified.
-            if (!storage_p.parse(pos, storage, expected))
+            if (!table_storage_p.parse(pos, storage, expected))
                 return false;
 
             if (s_populate.ignore(pos, expected))

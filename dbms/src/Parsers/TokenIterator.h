@@ -59,7 +59,7 @@ private:
 public:
     explicit TokenIterator(Tokens & tokens) : tokens(&tokens) {}
 
-    const Token & get() { return (*tokens)[index]; }
+    const Token & get() const { return (*tokens)[index]; }
     const Token & operator*() { return get(); }
     const Token * operator->() { return &get(); }
 

@@ -12,6 +12,12 @@ std::ostream & operator<<(std::ostream & stream, const Token & what)
     return stream;
 }
 
+std::ostream & operator<<(std::ostream & stream, const TokenIterator & what)
+{
+    stream << "TokenIterator {"<< what.get() << "}";
+    return stream;
+}
+
 std::ostream & operator<<(std::ostream & stream, const Expected & what)
 {
     stream << "Expected {variants=";

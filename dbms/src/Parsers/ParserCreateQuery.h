@@ -186,9 +186,13 @@ protected:
 /** ENGINE = name [PARTITION BY expr] [ORDER BY expr] [SAMPLE BY expr] [SETTINGS name = value, ...] */
 class ParserStorage : public IParserBase
 {
+public:
+    explicit ParserStorage(bool is_table = false) : is_table{is_table} {}
 protected:
     const char * getName() const { return "storage definition"; }
     bool parseImpl(Pos & pos, ASTPtr & node, Expected & expected);
+private:
+    bool is_table;
 };
 
 
@@ -198,7 +202,7 @@ protected:
   *     name1 type1,
   *     name2 type2,
   *     ...
-  * ) ENGINE = engine
+  * ) [ENGINE = engine]
   *
   * Or:
   * CREATE|ATTACH TABLE [IF NOT EXISTS] [db.]name AS [db2.]name2 [ENGINE = engine]

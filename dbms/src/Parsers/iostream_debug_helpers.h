@@ -6,6 +6,9 @@ namespace DB
 struct Token;
 std::ostream & operator<<(std::ostream & stream, const Token & what);
 
+struct TokenIterator;
+std::ostream & operator<<(std::ostream & stream, const TokenIterator & what);
+
 struct Expected;
 std::ostream & operator<<(std::ostream & stream, const Expected & what);
 
