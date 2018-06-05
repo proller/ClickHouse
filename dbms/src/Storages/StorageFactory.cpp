@@ -1,3 +1,4 @@
+#include <Poco/Util/AbstractConfiguration.h>
 #include <Storages/StorageFactory.h>
 #include <Interpreters/Context.h>
 #include <Parsers/ASTFunction.h>
@@ -72,11 +73,14 @@ StoragePtr StorageFactory::get(
         }
         else
         {
-            if (!storage_def)
-                throw Exception("Incorrect CREATE query: ENGINE required", ErrorCodes::ENGINE_REQUIRED);
 
+           if (!storage_def || !storage_def->engine)
+           {
+                name = context.getConfigRef().getString("default_table_engine", "Log");
+            }
+            else
+            {
             const ASTFunction & engine_def = *storage_def->engine;
-
             if (engine_def.parameters)
                 throw Exception(
                     "Engine definition cannot take the form of a parametric function", ErrorCodes::FUNCTION_CANNOT_HAVE_PARAMETERS);
@@ -85,6 +89,10 @@ StoragePtr StorageFactory::get(
                 args = engine_def.arguments->children;
 
             name = engine_def.name;
+           }
+
+            if (name.empty())
+                throw Exception("Incorrect CREATE query: ENGINE required. Or defined config setting `default_table_engine`", ErrorCodes::ENGINE_REQUIRED);
 
             if ((storage_def->partition_by || storage_def->order_by || storage_def->sample_by || storage_def->settings)
                 && !endsWith(name, "MergeTree"))

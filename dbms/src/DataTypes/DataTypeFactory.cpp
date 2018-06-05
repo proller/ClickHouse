@@ -89,15 +89,15 @@ void DataTypeFactory::registerDataType(const String & family_name, Creator creat
 }
 
 
-void DataTypeFactory::registerSimpleDataType(const String & name, SimpleCreator creator, CaseSensitiveness case_sensitiveness)
+void DataTypeFactory::registerSimpleDataType(const String & name, SimpleCreator creator, CaseSensitiveness case_sensitiveness, bool ignore_arguments)
 {
     if (creator == nullptr)
         throw Exception("DataTypeFactory: the data type " + name + " has been provided "
             " a null constructor", ErrorCodes::LOGICAL_ERROR);
 
-    registerDataType(name, [name, creator](const ASTPtr & ast)
+    registerDataType(name, [name, creator, ignore_arguments](const ASTPtr & ast)
     {
-        if (ast)
+        if (!ignore_arguments && ast)
             throw Exception("Data type " + name + " cannot have arguments", ErrorCodes::DATA_TYPE_CANNOT_HAVE_ARGUMENTS);
         return creator();
     }, case_sensitiveness);

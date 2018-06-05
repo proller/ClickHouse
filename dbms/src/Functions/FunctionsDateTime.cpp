@@ -84,6 +84,7 @@ void registerFunctionsDateTime(FunctionFactory & factory)
     factory.registerFunction<FunctionToRelativeSecondNum>();
     factory.registerFunction<FunctionToTime>();
     factory.registerFunction<FunctionNow>(FunctionFactory::CaseInsensitive);
+    factory.registerFunction<FunctionNow>("current_timestamp", FunctionFactory::CaseInsensitive); /// SQL-compatible alias
     factory.registerFunction<FunctionToday>();
     factory.registerFunction<FunctionYesterday>();
     factory.registerFunction<FunctionTimeSlot>();

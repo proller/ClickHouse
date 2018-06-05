@@ -9,8 +9,6 @@
 
 #include "iostream_debug_helpers.h"
 
-#define DEFAULT_TABLE_ENGINE "Log"
-
 namespace DB
 {
 
@@ -129,10 +127,9 @@ bool ParserStorage::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
     {
         if (is_table && (pos.get().type == TokenType::EndOfStream || pos.get().type == TokenType::Semicolon))
         {
-            auto func = std::make_shared<ASTFunction>();
-            func->name = DEFAULT_TABLE_ENGINE;
-            engine = func;
-        } else {
+        }
+        else
+        {
             return false;
         }
    } else {

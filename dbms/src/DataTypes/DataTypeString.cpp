@@ -312,7 +312,7 @@ void registerDataTypeString(DataTypeFactory & factory)
     /// These synonims are added for compatibility.
 
     factory.registerSimpleDataType("CHAR", creator, DataTypeFactory::CaseInsensitive);
-    factory.registerSimpleDataType("VARCHAR", creator, DataTypeFactory::CaseInsensitive);
+    factory.registerSimpleDataType("VARCHAR", creator, DataTypeFactory::CaseInsensitive, /* ignore_arguments = */ true);
     factory.registerSimpleDataType("TEXT", creator, DataTypeFactory::CaseInsensitive);
     factory.registerSimpleDataType("TINYTEXT", creator, DataTypeFactory::CaseInsensitive);
     factory.registerSimpleDataType("MEDIUMTEXT", creator, DataTypeFactory::CaseInsensitive);

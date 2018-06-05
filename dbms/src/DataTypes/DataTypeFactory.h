@@ -42,7 +42,7 @@ public:
     void registerDataType(const String & family_name, Creator creator, CaseSensitiveness case_sensitiveness = CaseSensitive);
 
     /// Register a simple data type, that have no parameters.
-    void registerSimpleDataType(const String & name, SimpleCreator creator, CaseSensitiveness case_sensitiveness = CaseSensitive);
+    void registerSimpleDataType(const String & name, SimpleCreator creator, CaseSensitiveness case_sensitiveness = CaseSensitive, bool ignore_arguments = false);
 
 private:
     DataTypesDictionary data_types;
