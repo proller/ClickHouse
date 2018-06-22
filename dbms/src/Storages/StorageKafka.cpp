@@ -11,7 +11,7 @@
 #include <Common/Exception.h>
 #include <Common/setThreadName.h>
 #include <Common/typeid_cast.h>
-#include <DataStreams/FormatFactory.h>
+#include <Formats/FormatFactory.h>
 #include <DataStreams/IProfilingBlockInputStream.h>
 #include <DataStreams/LimitBlockInputStream.h>
 #include <DataStreams/UnionBlockInputStream.h>
@@ -23,15 +23,17 @@
 #include <Parsers/ASTIdentifier.h>
 #include <Parsers/ASTInsertQuery.h>
 #include <Parsers/ASTLiteral.h>
-#include <Storages/StorageKafka.h>
+#include <Storages/StorageKafka.h> // Y_IGNORE
 #include <Storages/StorageFactory.h>
+#include <IO/ReadBuffer.h>
 #include <common/logger_useful.h>
 
 #if __has_include(<rdkafka.h>) // maybe bundled
-#include <rdkafka.h>
+#include <rdkafka.h> // Y_IGNORE
 #else // system
-#include <librdkafka/rdkafka.h>
+#include <librdkafka/rdkafka.h> // Y_IGNORE
 #endif
+
 
 namespace DB
 {
@@ -142,7 +144,7 @@ public:
         // Create a formatted reader on Kafka messages
         LOG_TRACE(storage.log, "Creating formatted reader");
         read_buf = std::make_unique<ReadBufferFromKafkaConsumer>(consumer->stream, storage.log);
-        reader = FormatFactory().getInput(storage.format_name, *read_buf, storage.getSampleBlock(), context, max_block_size);
+        reader = FormatFactory::instance().getInput(storage.format_name, *read_buf, storage.getSampleBlock(), context, max_block_size);
     }
 
     ~KafkaBlockInputStream() override
