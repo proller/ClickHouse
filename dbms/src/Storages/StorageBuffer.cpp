@@ -15,6 +15,7 @@
 #include <Common/MemoryTracker.h>
 #include <Common/FieldVisitors.h>
 #include <Common/typeid_cast.h>
+#include <Common/ProfileEvents.h>
 #include <common/logger_useful.h>
 #include <Poco/Ext/ThreadNumber.h>
 
@@ -134,7 +135,7 @@ BlockInputStreams StorageBuffer::read(
       */
     if (processed_stage > QueryProcessingStage::FetchColumns)
         for (auto & stream : streams_from_buffers)
-            stream = InterpreterSelectQuery(query_info.query, context, {}, processed_stage, 0, stream).execute().in;
+            stream = InterpreterSelectQuery(query_info.query, context, stream, processed_stage).execute().in;
 
     streams_from_dst.insert(streams_from_dst.end(), streams_from_buffers.begin(), streams_from_buffers.end());
     return streams_from_dst;

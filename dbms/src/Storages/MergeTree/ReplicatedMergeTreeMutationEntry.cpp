@@ -21,7 +21,7 @@ void ReplicatedMergeTreeMutationEntry::writeText(WriteBuffer & out) const
         out << partition_id << "\t" << number << "\n";
     }
 
-    out << "mutation commands:\n";
+    out << "commands: ";
     commands.writeText(out);
 }
 
@@ -45,7 +45,7 @@ void ReplicatedMergeTreeMutationEntry::readText(ReadBuffer & in)
         block_numbers[partition_id] = number;
     }
 
-    in >> "mutation commands:\n";
+    in >> "commands: ";
     commands.readText(in);
 }
 

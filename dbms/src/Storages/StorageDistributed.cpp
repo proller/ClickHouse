@@ -3,8 +3,9 @@
 
 #include <Databases/IDatabase.h>
 
+#include <DataTypes/DataTypeFactory.h>
+
 #include <Storages/StorageDistributed.h>
-#include <Storages/VirtualColumnFactory.h>
 #include <Storages/Distributed/DistributedBlockOutputStream.h>
 #include <Storages/Distributed/DirectoryMonitor.h>
 #include <Storages/StorageFactory.h>
@@ -34,12 +35,15 @@
 
 #include <Core/Field.h>
 
+#include <IO/ReadHelpers.h>
+
 #include <Poco/DirectoryIterator.h>
 
 #include <memory>
 
 #include <boost/filesystem.hpp>
 #include <Parsers/ASTTablesInSelectQuery.h>
+#include <Parsers/ASTDropQuery.h>
 
 
 namespace DB
@@ -53,6 +57,8 @@ namespace ErrorCodes
     extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
     extern const int INCORRECT_NUMBER_OF_COLUMNS;
     extern const int INFINITE_LOOP;
+    extern const int TYPE_MISMATCH;
+    extern const int NO_SUCH_COLUMN_IN_TABLE;
 }
 
 
@@ -69,14 +75,14 @@ ASTPtr rewriteSelectQuery(const ASTPtr & query, const std::string & database, co
 }
 
 /// insert query has database and table names as bare strings
-/// If the query is null, it creates a insert query with the database and tables 
+/// If the query is null, it creates a insert query with the database and tables
 /// Or it creates a copy of query, changes the database and table names.
 ASTPtr rewriteInsertQuery(const ASTPtr & query, const std::string & database, const std::string & table)
 {
     ASTPtr modified_query_ast = nullptr;
     if (query == nullptr)
         modified_query_ast = std::make_shared<ASTInsertQuery>();
-    else 
+    else
         modified_query_ast = query->clone();
 
     auto & actual_query = typeid_cast<ASTInsertQuery &>(*modified_query_ast);
@@ -207,7 +213,7 @@ BlockInputStreams StorageDistributed::read(
     const auto & modified_query_ast = rewriteSelectQuery(
         query_info.query, remote_database, remote_table);
 
-    Block header = materializeBlock(InterpreterSelectQuery(query_info.query, context, {}, processed_stage).getSampleBlock());
+    Block header = materializeBlock(InterpreterSelectQuery(query_info.query, context, Names{}, processed_stage).getSampleBlock());
 
     ClusterProxy::SelectStreamFactory select_stream_factory(
         header, processed_stage, QualifiedTableName{remote_database, remote_table}, context.getExternalTables());
@@ -301,19 +307,47 @@ BlockInputStreams StorageDistributed::describe(const Context & context, const Se
             describe_stream_factory, cluster, describe_query, context, settings);
 }
 
+void StorageDistributed::truncate(const ASTPtr &)
+{
+    std::lock_guard lock(cluster_nodes_mutex);
+
+    for (auto it = cluster_nodes_data.begin(); it != cluster_nodes_data.end();)
+    {
+        it->second.shutdownAndDropAllData();
+        it = cluster_nodes_data.erase(it);
+    }
+}
+
+
+namespace
+{
+    /// NOTE This is weird. Get rid of this.
+    std::map<String, String> virtual_columns =
+    {
+        {"_table", "String"},
+        {"_part", "String"},
+        {"_part_index", "UInt64"},
+        {"_sample_factor", "Float64"},
+    };
+}
+
 
 NameAndTypePair StorageDistributed::getColumn(const String & column_name) const
 {
-    if (const auto & type = VirtualColumnFactory::tryGetType(column_name))
-        return { column_name, type };
+    if (getColumns().hasPhysical(column_name))
+        return getColumns().getPhysical(column_name);
 
-    return getColumns().getPhysical(column_name);
+    auto it = virtual_columns.find(column_name);
+    if (it != virtual_columns.end())
+        return { it->first, DataTypeFactory::instance().get(it->second) };
+
+    throw Exception("There is no column " + column_name + " in table.", ErrorCodes::NO_SUCH_COLUMN_IN_TABLE);
 }
 
 
 bool StorageDistributed::hasColumn(const String & column_name) const
 {
-    return VirtualColumnFactory::hasColumn(column_name) || getColumns().hasPhysical(column_name);
+    return virtual_columns.count(column_name) || getColumns().hasPhysical(column_name);
 }
 
 void StorageDistributed::createDirectoryMonitors()
@@ -367,6 +401,11 @@ void StorageDistributed::ClusterNodeData::requireDirectoryMonitor(const std::str
     requireConnectionPool(name, storage);
     if (!directory_monitor)
         directory_monitor = std::make_unique<StorageDistributedDirectoryMonitor>(storage, name, conneciton_pool);
+}
+
+void StorageDistributed::ClusterNodeData::shutdownAndDropAllData()
+{
+    directory_monitor->shutdownAndDropAllData();
 }
 
 

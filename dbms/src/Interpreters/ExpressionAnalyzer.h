@@ -38,6 +38,8 @@ class ASTFunction;
 class ASTExpressionList;
 class ASTSelectQuery;
 
+struct ProjectionManipulatorBase;
+using ProjectionManipulatorPtr = std::shared_ptr<ProjectionManipulatorBase>;
 
 /** Information on what to do when executing a subquery in the [GLOBAL] IN/JOIN section.
   */
@@ -343,7 +345,7 @@ private:
       * Create Set from a subuqery or a table expression in the query. The created set is suitable for using the index.
       * The set will not be created if its size hits the limit.
       */
-    void tryMakeSetFromSubquery(const ASTPtr & subquery_or_table_name);
+    void tryMakeSetForIndexFromSubquery(const ASTPtr & subquery_or_table_name);
 
     void makeSetsForIndexImpl(const ASTPtr & node, const Block & sample_block);
 

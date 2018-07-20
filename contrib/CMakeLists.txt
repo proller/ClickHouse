@@ -1,5 +1,5 @@
 if (NOT MSVC)
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-old-style-cast -Wno-unused-function -Wno-deprecated-declarations -std=c++1z")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-old-style-cast -Wno-unused-function -Wno-deprecated-declarations -Wno-non-virtual-dtor -std=c++1z")
 endif ()
 
 if (USE_INTERNAL_BOOST_LIBRARY)
@@ -26,7 +26,7 @@ if (USE_INTERNAL_DOUBLE_CONVERSION_LIBRARY)
 endif ()
 
 if (USE_INTERNAL_CITYHASH_LIBRARY)
-    add_subdirectory (libcityhash)
+    add_subdirectory (cityhash102)
 endif ()
 
 if (USE_INTERNAL_FARMHASH_LIBRARY)
@@ -75,7 +75,7 @@ if (ENABLE_TCMALLOC AND USE_INTERNAL_GPERFTOOLS_LIBRARY)
     add_subdirectory (libtcmalloc)
 endif ()
 
-if (NOT ARCH_ARM)
+if (USE_INTERNAL_CPUID_LIBRARY)
     add_subdirectory (libcpuid)
 endif ()
 
@@ -149,5 +149,9 @@ if (USE_INTERNAL_POCO_LIBRARY)
 endif ()
 
 if (USE_INTERNAL_LLVM_LIBRARY)
+    # ld: unknown option: --color-diagnostics
+    if (APPLE AND COMPILER_GCC)
+        set (LINKER_SUPPORTS_COLOR_DIAGNOSTICS 0 CACHE INTERNAL "")
+    endif ()
     add_subdirectory (llvm/llvm)
 endif ()

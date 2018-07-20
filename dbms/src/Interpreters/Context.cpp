@@ -16,7 +16,7 @@
 #include <Common/Stopwatch.h>
 #include <Common/formatReadable.h>
 #include <Common/BackgroundSchedulePool.h>
-#include <DataStreams/FormatFactory.h>
+#include <Formats/FormatFactory.h>
 #include <Databases/IDatabase.h>
 #include <Storages/IStorage.h>
 #include <Storages/MarkCache.h>
@@ -117,7 +117,6 @@ struct ContextShared
     ConfigurationPtr config;                                /// Global configuration settings.
 
     Databases databases;                                    /// List of databases and tables in them.
-    FormatFactory format_factory;                           /// Formats.
     mutable std::shared_ptr<EmbeddedDictionaries> embedded_dictionaries;    /// Metrica's dictionaeis. Have lazy initialization.
     mutable std::shared_ptr<ExternalDictionaries> external_dictionaries;
     mutable std::shared_ptr<ExternalModels> external_models;
@@ -192,7 +191,7 @@ struct ContextShared
     Context::ConfigReloadCallback config_reload_callback;
 
     ContextShared(std::shared_ptr<IRuntimeComponentsFactory> runtime_components_factory_)
-        : runtime_components_factory(std::move(runtime_components_factory_))
+        : runtime_components_factory(std::move(runtime_components_factory_)), macros(std::make_unique<Macros>())
     {
         /// TODO: make it singleton (?)
         static std::atomic<size_t> num_calls{0};
@@ -355,7 +354,7 @@ std::shared_ptr<Context> Context::acquireSession(const String & session_id, std:
         if (session_check)
             throw Exception("Session not found.", ErrorCodes::SESSION_NOT_FOUND);
 
-        auto new_session = std::make_shared<Context>(*global_context);
+        auto new_session = std::make_shared<Context>(*this);
 
         new_session->scheduleCloseSession(key, timeout);
 
@@ -1655,12 +1654,12 @@ void Context::checkTableCanBeDropped(const String & database, const String & tab
 
 BlockInputStreamPtr Context::getInputFormat(const String & name, ReadBuffer & buf, const Block & sample, size_t max_block_size) const
 {
-    return shared->format_factory.getInput(name, buf, sample, *this, max_block_size);
+    return FormatFactory::instance().getInput(name, buf, sample, *this, max_block_size);
 }
 
 BlockOutputStreamPtr Context::getOutputFormat(const String & name, WriteBuffer & buf, const Block & sample) const
 {
-    return shared->format_factory.getOutput(name, buf, sample, *this);
+    return FormatFactory::instance().getOutput(name, buf, sample, *this);
 }
 
 
@@ -1732,9 +1731,9 @@ void Context::setFormatSchemaPath(const String & path)
     shared->format_schema_path = path;
 }
 
-Context::getSampleBlockCacheType & Context::getSampleBlockCache() const
+Context::SampleBlockCache & Context::getSampleBlockCache() const
 {
-    return getQueryContext().get_sample_block_cache;
+    return getQueryContext().sample_block_cache;
 }
 
 std::shared_ptr<ActionLocksManager> Context::getActionLocksManager()

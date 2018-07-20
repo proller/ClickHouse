@@ -6,6 +6,7 @@
 #include <memory>
 #include <mutex>
 #include <thread>
+#include <atomic>
 
 #include <common/MultiVersion.h>
 #include <Core/Types.h>
@@ -119,6 +120,9 @@ private:
 
     UInt64 session_close_cycle = 0;
     bool session_is_used = false;
+
+    using SampleBlockCache = std::unordered_map<std::string, Block>;
+    mutable SampleBlockCache sample_block_cache;
 
     using DatabasePtr = std::shared_ptr<IDatabase>;
     using Databases = std::map<String, std::shared_ptr<IDatabase>>;
@@ -400,9 +404,7 @@ public:
     /// User name and session identifier. Named sessions are local to users.
     using SessionKey = std::pair<String, String>;
 
-    using getSampleBlockCacheType = std::unordered_map<std::string, Block>;
-    mutable Context::getSampleBlockCacheType get_sample_block_cache;
-    getSampleBlockCacheType & getSampleBlockCache() const;
+    SampleBlockCache & getSampleBlockCache() const;
 
 private:
     /** Check if the current client has access to the specified database.
