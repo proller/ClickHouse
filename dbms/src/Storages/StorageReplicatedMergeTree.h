@@ -14,7 +14,7 @@
 #include <Storages/MergeTree/ReplicatedMergeTreeRestartingThread.h>
 #include <Storages/MergeTree/ReplicatedMergeTreePartCheckThread.h>
 #include <Storages/MergeTree/ReplicatedMergeTreeAlterThread.h>
-#include <Storages/MergeTree/AbandonableLockInZooKeeper.h>
+#include <Storages/MergeTree/EphemeralLockInZooKeeper.h>
 #include <Storages/MergeTree/BackgroundProcessingPool.h>
 #include <Storages/MergeTree/DataPartsExchange.h>
 #include <Storages/MergeTree/ReplicatedMergeTreeAddress.h>
@@ -41,6 +41,8 @@ namespace DB
   * - the list of incremental block numbers (/block_numbers) that we are about to insert,
   *   to ensure the linear order of data insertion and data merge only on the intervals in this sequence;
   * - coordinates writes with quorum (/quorum).
+  * - Storage of mutation entries (ALTER DELETE, ALTER UPDATE etc.) to execute (/mutations).
+  *   See comments in StorageReplicatedMergeTree::mutate() for details.
   */
 
 /** The replicated tables have a common log (/log/log-...).
@@ -50,7 +52,7 @@ namespace DB
   * - merge (MERGE),
   * - delete the partition (DROP).
   *
-  * Each replica copies (queueUpdatingThread, pullLogsToQueue) entries from the log to its queue (/replicas/replica_name/queue/queue-...)
+  * Each replica copies (queueUpdatingTask, pullLogsToQueue) entries from the log to its queue (/replicas/replica_name/queue/queue-...)
   *  and then executes them (queueTask).
   * Despite the name of the "queue", execution can be reordered, if necessary (shouldExecuteLogEntry, executeLogEntry).
   * In addition, the records in the queue can be generated independently (not from the log), in the following cases:
@@ -123,9 +125,13 @@ public:
 
     void mutate(const MutationCommands & commands, const Context & context) override;
 
+    std::vector<MergeTreeMutationStatus> getMutationsStatus() const;
+
     /** Removes a replica from ZooKeeper. If there are no other replicas, it deletes the entire table from ZooKeeper.
       */
     void drop() override;
+
+    void truncate(const ASTPtr &) override;
 
     void rename(const String & new_path_to_db, const String & new_database_name, const String & new_table_name) override;
 
@@ -278,6 +284,9 @@ private:
     /// A task that selects parts to merge.
     BackgroundSchedulePool::TaskHolder merge_selecting_task;
 
+    /// A task that marks finished mutations as done.
+    BackgroundSchedulePool::TaskHolder mutations_finalizing_task;
+
     /// It is acquired for each iteration of the selection of parts to merge or each OPTIMIZE query.
     std::mutex merge_selecting_mutex;
 
@@ -406,6 +415,9 @@ private:
       */
     void mergeSelectingTask();
 
+    /// Checks if some mutations are done and marks them as done.
+    void mutationsFinalizingTask();
+
     /** Write the selected parts to merge into the log,
       * Call when merge_selecting_mutex is locked.
       * Returns false if any part is not in ZK.
@@ -448,8 +460,9 @@ private:
     void updateQuorum(const String & part_name);
 
     /// Creates new block number if block with such block_id does not exist
-    std::optional<AbandonableLockInZooKeeper> allocateBlockNumber(const String & partition_id, zkutil::ZooKeeperPtr & zookeeper,
-                                                                  const String & zookeeper_block_id_path = "");
+    std::optional<EphemeralLockInZooKeeper> allocateBlockNumber(
+        const String & partition_id, zkutil::ZooKeeperPtr & zookeeper,
+        const String & zookeeper_block_id_path = "");
 
     /** Wait until all replicas, including this, execute the specified action from the log.
       * If replicas are added at the same time, it can not wait the added replica .
@@ -481,6 +494,9 @@ private:
 
     /// Info about how other replicas can access this one.
     ReplicatedMergeTreeAddress getReplicatedMergeTreeAddress() const;
+
+    bool dropPartsInPartition(zkutil::ZooKeeper & zookeeper, String & partition_id,
+        StorageReplicatedMergeTree::LogEntry & entry, bool detach);
 
 protected:
     /** If not 'attach', either creates a new table in ZK, or adds a replica to an existing table.

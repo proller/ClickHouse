@@ -17,8 +17,8 @@ else ()
     message (WARNING "You are using an unsupported compiler. Compilation has only been tested with Clang 5+ and GCC 7+.")
 endif ()
 
-# Check that submodules are present
-if (NOT EXISTS "${ClickHouse_SOURCE_DIR}/contrib/boost/boost")
+# Check that submodules are present only if source was downloaded with git
+if (EXISTS "${ClickHouse_SOURCE_DIR}/.git" AND NOT EXISTS "${ClickHouse_SOURCE_DIR}/contrib/boost/boost")
     message (FATAL_ERROR "Submodules are not initialized. Run\n\tgit submodule update --init --recursive")
 endif ()
 
@@ -40,6 +40,12 @@ message (STATUS "CMAKE_BUILD_TYPE: " ${CMAKE_BUILD_TYPE} )
 set (CMAKE_CONFIGURATION_TYPES "RelWithDebInfo;Debug;Release;MinSizeRel;ASan;UBSan" CACHE STRING "" FORCE)
 
 include (cmake/arch.cmake)
+
+if (CMAKE_GENERATOR STREQUAL "Ninja")
+    # Turn on colored output. https://github.com/ninja-build/ninja/wiki/FAQ
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fdiagnostics-color=always")
+endif ()
 
 if (NOT MSVC)
     set (COMMON_WARNING_FLAGS "${COMMON_WARNING_FLAGS} -Wall")    # -Werror is also added inside directories with our own code.
@@ -97,7 +103,7 @@ else ()
     set (CXX11_ABI_FLAGS "")
 endif ()
 
-set (COMPILER_FLAGS                      "${COMPILER_FLAGS} ${CXX11_ABI_FLAGS}")
+set (COMPILER_FLAGS "${COMPILER_FLAGS} ${CXX11_ABI_FLAGS}")
 
 string(REGEX MATCH "-?[0-9]+(.[0-9]+)?$" COMPILER_POSTFIX ${CMAKE_CXX_COMPILER})
 
@@ -268,6 +274,7 @@ include (cmake/find_re2.cmake)
 include (cmake/find_rdkafka.cmake)
 include (cmake/find_capnp.cmake)
 include (cmake/find_llvm.cmake)
+include (cmake/find_cpuid.cmake)
 
 include (cmake/find_contrib_lib.cmake)
 find_contrib_lib(cityhash)
