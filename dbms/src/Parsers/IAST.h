@@ -7,6 +7,7 @@
 #include <Core/Types.h>
 #include <Common/Exception.h>
 #include <Parsers/StringRange.h>
+#include <Parsers/IdentifierQuotingStyle.h>
 
 
 class SipHash;
@@ -40,17 +41,17 @@ public:
     ASTs children;
     StringRange range;
 
-    /** A string with a full query.
-      * This pointer does not allow it to be deleted while the range refers to it.
-      */
-    StringPtr query_string;
+    /// This pointer does not allow it to be deleted while the range refers to it.
+    StringPtr owned_string;
 
-    IAST() = default;
-    IAST(const StringRange range_) : range(range_) {}
     virtual ~IAST() = default;
 
     /** Get the canonical name of the column if the element is a column */
-    virtual String getColumnName() const { throw Exception("Trying to get name of not a column: " + getID(), ErrorCodes::NOT_A_COLUMN); }
+    String getColumnName() const;
+    virtual void appendColumnName(WriteBuffer &) const
+    {
+        throw Exception("Trying to get name of not a column: " + getID(), ErrorCodes::NOT_A_COLUMN);
+    }
 
     /** Get the alias, if any, or the canonical name of the column, if it is not. */
     virtual String getAliasOrColumnName() const { return getColumnName(); }
@@ -69,14 +70,8 @@ public:
 
     ASTPtr ptr() { return shared_from_this(); }
 
-    /** Get a deep copy of the tree. */
+    /** Get a deep copy of the tree. Cloned object must have the same range. */
     virtual ASTPtr clone() const = 0;
-
-    /** Get text, describing and identifying this element and its subtree.
-      * Usually it consist of element's id and getTreeID of all children.
-      */
-    String getTreeID() const;
-    void getTreeIDImpl(WriteBuffer & out) const;
 
     /** Get hash code, identifying this element and its subtree.
       */
@@ -156,16 +151,20 @@ public:
     struct FormatSettings
     {
         std::ostream & ostr;
-        bool hilite;
+        bool hilite = false;
         bool one_line;
+        bool always_quote_identifiers = false;
+        IdentifierQuotingStyle identifier_quoting_style = IdentifierQuotingStyle::Backticks;
 
         char nl_or_ws;
 
-        FormatSettings(std::ostream & ostr_, bool hilite_, bool one_line_)
-            : ostr(ostr_), hilite(hilite_), one_line(one_line_)
+        FormatSettings(std::ostream & ostr_, bool one_line_)
+            : ostr(ostr_), one_line(one_line_)
         {
             nl_or_ws = one_line ? ' ' : '\n';
         }
+
+        void writeIdentifier(const String & name, WriteBuffer & out) const;
     };
 
     /// State. For example, a set of nodes can be remembered, which we already walk through.
@@ -200,7 +199,7 @@ public:
             ErrorCodes::UNKNOWN_ELEMENT_IN_AST);
     }
 
-    void writeAlias(const String & name, std::ostream & s, bool hilite) const;
+    void cloneChildren();
 
 public:
     /// For syntax highlighting.

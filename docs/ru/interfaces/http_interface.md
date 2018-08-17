@@ -26,9 +26,6 @@ $ curl 'http://localhost:8123/?query=SELECT%201'
 $ wget -O- -q 'http://localhost:8123/?query=SELECT 1'
 1
 
-$ GET 'http://localhost:8123/?query=SELECT 1'
-1
-
 $ echo -ne 'GET /?query=SELECT%201 HTTP/1.0\r\n\r\n' | nc localhost 8123
 HTTP/1.0 200 OK
 Connection: Close
@@ -79,37 +76,37 @@ $ echo 'SELECT 1 FORMAT Pretty' | curl 'http://localhost:8123/?' --data-binary @
 Создаём таблицу:
 
 ```bash
-echo 'CREATE TABLE t (a UInt8) ENGINE = Memory' | POST 'http://localhost:8123/'
+echo 'CREATE TABLE t (a UInt8) ENGINE = Memory' | curl 'http://localhost:8123/' --data-binary @-
 ```
 
 Используем привычный запрос INSERT для вставки данных:
 
 ```bash
-echo 'INSERT INTO t VALUES (1),(2),(3)' | POST 'http://localhost:8123/'
+echo 'INSERT INTO t VALUES (1),(2),(3)' | curl 'http://localhost:8123/' --data-binary @-
 ```
 
 Данные можно отправить отдельно от запроса:
 
 ```bash
-echo '(4),(5),(6)' | POST 'http://localhost:8123/?query=INSERT INTO t VALUES'
+echo '(4),(5),(6)' | curl 'http://localhost:8123/?query=INSERT%20INTO%20t%20VALUES' --data-binary @-
 ```
 
 Можно указать любой формат для данных. Формат Values - то же, что используется при записи INSERT INTO t VALUES:
 
 ```bash
-echo '(7),(8),(9)' | POST 'http://localhost:8123/?query=INSERT INTO t FORMAT Values'
+echo '(7),(8),(9)' | curl 'http://localhost:8123/?query=INSERT%20INTO%20t%20FORMAT%20Values' --data-binary @-
 ```
 
 Можно вставить данные из tab-separated дампа, указав соответствующий формат:
 
 ```bash
-echo -ne '10\n11\n12\n' | POST 'http://localhost:8123/?query=INSERT INTO t FORMAT TabSeparated'
+echo -ne '10\n11\n12\n' | curl 'http://localhost:8123/?query=INSERT%20INTO%20t%20FORMAT%20TabSeparated' --data-binary @-
 ```
 
 Прочитаем содержимое таблицы. Данные выводятся в произвольном порядке из-за параллельной обработки запроса:
 
 ```bash
-$ GET 'http://localhost:8123/?query=SELECT a FROM t'
+$ curl 'http://localhost:8123/?query=SELECT%20a%20FROM%20t'
 7
 8
 9
@@ -127,15 +124,18 @@ $ GET 'http://localhost:8123/?query=SELECT a FROM t'
 Удаляем таблицу.
 
 ```bash
-POST 'http://localhost:8123/?query=DROP TABLE t'
+echo 'DROP TABLE t' | curl 'http://localhost:8123/' --data-binary @-
 ```
 
 Для запросов, которые не возвращают таблицу с данными, в случае успеха, выдаётся пустое тело ответа.
 
-Вы можете использовать сжатие при передаче данных. Формат сжатых данных нестандартный, и вам придётся использовать для работы с ним специальную программу compressor (sudo apt-get install compressor-metrika-yandex).
+Вы можете использовать внутренний формат сжатия Clickhouse при передаче данных. Формат сжатых данных нестандартный, и вам придётся использовать для работы с ним специальную программу clickhouse-compressor (устанавливается вместе с пакетом clickhouse-client).
 
 Если вы указали в URL compress=1, то сервер будет сжимать отправляемые вам данные.
 Если вы указали в URL decompress=1, то сервер будет разжимать те данные, которые вы передаёте ему POST-ом.
+
+Также имеется возможность использования стандартного сжатия HTTP, на основе gzip. Чтобы отправить POST-запрос, сжатый с помощью gzip, добавьте к запросу заголовок `Content-Encoding: gzip`.
+Чтобы ClickHouse сжимал ответ на запрос с помощью gzip, необходимо добавить `Accept-Encoding: gzip` к заголовкам запроса, и включить настройку ClickHouse  `enable_http_compression`.
 
 Это может быть использовано для уменьшения трафика по сети при передаче большого количества данных, а также для создания сразу сжатых дампов.
 
@@ -193,7 +193,11 @@ $ echo 'SELECT number FROM system.numbers LIMIT 10' | curl 'http://localhost:812
 
 Об остальных параметрах смотри раздел "SET".
 
-В отличие от родного интерфейса, HTTP интерфейс не поддерживает понятие сессии и настройки в пределах сессии, не позволяет (вернее, позволяет лишь в некоторых случаях) прервать выполнение запроса, не показывает прогресс выполнения запроса. Парсинг и форматирование данных производится на стороне сервера и использование сети может быть неэффективным.
+В HTTP-протоколе можно использовать ClickHouse-сессии, для этого необходимо добавить к запросу GET-пaраметр `session_id`. В качестве идентификатора сессии можно использовать произвольную строку. По умолчанию через 60 секунд бездействия сессия будет прервана. Можно изменить этот таймаут, изменяя настройку `default_session_timeout` в конфигурации сервера, или добавив к запросу GET параметр `session_timeout`. Статус сессии можно проверить с помощью параметра `session_check=1`. В рамках одной сессии одновременно может испольняться только один запрос.
+
+Имеется возможность получать информацию о прогрессе выполнения запроса в залоголвках X-ClickHouse-Progress, для этого нужно включить настройку send_progress_in_http_headers.
+
+Запущенные запросы не останавливаются автоматически при разрыве HTTP соединения. Парсинг и форматирование данных производится на стороне сервера и использование сети может быть неэффективным.
 Может быть передан необязательный параметр query_id - идентификатор запроса, произвольная строка. Подробнее смотрите раздел "Настройки, replace_running_query".
 
 Может быть передан необязательный параметр quota_key - ключ квоты, произвольная строка. Подробнее смотрите раздел "Квоты".

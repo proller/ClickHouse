@@ -14,7 +14,7 @@ class ASTStorage;
 
 
 /** Allows to create a table by the name and parameters of the engine.
-  * In 'columns', 'materialized_columns', etc., Nested data structures must be flattened.
+  * In 'columns' Nested data structures must be flattened.
   * You should subsequently call IStorage::startup method to work with table.
   */
 class StorageFactory : public ext::singleton<StorageFactory>
@@ -31,10 +31,7 @@ public:
         const String & database_name;
         Context & local_context;
         Context & context;
-        const NamesAndTypesList & columns;
-        const NamesAndTypesList & materialized_columns;
-        const NamesAndTypesList & alias_columns;
-        const ColumnDefaults & column_defaults;
+        const ColumnsDescription & columns;
         bool attach;
         bool has_force_restore_data_flag;
     };
@@ -48,16 +45,18 @@ public:
         const String & database_name,
         Context & local_context,
         Context & context,
-        const NamesAndTypesList & columns,
-        const NamesAndTypesList & materialized_columns,
-        const NamesAndTypesList & alias_columns,
-        const ColumnDefaults & column_defaults,
+        const ColumnsDescription & columns,
         bool attach,
         bool has_force_restore_data_flag) const;
 
     /// Register a table engine by its name.
     /// No locking, you must register all engines before usage of get.
     void registerStorage(const std::string & name, Creator creator);
+
+    const auto & getAllStorages() const
+    {
+        return storages;
+    }
 
 private:
     using Storages = std::unordered_map<std::string, Creator>;

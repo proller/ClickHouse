@@ -6,10 +6,17 @@
 
 #include <deque>
 
+
 namespace DB
 {
 
+namespace ErrorCodes
+{
+    extern const int LOGICAL_ERROR;
+}
+
 static const size_t MAX_ROWS_IN_MULTIVERSION_QUEUE = 8192;
+
 
 /* Deque with fixed memory size. Allows pushing gaps.
  * frontGap() returns the number of gaps were inserted before front.
@@ -168,43 +175,17 @@ public:
     /// Don't need version column. It's in primary key.
     /// max_rows_in_queue should be about max_block_size_ if we won't store a lot of extra blocks (RowRef holds SharedBlockPtr).
     VersionedCollapsingSortedBlockInputStream(
-            BlockInputStreams inputs_, const SortDescription & description_,
-            const String & sign_column_, size_t max_block_size_, bool can_collapse_all_rows_,
-            WriteBuffer * out_row_sources_buf_ = nullptr)
-            : MergingSortedBlockInputStream(inputs_, description_, max_block_size_, 0, out_row_sources_buf_)
-            , sign_column(sign_column_)
-            , max_rows_in_queue(std::min(std::max<size_t>(3, max_block_size_), MAX_ROWS_IN_MULTIVERSION_QUEUE) - 2)
-            , current_keys(max_rows_in_queue + 1), can_collapse_all_rows(can_collapse_all_rows_)
-    {
-    }
+        const BlockInputStreams & inputs_, const SortDescription & description_,
+        const String & sign_column_, size_t max_block_size_,
+        WriteBuffer * out_row_sources_buf_ = nullptr);
 
     String getName() const override { return "VersionedCollapsingSorted"; }
-
-    String getID() const override
-    {
-        std::stringstream res;
-        res << "VersionedCollapsingSortedBlockInputStream(inputs";
-
-        for (const auto & child : children)
-            res << ", " << child->getID();
-
-        res << ", description";
-
-        for (const auto & descr : description)
-            res << ", " << descr.getID();
-
-        res << ", sign_column, " << sign_column;
-        res << ", version_column, " << sign_column << ")";
-        return res.str();
-    }
 
 protected:
     /// Can return 1 more records than max_block_size.
     Block readImpl() override;
 
 private:
-    String sign_column;
-
     size_t sign_column_number = 0;
 
     Logger * log = &Logger::get("VersionedCollapsingSortedBlockInputStream");
@@ -221,8 +202,6 @@ private:
 
     /// Sources of rows for VERTICAL merge algorithm. Size equals to (size + number of gaps) in current_keys.
     std::queue<RowSourcePart> current_row_sources;
-
-    const bool can_collapse_all_rows;
 
     void merge(MutableColumns & merged_columns, std::priority_queue<SortCursor> & queue);
 

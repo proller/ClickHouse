@@ -5,7 +5,6 @@
 #include <DataStreams/LimitBlockInputStream.h>
 #include <Storages/System/StorageSystemNumbers.h>
 
-
 namespace DB
 {
 
@@ -15,11 +14,15 @@ public:
     NumbersBlockInputStream(size_t block_size_, size_t offset_, size_t step_)
         : block_size(block_size_), next(offset_), step(step_) {}
 
-    String getName() const { return "Numbers"; }
-    String getID() const { return "Numbers"; }
+    String getName() const override { return "Numbers"; }
+
+    Block getHeader() const override
+    {
+        return { ColumnWithTypeAndName(ColumnUInt64::create(), std::make_shared<DataTypeUInt64>(), "number") };
+    }
 
 protected:
-    Block readImpl()
+    Block readImpl() override
     {
         auto column = ColumnUInt64::create(block_size);
         ColumnUInt64::Container & vec = column->getData();
@@ -40,10 +43,10 @@ private:
 };
 
 
-StorageSystemNumbers::StorageSystemNumbers(const std::string & name_, bool multithreaded_, size_t limit_)
-    : name(name_), multithreaded(multithreaded_), limit(limit_)
+StorageSystemNumbers::StorageSystemNumbers(const std::string & name_, bool multithreaded_, size_t limit_, size_t offset_)
+    : name(name_), multithreaded(multithreaded_), limit(limit_), offset(offset_)
 {
-    columns = NamesAndTypesList{{"number", std::make_shared<DataTypeUInt64>()}};
+    setColumns(ColumnsDescription({{"number", std::make_shared<DataTypeUInt64>()}}));
 }
 
 
@@ -70,7 +73,7 @@ BlockInputStreams StorageSystemNumbers::read(
     BlockInputStreams res(num_streams);
     for (size_t i = 0; i < num_streams; ++i)
     {
-        res[i] = std::make_shared<NumbersBlockInputStream>(max_block_size, i * max_block_size, num_streams * max_block_size);
+        res[i] = std::make_shared<NumbersBlockInputStream>(max_block_size, offset + i * max_block_size, num_streams * max_block_size);
 
         if (limit)  /// This formula is how to split 'limit' elements to 'num_streams' chunks almost uniformly.
             res[i] = std::make_shared<LimitBlockInputStream>(res[i], limit * (i + 1) / num_streams - limit * i / num_streams, 0);

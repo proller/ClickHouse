@@ -121,7 +121,7 @@ NamesAndTypesList NamesAndTypesList::filter(const Names & names) const
 NamesAndTypesList NamesAndTypesList::addTypes(const Names & names) const
 {
     /// NOTE It's better to make a map in `IStorage` than to create it here every time again.
-    google::dense_hash_map<StringRef, const DataTypePtr *, StringRefHash> types;
+    GOOGLE_NAMESPACE::dense_hash_map<StringRef, const DataTypePtr *, StringRefHash> types;
     types.set_empty_key(StringRef());
 
     for (const NameAndTypePair & column : *this)
@@ -136,6 +136,16 @@ NamesAndTypesList NamesAndTypesList::addTypes(const Names & names) const
         res.emplace_back(name, *it->second);
     }
     return res;
+}
+
+bool NamesAndTypesList::contains(const String & name) const
+{
+    for (const NameAndTypePair & column : *this)
+    {
+        if (column.name == name)
+            return true;
+    }
+    return false;
 }
 
 }

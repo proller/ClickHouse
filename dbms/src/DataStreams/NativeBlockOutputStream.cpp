@@ -20,9 +20,9 @@ namespace ErrorCodes
 
 
 NativeBlockOutputStream::NativeBlockOutputStream(
-    WriteBuffer & ostr_, UInt64 client_revision_,
+    WriteBuffer & ostr_, UInt64 client_revision_, const Block & header_,
     WriteBuffer * index_ostr_, size_t initial_size_of_file_)
-    : ostr(ostr_), client_revision(client_revision_),
+    : ostr(ostr_), client_revision(client_revision_), header(header_),
     index_ostr(index_ostr_), initial_size_of_file(initial_size_of_file_)
 {
     if (index_ostr)
@@ -52,8 +52,15 @@ void NativeBlockOutputStream::writeData(const IDataType & type, const ColumnPtr 
     else
         full_column = column;
 
-    IDataType::OutputStreamGetter output_stream_getter = [&] (const IDataType::SubstreamPath &) { return &ostr; };
-    type.serializeBinaryBulkWithMultipleStreams(*full_column, output_stream_getter, offset, limit, false, {});
+    IDataType::SerializeBinaryBulkSettings settings;
+    settings.getter = [&ostr](IDataType::SubstreamPath) -> WriteBuffer * { return &ostr; };
+    settings.position_independent_encoding = false;
+    settings.low_cardinality_max_dictionary_size = 0;
+
+    IDataType::SerializeBinaryBulkStatePtr state;
+    type.serializeBinaryBulkStatePrefix(settings, state);
+    type.serializeBinaryBulkWithMultipleStreams(*full_column, offset, limit, settings, state);
+    type.serializeBinaryBulkStateSuffix(settings, state);
 }
 
 

@@ -118,9 +118,7 @@ struct AggregateFunctionUniqUpToData<UInt128> : AggregateFunctionUniqUpToData<UI
     void add(const IColumn & column, size_t row_num, UInt8 threshold)
     {
         UInt128 value = static_cast<const ColumnVector<UInt128> &>(column).getData()[row_num];
-        SipHash hash;
-        hash.update(reinterpret_cast<const char *>(&value), sizeof(value));
-        insert(hash.get64(), threshold);
+        insert(sipHash64(value), threshold);
     }
 };
 
@@ -182,9 +180,9 @@ public:
   * You can pass multiple arguments as is; You can also pass one argument - a tuple.
   * But (for the possibility of effective implementation), you can not pass several arguments, among which there are tuples.
   */
-template <bool argument_is_tuple>
+template <bool is_exact, bool argument_is_tuple>
 class AggregateFunctionUniqUpToVariadic final
-    : public IAggregateFunctionDataHelper<AggregateFunctionUniqUpToData<UInt64>, AggregateFunctionUniqUpToVariadic<argument_is_tuple>>
+    : public IAggregateFunctionDataHelper<AggregateFunctionUniqUpToData<UInt64>, AggregateFunctionUniqUpToVariadic<is_exact, argument_is_tuple>>
 {
 private:
     size_t num_args = 0;
@@ -214,7 +212,7 @@ public:
 
     void add(AggregateDataPtr place, const IColumn ** columns, size_t row_num, Arena *) const override
     {
-        this->data(place).insert(UniqVariadicHash<false, argument_is_tuple>::apply(num_args, columns, row_num), threshold);
+        this->data(place).insert(UInt64(UniqVariadicHash<is_exact, argument_is_tuple>::apply(num_args, columns, row_num)), threshold);
     }
 
     void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena *) const override

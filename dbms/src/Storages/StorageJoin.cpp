@@ -1,11 +1,11 @@
 #include <Storages/StorageJoin.h>
 #include <Storages/StorageFactory.h>
 #include <Interpreters/Join.h>
-#include <Interpreters/Limits.h>
 #include <Parsers/ASTIdentifier.h>
 #include <Common/typeid_cast.h>
 
-#include <Poco/String.h>
+#include <Poco/String.h>    /// toLower
+#include <Poco/File.h>
 
 
 namespace DB
@@ -25,33 +25,31 @@ StorageJoin::StorageJoin(
     const String & name_,
     const Names & key_names_,
     ASTTableJoin::Kind kind_, ASTTableJoin::Strictness strictness_,
-    const NamesAndTypesList & columns_,
-    const NamesAndTypesList & materialized_columns_,
-    const NamesAndTypesList & alias_columns_,
-    const ColumnDefaults & column_defaults_)
-    : StorageSetOrJoinBase{path_, name_, columns_, materialized_columns_, alias_columns_, column_defaults_},
+    const ColumnsDescription & columns_)
+    : StorageSetOrJoinBase{path_, name_, columns_},
     key_names(key_names_), kind(kind_), strictness(strictness_)
 {
-    /// Check that key exists in table definition.
-    const auto check_key_exists = [] (const NamesAndTypesList & columns, const String & key)
-    {
-        for (const auto & column : columns)
-            if (column.name == key)
-                return true;
-        return false;
-    };
-
     for (const auto & key : key_names)
-        if (!check_key_exists(columns, key) && !check_key_exists(materialized_columns, key))
-            throw Exception{
-                "Key column (" + key + ") does not exist in table declaration.",
-                ErrorCodes::NO_SUCH_COLUMN_IN_TABLE};
+        if (!getColumns().hasPhysical(key))
+            throw Exception{"Key column (" + key + ") does not exist in table declaration.", ErrorCodes::NO_SUCH_COLUMN_IN_TABLE};
 
     /// NOTE StorageJoin doesn't use join_use_nulls setting.
 
-    join = std::make_shared<Join>(key_names, key_names, false /* use_nulls */, Limits(), kind, strictness);
+    join = std::make_shared<Join>(key_names, key_names, NameSet(), false /* use_nulls */, SizeLimits(), kind, strictness);
     join->setSampleBlock(getSampleBlock().sortColumns());
     restore();
+}
+
+
+void StorageJoin::truncate(const ASTPtr &)
+{
+    Poco::File(path).remove(true);
+    Poco::File(path).createDirectories();
+    Poco::File(path + "tmp/").createDirectories();
+
+    increment = 0;
+    join = std::make_shared<Join>(key_names, key_names, NameSet(), false /* use_nulls */, SizeLimits(), kind, strictness);
+    join->setSampleBlock(getSampleBlock().sortColumns());
 }
 
 
@@ -59,12 +57,12 @@ void StorageJoin::assertCompatible(ASTTableJoin::Kind kind_, ASTTableJoin::Stric
 {
     /// NOTE Could be more loose.
     if (!(kind == kind_ && strictness == strictness_))
-        throw Exception("Table " + name + " has incompatible type of JOIN.", ErrorCodes::INCOMPATIBLE_TYPE_OF_JOIN);
+        throw Exception("Table " + table_name + " has incompatible type of JOIN.", ErrorCodes::INCOMPATIBLE_TYPE_OF_JOIN);
 }
 
 
 void StorageJoin::insertBlock(const Block & block) { join->insertFromBlock(block); }
-size_t StorageJoin::getSize() const { return join->getTotalRowCount(); };
+size_t StorageJoin::getSize() const { return join->getTotalRowCount(); }
 
 
 void registerStorageJoin(StorageFactory & factory)
@@ -124,7 +122,7 @@ void registerStorageJoin(StorageFactory & factory)
         return StorageJoin::create(
             args.data_path, args.table_name,
             key_names, kind, strictness,
-            args.columns, args.materialized_columns, args.alias_columns, args.column_defaults);
+            args.columns);
     });
 }
 

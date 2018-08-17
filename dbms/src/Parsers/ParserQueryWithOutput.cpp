@@ -1,6 +1,6 @@
 #include <Parsers/ParserQueryWithOutput.h>
 #include <Parsers/ParserShowTablesQuery.h>
-#include <Parsers/ParserSelectQuery.h>
+#include <Parsers/ParserSelectWithUnionQuery.h>
 #include <Parsers/ParserTablePropertiesQuery.h>
 #include <Parsers/ParserDescribeTableQuery.h>
 #include <Parsers/ParserShowProcesslistQuery.h>
@@ -10,6 +10,7 @@
 #include <Parsers/ParserAlterQuery.h>
 #include <Parsers/ParserDropQuery.h>
 #include <Parsers/ParserKillQueryQuery.h>
+#include <Parsers/ParserOptimizeQuery.h>
 
 
 namespace DB
@@ -18,7 +19,7 @@ namespace DB
 bool ParserQueryWithOutput::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
 {
     ParserShowTablesQuery show_tables_p;
-    ParserSelectQuery select_p;
+    ParserSelectWithUnionQuery select_p;
     ParserTablePropertiesQuery table_p;
     ParserDescribeTableQuery describe_table_p;
     ParserShowProcesslistQuery show_processlist_p;
@@ -27,6 +28,7 @@ bool ParserQueryWithOutput::parseImpl(Pos & pos, ASTPtr & node, Expected & expec
     ParserRenameQuery rename_p;
     ParserDropQuery drop_p;
     ParserCheckQuery check_p;
+    ParserOptimizeQuery optimize_p;
     ParserKillQueryQuery kill_query_p;
 
     ASTPtr query;
@@ -41,7 +43,8 @@ bool ParserQueryWithOutput::parseImpl(Pos & pos, ASTPtr & node, Expected & expec
         || rename_p.parse(pos, query, expected)
         || drop_p.parse(pos, query, expected)
         || check_p.parse(pos, query, expected)
-        || kill_query_p.parse(pos, query, expected);
+        || kill_query_p.parse(pos, query, expected)
+        || optimize_p.parse(pos, query, expected);
 
     if (!parsed)
         return false;

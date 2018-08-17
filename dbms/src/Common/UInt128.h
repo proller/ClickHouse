@@ -28,8 +28,16 @@ struct UInt128
     UInt64 high;
 
     UInt128() = default;
-    explicit UInt128(const UInt64 rhs) : low(rhs), high() {}
     explicit UInt128(const UInt64 low, const UInt64 high) : low(low), high(high) {}
+
+#if 1
+    explicit UInt128(const unsigned __int128 rhs)
+    :   low(rhs & 0xffffffffffffffffll),
+        high(rhs >> 64)
+    {}
+#else
+    explicit UInt128(const UInt64 rhs) : low(rhs), high() {}
+#endif
 
     auto tuple() const { return std::tie(high, low); }
 
@@ -40,9 +48,6 @@ struct UInt128
     bool inline operator>  (const UInt128 rhs) const { return tuple() > rhs.tuple(); }
     bool inline operator>= (const UInt128 rhs) const { return tuple() >= rhs.tuple(); }
 
-    /** Types who are stored at the moment in the database have no more than 64bits and can be handle
-     *  inside an unique UInt64.
-     */
     template <typename T> bool inline operator== (const T rhs) const { return *this == UInt128(rhs); }
     template <typename T> bool inline operator!= (const T rhs) const { return *this != UInt128(rhs); }
     template <typename T> bool inline operator>= (const T rhs) const { return *this >= UInt128(rhs); }
@@ -68,6 +73,7 @@ template <typename T> bool inline operator<  (T a, const UInt128 b) { return UIn
 
 template <> constexpr bool IsNumber<UInt128> = true;
 template <> struct TypeName<UInt128> { static const char * get() { return "UInt128"; } };
+template <> struct TypeId<UInt128> { static constexpr const size_t value = 5; };
 
 struct UInt128Hash
 {

@@ -42,6 +42,12 @@ AggregateFunctionPtr createAggregateFunctionUniqUpTo(const std::string & name, c
         threshold = threshold_param;
     }
 
+    if (argument_types.empty())
+        throw Exception("Incorrect number of arguments for aggregate function " + name,
+            ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+
+    bool use_exact_hash_function = !isAllArgumentsContiguousInMemory(argument_types);
+
     if (argument_types.size() == 1)
     {
         const IDataType & argument_type = *argument_types[0];
@@ -56,26 +62,22 @@ AggregateFunctionPtr createAggregateFunctionUniqUpTo(const std::string & name, c
             return std::make_shared<AggregateFunctionUniqUpTo<DataTypeDateTime::FieldType>>(threshold);
         else if (typeid_cast<const DataTypeString *>(&argument_type) || typeid_cast<const DataTypeFixedString*>(&argument_type))
             return std::make_shared<AggregateFunctionUniqUpTo<String>>(threshold);
-        else if (typeid_cast<const DataTypeTuple *>(&argument_type))
-            return std::make_shared<AggregateFunctionUniqUpToVariadic<true>>(argument_types, threshold);
         else if (typeid_cast<const DataTypeUUID *>(&argument_type))
             return std::make_shared<AggregateFunctionUniqUpTo<DataTypeUUID::FieldType>>(threshold);
-        else
-            throw Exception("Illegal type " + argument_types[0]->getName() + " of argument for aggregate function " + name, ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+        else if (typeid_cast<const DataTypeTuple *>(&argument_type))
+        {
+            if (use_exact_hash_function)
+                return std::make_shared<AggregateFunctionUniqUpToVariadic<true, true>>(argument_types, threshold);
+            else
+                return std::make_shared<AggregateFunctionUniqUpToVariadic<false, true>>(argument_types, threshold);
+        }
     }
-    else if (argument_types.size() > 1)
-    {
-        /// If there are several arguments, then no tuples allowed among them.
-        for (const auto & type : argument_types)
-            if (typeid_cast<const DataTypeTuple *>(type.get()))
-                throw Exception("Tuple argument of function " + name + " must be the only argument",
-                    ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
-        return std::make_shared<AggregateFunctionUniqUpToVariadic<false>>(argument_types, threshold);
-    }
+    /// "Variadic" method also works as a fallback generic case for single argument.
+    if (use_exact_hash_function)
+        return std::make_shared<AggregateFunctionUniqUpToVariadic<true, false>>(argument_types, threshold);
     else
-        throw Exception("Incorrect number of arguments for aggregate function " + name,
-            ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+        return std::make_shared<AggregateFunctionUniqUpToVariadic<false, false>>(argument_types, threshold);
 }
 
 }

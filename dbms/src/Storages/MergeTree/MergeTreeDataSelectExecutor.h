@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Core/QueryProcessingStage.h>
+#include <Storages/SelectQueryInfo.h>
 #include <Storages/MergeTree/MergeTreeData.h>
 #include <Storages/MergeTree/RangesInDataPart.h>
 
@@ -7,7 +9,7 @@
 namespace DB
 {
 
-class PKCondition;
+class KeyCondition;
 
 
 /** Executes SELECT queries on data from the merge tree.
@@ -21,6 +23,16 @@ public:
       * max_block_number_to_read - if not zero, do not read all the parts whose right border is greater than this threshold.
       */
     BlockInputStreams read(
+        const Names & column_names,
+        const SelectQueryInfo & query_info,
+        const Context & context,
+        QueryProcessingStage::Enum & processed_stage,
+        size_t max_block_size,
+        unsigned num_streams,
+        Int64 max_block_number_to_read) const;
+
+    BlockInputStreams readFromParts(
+        MergeTreeData::DataPartsVector parts,
         const Names & column_names,
         const SelectQueryInfo & query_info,
         const Context & context,
@@ -53,13 +65,12 @@ private:
         ExpressionActionsPtr prewhere_actions,
         const String & prewhere_column,
         const Names & virt_columns,
-        const Settings & settings,
-        const Context & context) const;
+        const Settings & settings) const;
 
     /// Get the approximate value (bottom estimate - only by full marks) of the number of rows falling under the index.
     size_t getApproximateTotalRowsToRead(
         const MergeTreeData::DataPartsVector & parts,
-        const PKCondition & key_condition,
+        const KeyCondition & key_condition,
         const Settings & settings) const;
 
     /// Create the expression "Sign == 1".
@@ -70,7 +81,7 @@ private:
 
     MarkRanges markRangesFromPKRange(
         const MergeTreeData::DataPart::Index & index,
-        const PKCondition & key_condition,
+        const KeyCondition & key_condition,
         const Settings & settings) const;
 };
 

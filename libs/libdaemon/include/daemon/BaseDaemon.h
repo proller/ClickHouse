@@ -1,7 +1,7 @@
 #pragma once
 
 #include <sys/types.h>
-#include <unistd.h>
+#include <port/unistd.h>
 #include <iostream>
 #include <memory>
 #include <functional>
@@ -23,7 +23,7 @@
 #include <common/Types.h>
 #include <common/logger_useful.h>
 #include <daemon/GraphiteWriter.h>
-#include <Common/ConfigProcessor/ConfigProcessor.h>
+#include <Common/Config/ConfigProcessor.h>
 
 namespace Poco { class TaskManager; }
 
@@ -67,7 +67,7 @@ public:
     void reloadConfiguration();
 
     /// Строит необходимые логгеры
-    void buildLoggers();
+    void buildLoggers(Poco::Util::AbstractConfiguration & config);
 
     /// Определяет параметр командной строки
     void defineOptions(Poco::Util::OptionSet & _options) override;
@@ -145,6 +145,11 @@ public:
         return layer;    /// layer выставляется в классе-наследнике BaseDaemonApplication.
     }
 
+    /// close all process FDs except
+    /// 0-2 -- stdin, stdout, stderr
+    /// also doesn't close global internal pipes for signal handling
+    void closeFDs();
+
 protected:
     /// Возвращает TaskManager приложения
     /// все методы task_manager следует вызывать из одного потока
@@ -158,6 +163,9 @@ protected:
 
     /// thread safe
     virtual void handleSignal(int signal_id);
+
+    /// initialize termination process and signal handlers
+    virtual void initializeTerminationAndSignalProcessing();
 
     /// реализация обработки сигналов завершения через pipe не требует блокировки сигнала с помощью sigprocmask во всех потоках
     void waitForTerminationRequest()
@@ -214,7 +222,7 @@ protected:
     /// Файлы с логами.
     Poco::AutoPtr<Poco::FileChannel> log_file;
     Poco::AutoPtr<Poco::FileChannel> error_log_file;
-    Poco::AutoPtr<Poco::SyslogChannel> syslog_channel;
+    Poco::AutoPtr<Poco::Channel> syslog_channel;
 
     std::map<std::string, std::unique_ptr<GraphiteWriter>> graphite_writers;
 
@@ -228,6 +236,11 @@ protected:
     std::string config_path;
     ConfigProcessor::LoadedConfig loaded_config;
     Poco::Util::AbstractConfiguration * last_configuration = nullptr;
+
+private:
+
+    /// Previous value of logger element in config. It is used to reinitialize loggers whenever the value changed.
+    std::string config_logger;
 };
 
 
