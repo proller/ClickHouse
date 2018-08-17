@@ -20,6 +20,15 @@ bool ParserCase::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
     if (!s_case.ignore(pos, expected))
         return false;
 
+/*
+    if (!s_case.parse(pos, node, expected))
+    {
+        /// Parse as a simple ASTFunction.
+//DUMP("go func");
+        return ParserFunction{}.parse(pos, node, expected);
+    }
+*/
+
     auto old_pos = pos;
     bool has_case_expr = !s_when.ignore(pos, expected);
     pos = old_pos;

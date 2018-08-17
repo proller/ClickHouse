@@ -5,12 +5,14 @@
 #include <IO/WriteHelpers.h>
 #include <IO/WriteBufferFromString.h>
 
+#include <Core/iostream_debug_helpers.h>
 
 namespace DB
 {
 
 String ASTFunction::getColumnNameImpl() const
 {
+DUMP("");
     WriteBufferFromOwnString wb;
     writeString(name, wb);
 
@@ -34,6 +36,8 @@ String ASTFunction::getColumnNameImpl() const
         writeString((*it)->getColumnName(), wb);
     }
     writeChar(')', wb);
+
+DUMP(wb.str());
     return wb.str();
 }
 

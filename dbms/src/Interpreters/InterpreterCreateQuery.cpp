@@ -489,6 +489,7 @@ BlockIO InterpreterCreateQuery::createTable(ASTCreateQuery & create)
 
     /// Set the table engine if it was not specified explicitly.
     setEngine(create);
+std::cerr << "setengine1\n";
 
     StoragePtr res;
 

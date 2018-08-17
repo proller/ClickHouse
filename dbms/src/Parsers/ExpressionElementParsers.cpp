@@ -13,16 +13,15 @@
 #include <Parsers/ASTQualifiedAsterisk.h>
 #include <Parsers/ASTOrderByElement.h>
 #include <Parsers/ASTSubquery.h>
-
 #include <Parsers/CommonParsers.h>
 #include <Parsers/ExpressionListParsers.h>
 #include <Parsers/ParserSelectWithUnionQuery.h>
 #include <Parsers/ParserCase.h>
-
 #include <Parsers/ExpressionElementParsers.h>
 #include <Parsers/ParserCreateQuery.h>
-
 #include <Parsers/queryToString.h>
+
+#include "iostream_debug_helpers.h"
 
 
 namespace DB
@@ -294,6 +293,44 @@ bool ParserCastExpression::parseImpl(Pos & pos, ASTPtr & node, Expected & expect
         && ParserKeyword("AS").ignore(pos, expected)
         && ParserIdentifierWithOptionalParameters().parse(pos, type_node, expected)
         && ParserToken(TokenType::ClosingRoundBracket).ignore(pos, expected))
+/*
+    const auto begin = pos;
+
+    ParserIdentifier id_parser;
+
+    ASTPtr identifier;
+
+    if (!id_parser.parse(pos, identifier, expected))
+        return false;
+
+    const auto & id = typeid_cast<const ASTIdentifier &>(*identifier).name;
+
+    /// TODO This is ridiculous. Please get rid of this.
+    if (id.length() != strlen(name) || 0 != strcasecmp(id.c_str(), name))
+    {
+        /// Parse as a CASE expression.
+        pos = begin;
+DUMP("parsecase=");
+        return ParserCase{}.parse(pos, node, expected);
+    }
+
+    /// Parse as CAST(expression AS type)
+    ParserExpressionInCastExpression expression_and_type(false);
+
+    ASTPtr expr_list_args;
+
+    if (pos->type != TokenType::OpeningRoundBracket)
+        return false;
+    ++pos;
+
+    const auto contents_begin = pos;
+    ASTPtr first_argument;
+    if (!expression_and_type.parse(pos, first_argument, expected))
+        return false;
+
+    /// check for subsequent comma ","
+    if (pos->type != TokenType::Comma)
+*/
     {
         /// Convert to canonical representation in functional form: CAST(expr, 'type')
 
@@ -313,6 +350,22 @@ bool ParserCastExpression::parseImpl(Pos & pos, ASTPtr & node, Expected & expect
     }
 
     return false;
+/*
+    if (pos->type != TokenType::ClosingRoundBracket)
+        return false;
+    ++pos;
+
+    const auto function_node = std::make_shared<ASTFunction>();
+    ASTPtr node_holder{function_node};
+    function_node->name = name;
+
+    function_node->arguments = expr_list_args;
+    function_node->children.push_back(function_node->arguments);
+
+    node = node_holder;
+DUMP("parseok");
+    return true;
+*/
 }
 
 
@@ -683,6 +736,61 @@ bool ParserExpressionElement::parseImpl(Pos & pos, ASTPtr & node, Expected & exp
         || ParserQualifiedAsterisk().parse(pos, node, expected)
         || ParserAsterisk().parse(pos, node, expected)
         || ParserCompoundIdentifier().parse(pos, node, expected);
+/*
+    ParserParenthesisExpression paren_p;
+    ParserSubquery subquery_p;
+    ParserArray array_p;
+    ParserArrayOfLiterals array_lite_p;
+    ParserLiteral lit_p;
+    ParserExtractExpression extract_p;
+    ParserCastExpression cast_p;
+    ParserCompoundIdentifier id_p;
+    ParserAsterisk asterisk_p;
+    ParserQualifiedAsterisk qualified_asterisk_p;
+
+DUMP(pos.get(), expected);
+    if (subquery_p.parse(pos, node, expected))
+        { DUMP("RETURN"); return true; }
+
+DUMP(pos.get(), expected);
+    if (paren_p.parse(pos, node, expected))
+        { DUMP("RETURN"); return true; }
+
+DUMP(pos.get(), expected);
+    if (array_lite_p.parse(pos, node, expected))
+        { DUMP("RETURN"); return true; }
+
+DUMP(pos.get(), expected);
+    if (array_p.parse(pos, node, expected))
+        { DUMP("RETURN"); return true; }
+
+DUMP(pos.get(), expected);
+    if (lit_p.parse(pos, node, expected))
+        { DUMP("RETURN"); return true; }
+
+DUMP(pos.get(), expected);
+    if (extract_p.parse(pos, node, expected))
+        { DUMP("RETURN"); return true; }
+
+DUMP(pos.get(), expected);
+    if (cast_p.parse(pos, node, expected))
+        { DUMP("RETURN"); return true; }
+
+DUMP(pos.get(), expected);
+    if (qualified_asterisk_p.parse(pos, node, expected))
+        { DUMP("RETURN"); return true; }
+
+DUMP(pos.get(), expected);
+    if (asterisk_p.parse(pos, node, expected))
+        { DUMP("RETURN"); return true; }
+
+DUMP(pos.get(), expected);
+    if (id_p.parse(pos, node, expected))
+        { DUMP("RETURN"); return true; }
+
+DUMP(pos.get(), expected);
+    return false;
+*/
 }
 
 
