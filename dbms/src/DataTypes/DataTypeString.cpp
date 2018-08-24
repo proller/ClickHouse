@@ -308,12 +308,12 @@ void registerDataTypeString(DataTypeFactory & factory)
 {
     auto creator = static_cast<DataTypePtr(*)()>([] { return DataTypePtr(std::make_shared<DataTypeString>()); });
 
-    factory.registerSimpleDataType("String", creator);
+    factory.registerSimpleDataType("String", creator, {}, /* ignore_arguments = */ true);
 
     /// These synonims are added for compatibility.
 
     factory.registerAlias("CHAR", "String", DataTypeFactory::CaseInsensitive);
-    factory.registerAlias("VARCHAR", "String", DataTypeFactory::CaseInsensitive, /* ignore_arguments = */ true);
+    factory.registerAlias("VARCHAR", "String", DataTypeFactory::CaseInsensitive); // , /* ignore_arguments = */ true);
     factory.registerAlias("TEXT", "String", DataTypeFactory::CaseInsensitive);
     factory.registerAlias("TINYTEXT", "String", DataTypeFactory::CaseInsensitive);
     factory.registerAlias("MEDIUMTEXT", "String", DataTypeFactory::CaseInsensitive);
