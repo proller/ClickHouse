@@ -1,10 +1,10 @@
 # Third-party libraries may have substandard code.
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-result -Wno-deprecated-declarations -Wno-maybe-uninitialized -Wno-format -Wno-misleading-indentation")
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-result -Wno-deprecated-declarations -Wno-maybe-uninitialized -Wno-format -Wno-misleading-indentation -Wno-stringop-overflow")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-old-style-cast -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-result -Wno-deprecated-declarations -Wno-non-virtual-dtor -Wno-maybe-uninitialized -Wno-format -Wno-misleading-indentation -Wno-implicit-fallthrough -std=c++1z")
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function -Wno-unused-variable -Wno-unused-result -Wno-deprecated-declarations -Wno-format")
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function -Wno-unused-variable -Wno-unused-result -Wno-deprecated-declarations -Wno-format -Wno-parentheses-equality")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-old-style-cast -Wno-unused-function -Wno-unused-variable -Wno-unused-result -Wno-deprecated-declarations -Wno-non-virtual-dtor -Wno-format -std=c++1z")
 endif ()
 
@@ -104,14 +104,14 @@ endif ()
 
 if (ENABLE_MYSQL AND USE_INTERNAL_MYSQL_LIBRARY)
     add_subdirectory (mariadb-connector-c-cmake)
-    target_include_directories(mysqlclient PRIVATE BEFORE ${ZLIB_INCLUDE_DIR})
-    target_include_directories(mysqlclient PRIVATE BEFORE ${OPENSSL_INCLUDE_DIR})
+    target_include_directories(mysqlclient BEFORE PRIVATE ${ZLIB_INCLUDE_DIR})
+    target_include_directories(mysqlclient BEFORE PRIVATE ${OPENSSL_INCLUDE_DIR})
 endif ()
 
 if (USE_INTERNAL_RDKAFKA_LIBRARY)
     add_subdirectory (librdkafka-cmake)
-    target_include_directories(rdkafka PRIVATE BEFORE ${ZLIB_INCLUDE_DIR})
-    target_include_directories(rdkafka PRIVATE BEFORE ${OPENSSL_INCLUDE_DIR})
+    target_include_directories(rdkafka BEFORE PRIVATE ${ZLIB_INCLUDE_DIR})
+    target_include_directories(rdkafka BEFORE PRIVATE ${OPENSSL_INCLUDE_DIR})
 endif ()
 
 if (ENABLE_ODBC AND USE_INTERNAL_ODBC_LIBRARY)
@@ -151,7 +151,7 @@ endif ()
 
 if (USE_INTERNAL_LLVM_LIBRARY)
     # ld: unknown option: --color-diagnostics
-    if (APPLE AND COMPILER_GCC)
+    if (APPLE)
         set (LINKER_SUPPORTS_COLOR_DIAGNOSTICS 0 CACHE INTERNAL "")
     endif ()
     add_subdirectory (llvm/llvm)

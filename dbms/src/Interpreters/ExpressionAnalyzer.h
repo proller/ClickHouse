@@ -4,6 +4,7 @@
 #include <Interpreters/Settings.h>
 #include <Core/Block.h>
 #include <Interpreters/ExpressionActions.h>
+#include <Interpreters/evaluateQualified.h>
 #include <Interpreters/ProjectionManipulation.h>
 #include <Parsers/StringRange.h>
 #include <Parsers/ASTTablesInSelectQuery.h>
@@ -91,19 +92,6 @@ struct ScopeStack
     const Block & getSampleBlock() const;
 };
 
-struct DatabaseAndTableWithAlias
-{
-    String database;
-    String table;
-    String alias;
-
-    /// "alias." or "database.table." if alias is empty
-    String getQualifiedNamePrefix() const;
-
-    /// If ast is ASTIdentifier, prepend getQualifiedNamePrefix() to it's name.
-    void makeQualifiedName(const ASTPtr & ast) const;
-};
-
 /** Transforms an expression from a syntax tree into a sequence of actions to execute it.
   *
   * NOTE: if `ast` is a SELECT query from a table, the structure of this table should not change during the lifetime of ExpressionAnalyzer.
@@ -152,6 +140,8 @@ public:
     /// Before aggregation:
     bool appendArrayJoin(ExpressionActionsChain & chain, bool only_types);
     bool appendJoin(ExpressionActionsChain & chain, bool only_types);
+    /// remove_filter is set in ExpressionActionsChain::finalize();
+    bool appendPrewhere(ExpressionActionsChain & chain, bool only_types);
     bool appendWhere(ExpressionActionsChain & chain, bool only_types);
     bool appendGroupBy(ExpressionActionsChain & chain, bool only_types);
     void appendAggregateFunctionsArguments(ExpressionActionsChain & chain, bool only_types);
@@ -189,7 +179,7 @@ public:
     /// Create Set-s that we can from IN section to use the index on them.
     void makeSetsForIndex();
 
-    bool isRewriteSubQueriesPredicate() { return rewrite_sub_queries; }
+    bool isRewriteSubqueriesPredicate() { return rewrite_subqueries; }
 
 private:
     ASTPtr ast;
@@ -303,7 +293,7 @@ private:
     size_t external_table_id = 1;
 
     /// Predicate optimizer overrides the sub queries
-    bool rewrite_sub_queries = false;
+    bool rewrite_subqueries = false;
 
     /** Remove all unnecessary columns from the list of all available columns of the table (`columns`).
       * At the same time, form a set of unknown columns (`unknown_required_source_columns`),

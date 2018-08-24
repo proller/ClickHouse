@@ -22,6 +22,7 @@
 #include <Common/getFQDNOrHostName.h>
 #include <Common/getMultipleKeysFromConfig.h>
 #include <Common/getNumberOfPhysicalCPUCores.h>
+#include <Common/TaskStatsInfoGetter.h>
 #include <IO/HTTPCommon.h>
 #include <Interpreters/AsynchronousMetrics.h>
 #include <Interpreters/DDLWorker.h>
@@ -364,6 +365,17 @@ int Server::main(const std::vector<std::string> & /*args*/)
         /// Initialize a watcher updating DNS cache in case of network errors
         dns_cache_updater = std::make_unique<DNSCacheUpdater>(*global_context);
     }
+
+#if defined(__linux__)
+    if (!TaskStatsInfoGetter::checkPermissions())
+    {
+        LOG_INFO(log, "It looks like the process has no CAP_NET_ADMIN capability, some performance statistics will be disabled."
+                      " It could happen due to incorrect ClickHouse package installation."
+                      " You could resolve the problem manually with 'sudo setcap cap_net_admin=+ep /usr/bin/clickhouse'");
+    }
+#else
+    LOG_INFO(log, "TaskStats is not implemented for this OS. IO accounting will be disabled.");
+#endif
 
     {
         Poco::Timespan keep_alive_timeout(config().getUInt("keep_alive_timeout", 10), 0);

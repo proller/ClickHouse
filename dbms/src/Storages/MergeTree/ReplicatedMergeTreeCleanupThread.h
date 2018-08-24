@@ -4,10 +4,9 @@
 #include <Common/ZooKeeper/Types.h>
 #include <Common/ZooKeeper/ZooKeeper.h>
 #include <common/logger_useful.h>
-#include <Common/BackgroundSchedulePool.h>
+#include <Core/BackgroundSchedulePool.h>
 #include <thread>
 #include <map>
-
 #include <pcg_random.hpp>
 
 
@@ -24,11 +23,7 @@ class ReplicatedMergeTreeCleanupThread
 public:
     ReplicatedMergeTreeCleanupThread(StorageReplicatedMergeTree & storage_);
 
-    void start()
-    {
-        task->activate();
-        task->schedule();
-    }
+    void start() { task->activateAndSchedule(); }
 
     void wakeup() { task->schedule(); }
 

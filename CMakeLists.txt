@@ -1,5 +1,5 @@
 project (ClickHouse)
-cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 3.3)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${ClickHouse_SOURCE_DIR}/cmake/Modules/")
 
@@ -78,7 +78,7 @@ if (USE_STATIC_LIBRARIES)
     list(REVERSE CMAKE_FIND_LIBRARY_SUFFIXES)
 endif ()
 
-if (CMAKE_LIBRARY_ARCHITECTURE MATCHES "amd64.*|x86_64.*|AMD64.*")
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "amd64|x86_64")
     option (USE_INTERNAL_MEMCPY "Use internal implementation of 'memcpy' function instead of provided by libc. Only for x86_64." ON)
 
     if (OS_LINUX)
@@ -218,7 +218,7 @@ else ()
     set (CLICKHOUSE_ETC_DIR "${CMAKE_INSTALL_PREFIX}/etc")
 endif ()
 
-option (UNBUNDLED "Try find all libraries in system (if fail - use bundled from contrib/)" OFF)
+option (UNBUNDLED "Try find all libraries in system. We recommend to avoid this mode for production builds, because we cannot guarantee exact versions and variants of libraries your system has installed. This mode exists for enthusiastic developers who search for trouble. Also it is useful for maintainers of OS packages." OFF)
 if (UNBUNDLED)
     set(NOT_UNBUNDLED 0)
 else ()

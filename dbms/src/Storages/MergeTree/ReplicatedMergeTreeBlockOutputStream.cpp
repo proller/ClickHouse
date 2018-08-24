@@ -1,5 +1,4 @@
 #include <Storages/StorageReplicatedMergeTree.h>
-#include <Storages/MergeTree/EphemeralLockInZooKeeper.h>
 #include <Storages/MergeTree/ReplicatedMergeTreeQuorumEntry.h>
 #include <Storages/MergeTree/ReplicatedMergeTreeBlockOutputStream.h>
 #include <Interpreters/PartLog.h>
@@ -215,6 +214,7 @@ void ReplicatedMergeTreeBlockOutputStream::commitPart(zkutil::ZooKeeperPtr & zoo
 
     if (!block_number_lock)
     {
+        LOG_INFO(log, "Block with ID " << block_id << " already exists; ignoring it.");
         part->is_duplicate = true;
         last_block_is_duplicate = true;
         ProfileEvents::increment(ProfileEvents::DuplicatedInsertedBlocks);
@@ -309,7 +309,7 @@ void ReplicatedMergeTreeBlockOutputStream::commitPart(zkutil::ZooKeeperPtr & zoo
         /// Lock nodes have been already deleted, do not delete them in destructor
         block_number_lock->assumeUnlocked();
     }
-    else if (zkutil::isUserError(multi_code))
+    else if (ZooKeeperImpl::ZooKeeper::isUserError(multi_code))
     {
         String failed_op_path = zkutil::KeeperMultiException(multi_code, ops, responses).getPathForFirstFailedOp();
 
@@ -338,7 +338,7 @@ void ReplicatedMergeTreeBlockOutputStream::commitPart(zkutil::ZooKeeperPtr & zoo
                             ErrorCodes::UNEXPECTED_ZOOKEEPER_ERROR);
         }
     }
-    else if (zkutil::isHardwareError(multi_code))
+    else if (ZooKeeperImpl::ZooKeeper::isHardwareError(multi_code))
     {
         transaction.rollback();
         throw Exception("Unrecoverable network error while adding block " + toString(block_number) + " with ID '" + block_id + "': "
