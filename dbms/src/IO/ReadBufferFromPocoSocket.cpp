@@ -5,7 +5,7 @@
 #include <IO/ReadBufferFromPocoSocket.h>
 #include <Common/NetException.h>
 #include <Common/Stopwatch.h>
-
+#include <Common/ProfileEvents.h>
 
 namespace ProfileEvents
 {

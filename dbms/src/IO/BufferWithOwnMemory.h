@@ -2,18 +2,18 @@
 
 #include <boost/noncopyable.hpp>
 
-#include <Common/ProfileEvents.h>
+//#include <Common/ProfileEvents.h>
 #include <Common/Allocator.h>
 
 #include <Common/Exception.h>
 #include <Core/Defines.h>
+#include <Common/ProfileEvents.h>
 
-
-namespace ProfileEvents
+/*namespace ProfileEvents
 {
     extern const Event IOBufferAllocs;
     extern const Event IOBufferAllocBytes;
-}
+} */
 
 
 namespace DB
@@ -34,98 +34,30 @@ struct Memory : boost::noncopyable, Allocator<false>
     char * m_data = nullptr;
     size_t alignment = 0;
 
-    Memory() {}
+    Memory();
 
     /// If alignment != 0, then allocate memory aligned to specified value.
-    Memory(size_t size_, size_t alignment_ = 0) : m_capacity(size_), m_size(m_capacity), alignment(alignment_)
-    {
-        alloc();
-    }
+    Memory(size_t size_, size_t alignment_ = 0);
+    ~Memory();
 
-    ~Memory()
-    {
-        dealloc();
-    }
+    Memory(Memory && rhs) noexcept;
 
-    Memory(Memory && rhs) noexcept
-    {
-        *this = std::move(rhs);
-    }
+    Memory & operator=(Memory && rhs) noexcept;
 
-    Memory & operator=(Memory && rhs) noexcept
-    {
-        std::swap(m_capacity, rhs.m_capacity);
-        std::swap(m_size, rhs.m_size);
-        std::swap(m_data, rhs.m_data);
-        std::swap(alignment, rhs.alignment);
+    size_t size() const;
+    const char & operator[](size_t i) const;
+    char & operator[](size_t i);
+    const char * data() const;
+    char * data();
 
-        return *this;
-    }
-
-    size_t size() const { return m_size; }
-    const char & operator[](size_t i) const { return m_data[i]; }
-    char & operator[](size_t i) { return m_data[i]; }
-    const char * data() const { return m_data; }
-    char * data() { return m_data; }
-
-    void resize(size_t new_size)
-    {
-        if (0 == m_capacity)
-        {
-            m_size = new_size;
-            m_capacity = new_size;
-            alloc();
-        }
-        else if (new_size <= m_size)
-        {
-            m_size = new_size;
-            return;
-        }
-        else
-        {
-            size_t new_capacity = align(new_size + pad_right, alignment);
-            m_data = static_cast<char *>(Allocator::realloc(m_data, m_capacity, new_capacity, alignment));
-            m_capacity = new_capacity;
-            m_size = m_capacity - pad_right;
-        }
-    }
+    void resize(size_t new_size);
 
 private:
-    static size_t align(const size_t value, const size_t alignment)
-    {
-        if (!alignment)
-            return value;
+    static size_t align(const size_t value, const size_t alignment);
 
-        return (value + alignment - 1) / alignment * alignment;
-    }
+    void alloc();
 
-    void alloc()
-    {
-        if (!m_capacity)
-        {
-            m_data = nullptr;
-            return;
-        }
-
-        size_t padded_capacity = m_capacity + pad_right;
-
-        ProfileEvents::increment(ProfileEvents::IOBufferAllocs);
-        ProfileEvents::increment(ProfileEvents::IOBufferAllocBytes, padded_capacity);
-
-        size_t new_capacity = align(padded_capacity, alignment);
-        m_data = static_cast<char *>(Allocator::alloc(new_capacity, alignment));
-        m_capacity = new_capacity;
-        m_size = m_capacity - pad_right;
-    }
-
-    void dealloc()
-    {
-        if (!m_data)
-            return;
-
-        Allocator::free(m_data, m_capacity);
-        m_data = nullptr;    /// To avoid double free if next alloc will throw an exception.
-    }
+    void dealloc();
 };
 
 
