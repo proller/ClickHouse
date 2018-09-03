@@ -1,7 +1,11 @@
 #pragma once
+
 #include <Common/ProfileEvents.h>
 #include <Common/MemoryTracker.h>
+#include <Common/ObjectPool.h>
+
 #include <IO/Progress.h>
+
 #include <memory>
 #include <map>
 #include <mutex>
@@ -33,7 +37,6 @@ using InternalTextLogsQueueWeakPtr = std::weak_ptr<InternalTextLogsQueue>;
 class ThreadGroupStatus
 {
 public:
-
     mutable std::shared_mutex mutex;
 
     ProfileEvents::Counters performance_counters{VariableContext::Process};
@@ -126,7 +129,6 @@ public:
     ~ThreadStatus();
 
 protected:
-
     ThreadStatus();
 
     void initPerformanceCounters();
@@ -160,11 +162,12 @@ protected:
     /// Use ptr not to add extra dependencies in the header
     std::unique_ptr<RUsageCounters> last_rusage;
     std::unique_ptr<TasksStatsCounters> last_taskstats;
-    std::unique_ptr<TaskStatsInfoGetter> taskstats_getter;
-    bool has_permissions_for_taskstats = false;
+
+    /// Set to non-nullptr only if we have enough capabilities.
+    /// We use pool because creation and destruction of TaskStatsInfoGetter objects are expensive.
+    SimpleObjectPool<TaskStatsInfoGetter>::Pointer taskstats_getter;
 
 public:
-
     /// Implicitly finalizes current thread in the destructor
     class CurrentThreadScope
     {
@@ -174,15 +177,9 @@ public:
         CurrentThreadScope() = default;
         ~CurrentThreadScope()
         {
-            try
-            {
-                if (deleter)
-                    deleter();
-            }
-            catch (...)
-            {
-                std::terminate();
-            }
+            if (deleter)
+                deleter();
+            /// std::terminate on exception: this is Ok.
         }
     };
 
