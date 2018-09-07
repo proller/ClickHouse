@@ -77,9 +77,10 @@ struct ScopeStack
     using Levels = std::vector<Level>;
 
     Levels stack;
-    const Settings & settings;
 
-    ScopeStack(const ExpressionActionsPtr & actions, const Settings & settings_);
+    const Context & context;
+
+    ScopeStack(const ExpressionActionsPtr & actions, const Context & context_);
 
     void pushLevel(const NamesAndTypesList & input_columns);
 
@@ -141,7 +142,8 @@ public:
     bool appendArrayJoin(ExpressionActionsChain & chain, bool only_types);
     bool appendJoin(ExpressionActionsChain & chain, bool only_types);
     /// remove_filter is set in ExpressionActionsChain::finalize();
-    bool appendPrewhere(ExpressionActionsChain & chain, bool only_types);
+    /// sampling_expression is needed if sampling is used in order to not remove columns are used in it.
+    bool appendPrewhere(ExpressionActionsChain & chain, bool only_types, const ASTPtr & sampling_expression);
     bool appendWhere(ExpressionActionsChain & chain, bool only_types);
     bool appendGroupBy(ExpressionActionsChain & chain, bool only_types);
     void appendAggregateFunctionsArguments(ExpressionActionsChain & chain, bool only_types);
@@ -186,7 +188,7 @@ private:
     ASTPtr query;
     ASTSelectQuery * select_query;
     const Context & context;
-    Settings settings;
+    const Settings settings;
     size_t subquery_depth;
 
     /** Original columns.

@@ -47,6 +47,7 @@
 #include <Common/typeid_cast.h>
 #include <Parsers/queryToString.h>
 #include <ext/map.h>
+#include <memory>
 
 
 namespace DB
@@ -63,6 +64,7 @@ namespace ErrorCodes
     extern const int LOGICAL_ERROR;
     extern const int NOT_IMPLEMENTED;
     extern const int PARAMETER_OUT_OF_BOUND;
+    extern const int ARGUMENT_OUT_OF_BOUND;
 }
 
 InterpreterSelectQuery::InterpreterSelectQuery(
@@ -279,7 +281,6 @@ BlockInputStreams InterpreterSelectQuery::executeWithMultipleStreams()
     return pipeline.streams;
 }
 
-
 InterpreterSelectQuery::AnalysisResult InterpreterSelectQuery::analyzeExpressions(QueryProcessingStage::Enum from_stage, bool dry_run)
 {
     AnalysisResult res;
@@ -305,7 +306,27 @@ InterpreterSelectQuery::AnalysisResult InterpreterSelectQuery::analyzeExpression
         chain.finalize();
 
         if (has_prewhere)
-            res.prewhere_info->remove_prewhere_column = chain.steps.at(0).can_remove_required_output.at(0);
+        {
+            const ExpressionActionsChain::Step & step = chain.steps.at(0);
+            res.prewhere_info->remove_prewhere_column = step.can_remove_required_output.at(0);
+
+            Names columns_to_remove_after_sampling;
+            for (size_t i = 1; i < step.required_output.size(); ++i)
+            {
+                if (step.can_remove_required_output[i])
+                    columns_to_remove_after_sampling.push_back(step.required_output[i]);
+            }
+
+            if (!columns_to_remove_after_sampling.empty())
+            {
+                auto columns = res.prewhere_info->prewhere_actions->getSampleBlock().getNamesAndTypesList();
+                ExpressionActionsPtr actions = std::make_shared<ExpressionActions>(columns, context);
+                for (const auto & column : columns_to_remove_after_sampling)
+                    actions->add(ExpressionAction::removeColumn(column));
+
+                res.prewhere_info->after_sampling_actions = std::move(actions);
+            }
+        }
         if (has_where)
             res.remove_where_filter = chain.steps.at(where_step_num).can_remove_required_output.at(0);
 
@@ -315,9 +336,10 @@ InterpreterSelectQuery::AnalysisResult InterpreterSelectQuery::analyzeExpression
     };
 
     {
-        ExpressionActionsChain chain;
+        ExpressionActionsChain chain(context);
 
-        if (query_analyzer->appendPrewhere(chain, !res.first_stage))
+        ASTPtr sampling_expression = storage && query.sample_size() ? storage->getSamplingExpression() : nullptr;
+        if (query_analyzer->appendPrewhere(chain, !res.first_stage, sampling_expression))
         {
             has_prewhere = true;
 
@@ -678,10 +700,6 @@ void InterpreterSelectQuery::executeFetchColumns(
             /// Separate expression for columns used in prewhere.
             auto required_prewhere_columns_expr_list = std::make_shared<ASTExpressionList>();
 
-            /// Columns which we will get after prewhere execution.
-            auto source_columns = storage->getColumns().getAllPhysical();
-            auto physical_columns = ext::map<NameSet>(source_columns, [] (const auto & it) { return it.name; });
-
             for (const auto & column : required_columns)
             {
                 ASTPtr column_expr;
@@ -703,6 +721,8 @@ void InterpreterSelectQuery::executeFetchColumns(
                     required_columns_expr_list->children.emplace_back(std::move(column_expr));
             }
 
+            /// Columns which we will get after prewhere execution.
+            NamesAndTypesList additional_source_columns;
             /// Add columns which will be added by prewhere (otherwise we will remove them in project action).
             for (const auto & column : prewhere_actions_result)
             {
@@ -710,10 +730,11 @@ void InterpreterSelectQuery::executeFetchColumns(
                     continue;
 
                 required_columns_expr_list->children.emplace_back(std::make_shared<ASTIdentifier>(column.name));
-                source_columns.emplace_back(column.name, column.type);
+                additional_source_columns.emplace_back(column.name, column.type);
             }
+            auto additional_source_columns_set = ext::map<NameSet>(additional_source_columns, [] (const auto & it) { return it.name; });
 
-            alias_actions = ExpressionAnalyzer(required_columns_expr_list, context, nullptr, source_columns).getActions(true);
+            alias_actions = ExpressionAnalyzer(required_columns_expr_list, context, storage, additional_source_columns).getActions(true);
 
             /// The set of required columns could be added as a result of adding an action to calculate ALIAS.
             required_columns = alias_actions->getRequiredColumns();
@@ -728,7 +749,7 @@ void InterpreterSelectQuery::executeFetchColumns(
             size_t next_req_column_pos = 0;
             for (size_t i = 0; i < required_columns.size(); ++i)
             {
-                if (physical_columns.count(required_columns[i]))
+                if (!additional_source_columns_set.count(required_columns[i]))
                 {
                     if (next_req_column_pos < i)
                         std::swap(required_columns[i], required_columns[next_req_column_pos]);
@@ -740,7 +761,7 @@ void InterpreterSelectQuery::executeFetchColumns(
             if (prewhere_info)
             {
                 /// Don't remove columns which are needed to be aliased.
-                auto new_actions = std::make_shared<ExpressionActions>(prewhere_info->prewhere_actions->getRequiredColumnsWithTypes(), settings);
+                auto new_actions = std::make_shared<ExpressionActions>(prewhere_info->prewhere_actions->getRequiredColumnsWithTypes(), context);
                 for (const auto & action : prewhere_info->prewhere_actions->getActions())
                 {
                     if (action.type != ExpressionAction::REMOVE_COLUMN
