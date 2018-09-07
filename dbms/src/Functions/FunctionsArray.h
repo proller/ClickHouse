@@ -733,6 +733,14 @@ struct ArrayIndexGenericNullImpl
     }
 };
 
+
+inline bool allowArrayIndex(const IDataType * data_type0, const IDataType * data_type1)
+{
+    return ((data_type0->isNumber() || isEnum(data_type0)) && data_type1->isNumber())
+        || data_type0->equals(*data_type1);
+}
+
+
 template <typename IndexConv, typename Name>
 class FunctionArrayIndex : public IFunction
 {
@@ -908,7 +916,7 @@ private:
                 const auto & value = (*item_arg)[row];
 
                 data[row] = 0;
-                for (size_t i = 0, size = arr.size(); i < size; ++i)
+                for (size_t i = 0, arr_size = arr.size(); i < arr_size; ++i)
                 {
                     bool hit = false;
 
@@ -1010,9 +1018,7 @@ public:
             DataTypePtr observed_type0 = removeNullable(array_type->getNestedType());
             DataTypePtr observed_type1 = removeNullable(arguments[1]);
 
-            /// We also support arrays of Enum type (that are represented by number) to search numeric values.
-            if (!(observed_type0->isValueRepresentedByNumber() && observed_type1->isNumber())
-                && !observed_type0->equals(*observed_type1))
+            if (!allowArrayIndex(observed_type0.get(), observed_type1.get()))
                 throw Exception("Types of array and 2nd argument of function "
                     + getName() + " must be identical up to nullability or numeric types or Enum and numeric type. Passed: "
                     + arguments[0]->getName() + " and " + arguments[1]->getName() + ".",
@@ -1466,7 +1472,7 @@ class FunctionArrayConcat : public IFunction
 public:
     static constexpr auto name = "arrayConcat";
     static FunctionPtr create(const Context & context);
-    FunctionArrayConcat(const Context & context) : context(context) {};
+    FunctionArrayConcat(const Context & context) : context(context) {}
 
     String getName() const override;
 
@@ -1593,7 +1599,7 @@ class FunctionArrayIntersect : public IFunction
 public:
     static constexpr auto name = "arrayIntersect";
     static FunctionPtr create(const Context & context);
-    FunctionArrayIntersect(const Context & context) : context(context) {};
+    FunctionArrayIntersect(const Context & context) : context(context) {}
 
     String getName() const override;
 
@@ -1695,7 +1701,7 @@ class FunctionArrayResize : public IFunction
 public:
     static constexpr auto name = "arrayResize";
     static FunctionPtr create(const Context & context);
-    FunctionArrayResize(const Context & context) : context(context) {};
+    FunctionArrayResize(const Context & context) : context(context) {}
 
     String getName() const override;
 
