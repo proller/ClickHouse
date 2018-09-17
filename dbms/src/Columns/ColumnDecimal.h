@@ -55,8 +55,10 @@ private:
 template <typename T>
 class ColumnDecimal final : public COWPtrHelper<IColumn, ColumnDecimal<T>>
 {
+    static_assert(IsDecimalNumber<T>);
+
 private:
-    using Self = ColumnDecimal<T>;
+    using Self = ColumnDecimal;
     friend class COWPtrHelper<IColumn, Self>;
 
 public:
@@ -77,7 +79,7 @@ public:
     const char * getFamilyName() const override { return TypeName<T>::get(); }
 
     bool isNumeric() const override { return false; }
-    bool canBeInsideNullable() const override { return false; }
+    bool canBeInsideNullable() const override { return true; }
     bool isFixedAndContiguous() const override { return true; }
     size_t sizeOfValueIfFixed() const override { return sizeof(T); }
 

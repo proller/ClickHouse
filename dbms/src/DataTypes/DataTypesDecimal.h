@@ -91,6 +91,8 @@ DataTypePtr createDecimal(UInt64 precision, UInt64 scale);
 template <typename T>
 class DataTypeDecimal final : public DataTypeSimpleSerialization
 {
+    static_assert(IsDecimalNumber<T>);
+
 public:
     using FieldType = T;
     using ColumnType = ColumnDecimal<T>;
@@ -134,21 +136,13 @@ public:
     bool textCanContainOnlyValidUTF8() const override { return true; }
     bool isComparable() const override { return true; }
     bool isValueRepresentedByNumber() const override { return true; }
-    bool isValueRepresentedByInteger() const override { return true; }
-    bool isValueRepresentedByUnsignedInteger() const override { return false; }
     bool isValueUnambiguouslyRepresentedInContiguousMemoryRegion() const override { return true; }
     bool haveMaximumSizeOfValue() const override { return true; }
     size_t getSizeOfValueInMemory() const override { return sizeof(T); }
-    bool isCategorial() const override { return isValueRepresentedByInteger(); }
 
-    bool canBeUsedAsVersion() const override { return false; }
     bool isSummable() const override { return true; }
-    bool canBeUsedInBitOperations() const override { return false; }
-    bool isUnsignedInteger() const override { return false; }
     bool canBeUsedInBooleanContext() const override { return true; }
-    bool isNumber() const override { return true; }
-    bool isInteger() const override { return false; }
-    bool canBeInsideNullable() const override { return false; }
+    bool canBeInsideNullable() const override { return true; }
 
     /// Decimal specific
 
@@ -255,17 +249,6 @@ inline const DataTypeDecimal<T> * checkDecimal(const IDataType & data_type)
     return typeid_cast<const DataTypeDecimal<T> *>(&data_type);
 }
 
-inline bool isDecimal(const IDataType & data_type)
-{
-    if (typeid_cast<const DataTypeDecimal<Decimal32> *>(&data_type))
-        return true;
-    if (typeid_cast<const DataTypeDecimal<Decimal64> *>(&data_type))
-        return true;
-    if (typeid_cast<const DataTypeDecimal<Decimal128> *>(&data_type))
-        return true;
-    return false;
-}
-
 inline UInt32 getDecimalScale(const IDataType & data_type)
 {
     if (auto * decimal_type = checkDecimal<Decimal32>(data_type))
@@ -278,28 +261,14 @@ inline UInt32 getDecimalScale(const IDataType & data_type)
 }
 
 ///
-inline bool notDecimalButComparableToDecimal(const IDataType & data_type)
-{
-    if (data_type.isInteger())
-        return true;
-    return false;
-}
 
-///
-inline bool comparableToDecimal(const IDataType & data_type)
-{
-    if (data_type.isInteger())
-        return true;
-    return isDecimal(data_type);
-}
-
-template <typename DataType> constexpr bool IsDecimal = false;
-template <> constexpr bool IsDecimal<DataTypeDecimal<Decimal32>> = true;
-template <> constexpr bool IsDecimal<DataTypeDecimal<Decimal64>> = true;
-template <> constexpr bool IsDecimal<DataTypeDecimal<Decimal128>> = true;
+template <typename DataType> constexpr bool IsDataTypeDecimal = false;
+template <> constexpr bool IsDataTypeDecimal<DataTypeDecimal<Decimal32>> = true;
+template <> constexpr bool IsDataTypeDecimal<DataTypeDecimal<Decimal64>> = true;
+template <> constexpr bool IsDataTypeDecimal<DataTypeDecimal<Decimal128>> = true;
 
 template <typename FromDataType, typename ToDataType>
-inline std::enable_if_t<IsDecimal<FromDataType> && IsDecimal<ToDataType>, typename ToDataType::FieldType>
+inline std::enable_if_t<IsDataTypeDecimal<FromDataType> && IsDataTypeDecimal<ToDataType>, typename ToDataType::FieldType>
 convertDecimals(const typename FromDataType::FieldType & value, UInt32 scale_from, UInt32 scale_to)
 {
     ToDataType type_to(ToDataType::maxPrecision(), scale_to);
@@ -318,7 +287,7 @@ convertDecimals(const typename FromDataType::FieldType & value, UInt32 scale_fro
 }
 
 template <typename FromDataType, typename ToDataType>
-inline std::enable_if_t<IsDecimal<FromDataType> && !IsDecimal<ToDataType>, typename ToDataType::FieldType>
+inline std::enable_if_t<IsDataTypeDecimal<FromDataType> && !IsDataTypeDecimal<ToDataType>, typename ToDataType::FieldType>
 convertFromDecimal(const typename FromDataType::FieldType & value, UInt32 scale [[maybe_unused]])
 {
     if (scale > FromDataType::maxPrecision())
@@ -331,7 +300,7 @@ convertFromDecimal(const typename FromDataType::FieldType & value, UInt32 scale 
 }
 
 template <typename FromDataType, typename ToDataType>
-inline std::enable_if_t<!IsDecimal<FromDataType> && IsDecimal<ToDataType>, typename ToDataType::FieldType>
+inline std::enable_if_t<!IsDataTypeDecimal<FromDataType> && IsDataTypeDecimal<ToDataType>, typename ToDataType::FieldType>
 convertToDecimal(const typename FromDataType::FieldType & value, UInt32 scale [[maybe_unused]])
 {
     if (scale > ToDataType::maxPrecision())

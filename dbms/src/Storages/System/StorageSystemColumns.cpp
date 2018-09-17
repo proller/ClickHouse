@@ -198,11 +198,10 @@ BlockInputStreams StorageSystemColumns::read(
     const Names & column_names,
     const SelectQueryInfo & query_info,
     const Context & context,
-    QueryProcessingStage::Enum processed_stage,
+    QueryProcessingStage::Enum /*processed_stage*/,
     const size_t max_block_size,
     const unsigned /*num_streams*/)
 {
-    checkQueryProcessingStage(processed_stage, context);
     check(column_names);
 
     /// Create a mask of what columns are needed in the result.
@@ -220,18 +219,6 @@ BlockInputStreams StorageSystemColumns::read(
             columns_mask[i] = 1;
             res_block.insert(sample_block.getByPosition(i));
         }
-    }
-
-    /// Whe should exit quickly in case of LIMIT. This helps when we have extraordinarily huge number of tables.
-    std::optional<UInt64> limit;
-    {
-        const ASTSelectQuery * select = typeid_cast<const ASTSelectQuery *>(query_info.query.get());
-        if (!select)
-            throw Exception("Logical error: not a SELECT query in StorageSystemColumns::read method", ErrorCodes::LOGICAL_ERROR);
-        if (select->limit_length)
-            limit = typeid_cast<const ASTLiteral &>(*select->limit_length).value.get<UInt64>();
-        if (select->limit_offset)
-            *limit += typeid_cast<const ASTLiteral &>(*select->limit_offset).value.get<UInt64>();
     }
 
     Block block_to_filter;
@@ -276,16 +263,6 @@ BlockInputStreams StorageSystemColumns::read(
                     std::forward_as_tuple(iterator->table()));
                 table_column_mut->insert(table_name);
                 ++offsets[i];
-
-                if (limit && offsets[i] >= *limit)
-                    break;
-            }
-
-            if (limit && offsets[i] >= *limit)
-            {
-                offsets.resize(i);
-                database_column = database_column->cut(0, i);
-                break;
             }
         }
 

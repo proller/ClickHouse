@@ -5,10 +5,12 @@
 #include <DataTypes/DataTypeDate.h>
 #include <DataTypes/DataTypeDateTime.h>
 #include <DataTypes/DataTypeInterval.h>
+#include <DataTypes/DataTypeAggregateFunction.h>
 #include <DataTypes/Native.h>
 #include <Columns/ColumnVector.h>
 #include <Columns/ColumnDecimal.h>
 #include <Columns/ColumnConst.h>
+#include <Columns/ColumnAggregateFunction.h>
 #include <Functions/IFunction.h>
 #include <Functions/FunctionHelpers.h>
 #include <Functions/FunctionFactory.h>
@@ -16,6 +18,7 @@
 #include <Core/AccurateComparison.h>
 #include <Common/FieldVisitors.h>
 #include <Common/typeid_cast.h>
+#include <Common/Arena.h>
 #include <IO/WriteHelpers.h>
 #include <Interpreters/ExpressionActions.h>
 #include <ext/range.h>
@@ -41,6 +44,7 @@ namespace ErrorCodes
     extern const int LOGICAL_ERROR;
     extern const int TOO_LESS_ARGUMENTS_FOR_FUNCTION;
     extern const int DECIMAL_OVERFLOW;
+    extern const int CANNOT_ADD_DIFFERENT_AGGREGATE_STATES;
 }
 
 
@@ -92,8 +96,10 @@ template <typename A, typename Op>
 struct UnaryOperationImpl
 {
     using ResultType = typename Op::ResultType;
-    using ArrayA = typename ColumnVector<A>::Container;
-    using ArrayC = typename ColumnVector<ResultType>::Container;
+    using ColVecA = std::conditional_t<IsDecimalNumber<A>, ColumnDecimal<A>, ColumnVector<A>>;
+    using ColVecC = std::conditional_t<IsDecimalNumber<ResultType>, ColumnDecimal<ResultType>, ColumnVector<ResultType>>;
+    using ArrayA = typename ColVecA::Container;
+    using ArrayC = typename ColVecC::Container;
 
     static void NO_INLINE vector(const ArrayA & a, ArrayC & c)
     {
@@ -736,8 +742,10 @@ struct DecimalBinaryOperation
     using ResultType = ResultType_;
     using NativeResultType = typename NativeType<ResultType>::Type;
     using Op = Operation<NativeResultType, NativeResultType>;
-    using ArrayA = std::conditional_t<IsDecimalNumber<A>, typename ColumnDecimal<A>::Container, typename ColumnVector<A>::Container>;
-    using ArrayB = std::conditional_t<IsDecimalNumber<B>, typename ColumnDecimal<B>::Container, typename ColumnVector<B>::Container>;
+    using ColVecA = std::conditional_t<IsDecimalNumber<A>, ColumnDecimal<A>, ColumnVector<A>>;
+    using ColVecB = std::conditional_t<IsDecimalNumber<B>, ColumnDecimal<B>, ColumnVector<B>>;
+    using ArrayA = typename ColVecA::Container;
+    using ArrayB = typename ColVecB::Container;
     using ArrayC = typename ColumnDecimal<ResultType>::Container;
     using SelfNoOverflow = DecimalBinaryOperation<A, B, Operation, ResultType_, false>;
 
@@ -1016,14 +1024,14 @@ public:
     /// DateTime, but if both operands are Dates, their type must be the same (e.g. Date - DateTime is invalid).
     using ResultDataType = Switch<
         /// Decimal cases
-        Case<!allow_decimal && (IsDecimal<LeftDataType> || IsDecimal<RightDataType>), InvalidType>,
-        Case<IsDecimal<LeftDataType> && IsDecimal<RightDataType> && UseLeftDecimal<LeftDataType, RightDataType>, LeftDataType>,
-        Case<IsDecimal<LeftDataType> && IsDecimal<RightDataType>, RightDataType>,
-        Case<IsDecimal<LeftDataType> && !IsDecimal<RightDataType> && IsIntegral<RightDataType>, LeftDataType>,
-        Case<!IsDecimal<LeftDataType> && IsDecimal<RightDataType> && IsIntegral<LeftDataType>, RightDataType>,
+        Case<!allow_decimal && (IsDataTypeDecimal<LeftDataType> || IsDataTypeDecimal<RightDataType>), InvalidType>,
+        Case<IsDataTypeDecimal<LeftDataType> && IsDataTypeDecimal<RightDataType> && UseLeftDecimal<LeftDataType, RightDataType>, LeftDataType>,
+        Case<IsDataTypeDecimal<LeftDataType> && IsDataTypeDecimal<RightDataType>, RightDataType>,
+        Case<IsDataTypeDecimal<LeftDataType> && !IsDataTypeDecimal<RightDataType> && IsIntegral<RightDataType>, LeftDataType>,
+        Case<!IsDataTypeDecimal<LeftDataType> && IsDataTypeDecimal<RightDataType> && IsIntegral<LeftDataType>, RightDataType>,
         /// Decimal <op> Real is not supported (traditional DBs convert Decimal <op> Real to Real)
-        Case<IsDecimal<LeftDataType> && !IsDecimal<RightDataType> && !IsIntegral<RightDataType>, InvalidType>,
-        Case<!IsDecimal<LeftDataType> && IsDecimal<RightDataType> && !IsIntegral<LeftDataType>, InvalidType>,
+        Case<IsDataTypeDecimal<LeftDataType> && !IsDataTypeDecimal<RightDataType> && !IsIntegral<RightDataType>, InvalidType>,
+        Case<!IsDataTypeDecimal<LeftDataType> && IsDataTypeDecimal<RightDataType> && !IsIntegral<LeftDataType>, InvalidType>,
         /// number <op> number -> see corresponding impl
         Case<!IsDateOrDateTime<LeftDataType> && !IsDateOrDateTime<RightDataType>,
             DataTypeFromFieldType<typename Op::ResultType>>,
@@ -1127,6 +1135,123 @@ class FunctionBinaryArithmetic : public IFunction
         return FunctionFactory::instance().get(function_name.str(), context);
     }
 
+    bool isAggregateMultiply(const DataTypePtr & type0, const DataTypePtr & type1) const
+    {
+        if constexpr (!std::is_same_v<Op<UInt8, UInt8>, MultiplyImpl<UInt8, UInt8>>)
+            return false;
+
+        WhichDataType which0(type0);
+        WhichDataType which1(type1);
+
+        return (which0.isAggregateFunction() && which1.isNativeUInt())
+            || (which0.isNativeUInt() && which1.isAggregateFunction());
+    }
+
+    bool isAggregateAddition(const DataTypePtr & type0, const DataTypePtr & type1) const
+    {
+        if constexpr (!std::is_same_v<Op<UInt8, UInt8>, PlusImpl<UInt8, UInt8>>)
+            return false;
+
+        WhichDataType which0(type0);
+        WhichDataType which1(type1);
+
+        return which0.isAggregateFunction() && which1.isAggregateFunction();
+    }
+
+    /// Multiply aggregation state by integer constant: by merging it with itself specified number of times.
+    void executeAggregateMultiply(Block & block, const ColumnNumbers & arguments, size_t result, size_t input_rows_count) const
+    {
+        ColumnNumbers new_arguments = arguments;
+        if (WhichDataType(block.getByPosition(new_arguments[1]).type).isAggregateFunction())
+            std::swap(new_arguments[0], new_arguments[1]);
+
+        if (!block.getByPosition(new_arguments[1]).column->isColumnConst())
+            throw Exception{"Illegal column " + block.getByPosition(new_arguments[1]).column->getName()
+                + " of argument of aggregation state multiply. Should be integer constant", ErrorCodes::ILLEGAL_COLUMN};
+
+        const ColumnAggregateFunction * column = typeid_cast<const ColumnAggregateFunction *>(block.getByPosition(new_arguments[0]).column.get());
+        IAggregateFunction * function = column->getAggregateFunction().get();
+
+        auto arena = std::make_shared<Arena>();
+
+        auto column_to = ColumnAggregateFunction::create(column->getAggregateFunction(), Arenas(1, arena));
+        column_to->reserve(input_rows_count);
+
+        auto column_from = ColumnAggregateFunction::create(column->getAggregateFunction(), Arenas(1, arena));
+        column_from->reserve(input_rows_count);
+
+        for (size_t i = 0; i < input_rows_count; ++i)
+        {
+            column_to->insertDefault();
+            column_from->insertFrom(column->getData()[i]);
+        }
+
+        auto & vec_to = column_to->getData();
+        auto & vec_from = column_from->getData();
+
+        UInt64 m = typeid_cast<const ColumnConst *>(block.getByPosition(new_arguments[1]).column.get())->getValue<UInt64>();
+
+        /// We use exponentiation by squaring algorithm to perform multiplying aggregate states by N in O(log(N)) operations
+        /// https://en.wikipedia.org/wiki/Exponentiation_by_squaring
+        while (m)
+        {
+            if (m % 2)
+            {
+                for (size_t i = 0; i < input_rows_count; ++i)
+                    function->merge(vec_to[i], vec_from[i], arena.get());
+                --m;
+            }
+            else
+            {
+                for (size_t i = 0; i < input_rows_count; ++i)
+                    function->merge(vec_from[i], vec_from[i], arena.get());
+                m /= 2;
+            }
+        }
+
+        block.getByPosition(result).column = std::move(column_to);
+    }
+
+    /// Merge two aggregation states together.
+    void executeAggregateAddition(Block & block, const ColumnNumbers & arguments, size_t result, size_t input_rows_count) const
+    {
+        const ColumnAggregateFunction * columns[2];
+        for (size_t i = 0; i < 2; ++i)
+            columns[i] = typeid_cast<const ColumnAggregateFunction *>(block.getByPosition(arguments[i]).column.get());
+
+        auto column_to = ColumnAggregateFunction::create(columns[0]->getAggregateFunction());
+        column_to->reserve(input_rows_count);
+
+        for(size_t i = 0; i < input_rows_count; ++i)
+        {
+            column_to->insertFrom(columns[0]->getData()[i]);
+            column_to->insertMergeFrom(columns[1]->getData()[i]);
+        }
+
+        block.getByPosition(result).column = std::move(column_to);
+    }
+
+    void executeDateTimeIntervalPlusMinus(Block & block, const ColumnNumbers & arguments,
+        size_t result, size_t input_rows_count, const FunctionBuilderPtr & function_builder) const
+    {
+        ColumnNumbers new_arguments = arguments;
+
+        /// Interval argument must be second.
+        if (WhichDataType(block.getByPosition(arguments[0]).type).isInterval())
+            std::swap(new_arguments[0], new_arguments[1]);
+
+        /// Change interval argument type to its representation
+        Block new_block = block;
+        new_block.getByPosition(new_arguments[1]).type = std::make_shared<DataTypeNumber<DataTypeInterval::FieldType>>();
+
+        ColumnsWithTypeAndName new_arguments_with_type_and_name =
+                {new_block.getByPosition(new_arguments[0]), new_block.getByPosition(new_arguments[1])};
+        auto function = function_builder->build(new_arguments_with_type_and_name);
+
+        function->execute(new_block, new_arguments, result, input_rows_count);
+        block.getByPosition(result).column = new_block.getByPosition(result).column;
+    }
+
 public:
     static constexpr auto name = Name::name;
     static FunctionPtr create(const Context & context) { return std::make_shared<FunctionBinaryArithmetic>(context); }
@@ -1145,6 +1270,24 @@ public:
 
     DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override
     {
+        /// Special case when multiply aggregate function state
+        if (isAggregateMultiply(arguments[0], arguments[1]))
+        {
+            if (WhichDataType(arguments[0]).isAggregateFunction())
+                return arguments[0];
+            return arguments[1];
+        }
+
+        /// Special case - addition of two aggregate functions states
+        if (isAggregateAddition(arguments[0], arguments[1]))
+        {
+            if (!arguments[0]->equals(*arguments[1]))
+                throw Exception("Cannot add aggregate states of different functions: "
+                    + arguments[0]->getName() + " and " + arguments[1]->getName(), ErrorCodes::CANNOT_ADD_DIFFERENT_AGGREGATE_STATES);
+
+            return arguments[0];
+        }
+
         /// Special case when the function is plus or minus, one of arguments is Date/DateTime and another is Interval.
         if (auto function_builder = getFunctionForIntervalArithmetic(arguments[0], arguments[1]))
         {
@@ -1154,7 +1297,7 @@ public:
                 new_arguments[i].type = arguments[i];
 
             /// Interval argument must be second.
-            if (checkDataType<DataTypeInterval>(new_arguments[0].type.get()))
+            if (WhichDataType(new_arguments[0].type).isInterval())
                 std::swap(new_arguments[0], new_arguments[1]);
 
             /// Change interval argument to its representation
@@ -1172,16 +1315,16 @@ public:
             using ResultDataType = typename BinaryOperationTraits<Op, LeftDataType, RightDataType>::ResultDataType;
             if constexpr (!std::is_same_v<ResultDataType, InvalidType>)
             {
-                if constexpr (IsDecimal<LeftDataType> && IsDecimal<RightDataType>)
+                if constexpr (IsDataTypeDecimal<LeftDataType> && IsDataTypeDecimal<RightDataType>)
                 {
                     constexpr bool is_multiply = std::is_same_v<Op<UInt8, UInt8>, MultiplyImpl<UInt8, UInt8>>;
                     constexpr bool is_division = std::is_same_v<Op<UInt8, UInt8>, DivideFloatingImpl<UInt8, UInt8>>;
                     ResultDataType result_type = decimalResultType(left, right, is_multiply, is_division);
                     type_res = std::make_shared<ResultDataType>(result_type.getPrecision(), result_type.getScale());
                 }
-                else if constexpr (IsDecimal<LeftDataType>)
+                else if constexpr (IsDataTypeDecimal<LeftDataType>)
                     type_res = std::make_shared<LeftDataType>(left.getPrecision(), left.getScale());
-                else if constexpr (IsDecimal<RightDataType>)
+                else if constexpr (IsDataTypeDecimal<RightDataType>)
                     type_res = std::make_shared<RightDataType>(right.getPrecision(), right.getScale());
                 else
                     type_res = std::make_shared<ResultDataType>();
@@ -1197,26 +1340,24 @@ public:
 
     void executeImpl(Block & block, const ColumnNumbers & arguments, size_t result, size_t input_rows_count) override
     {
+        /// Special case when multiply aggregate function state
+        if (isAggregateMultiply(block.getByPosition(arguments[0]).type, block.getByPosition(arguments[1]).type))
+        {
+            executeAggregateMultiply(block, arguments, result, input_rows_count);
+            return;
+        }
+
+        /// Special case - addition of two aggregate functions states
+        if (isAggregateAddition(block.getByPosition(arguments[0]).type, block.getByPosition(arguments[1]).type))
+        {
+            executeAggregateAddition(block, arguments, result, input_rows_count);
+            return;
+        }
+
         /// Special case when the function is plus or minus, one of arguments is Date/DateTime and another is Interval.
         if (auto function_builder = getFunctionForIntervalArithmetic(block.getByPosition(arguments[0]).type, block.getByPosition(arguments[1]).type))
         {
-            ColumnNumbers new_arguments = arguments;
-
-            /// Interval argument must be second.
-            if (checkDataType<DataTypeInterval>(block.getByPosition(arguments[0]).type.get()))
-                std::swap(new_arguments[0], new_arguments[1]);
-
-            /// Change interval argument type to its representation
-            Block new_block = block;
-            new_block.getByPosition(new_arguments[1]).type = std::make_shared<DataTypeNumber<DataTypeInterval::FieldType>>();
-
-            ColumnsWithTypeAndName new_arguments_with_type_and_name =
-                    {new_block.getByPosition(new_arguments[0]), new_block.getByPosition(new_arguments[1])};
-            auto function = function_builder->build(new_arguments_with_type_and_name);
-
-            function->execute(new_block, new_arguments, result, input_rows_count);
-            block.getByPosition(result).column = new_block.getByPosition(result).column;
-
+            executeDateTimeIntervalPlusMinus(block, arguments, result, input_rows_count, function_builder);
             return;
         }
 
@@ -1229,7 +1370,7 @@ public:
             using ResultDataType = typename BinaryOperationTraits<Op, LeftDataType, RightDataType>::ResultDataType;
             if constexpr (!std::is_same_v<ResultDataType, InvalidType>)
             {
-                constexpr bool result_is_decimal = IsDecimal<LeftDataType> || IsDecimal<RightDataType>;
+                constexpr bool result_is_decimal = IsDataTypeDecimal<LeftDataType> || IsDataTypeDecimal<RightDataType>;
                 constexpr bool is_multiply = std::is_same_v<Op<UInt8, UInt8>, MultiplyImpl<UInt8, UInt8>>;
                 constexpr bool is_division = std::is_same_v<Op<UInt8, UInt8>, DivideFloatingImpl<UInt8, UInt8>>;
 
@@ -1241,7 +1382,7 @@ public:
                 using ColVecResult = std::conditional_t<IsDecimalNumber<ResultType>, ColumnDecimal<ResultType>, ColumnVector<ResultType>>;
 
                 /// Decimal operations need scale. Operations are on result type.
-                using OpImpl = std::conditional_t<IsDecimal<ResultDataType>,
+                using OpImpl = std::conditional_t<IsDataTypeDecimal<ResultDataType>,
                     DecimalBinaryOperation<T0, T1, Op, ResultType>,
                     BinaryOperationImpl<T0, T1, Op<T0, T1>, ResultType>>;
 
@@ -1257,7 +1398,7 @@ public:
                             ResultDataType type = decimalResultType(left, right, is_multiply, is_division);
                             typename ResultDataType::FieldType scale_a = type.scaleFactorFor(left, is_multiply);
                             typename ResultDataType::FieldType scale_b = type.scaleFactorFor(right, is_multiply || is_division);
-                            if constexpr (IsDecimal<RightDataType> && is_division)
+                            if constexpr (IsDataTypeDecimal<RightDataType> && is_division)
                                 scale_a = right.getScaleMultiplier();
 
                             auto res = OpImpl::constant_constant(col_left->template getValue<T0>(), col_right->template getValue<T1>(),
@@ -1298,7 +1439,7 @@ public:
 
                             typename ResultDataType::FieldType scale_a = type.scaleFactorFor(left, is_multiply);
                             typename ResultDataType::FieldType scale_b = type.scaleFactorFor(right, is_multiply || is_division);
-                            if constexpr (IsDecimal<RightDataType> && is_division)
+                            if constexpr (IsDataTypeDecimal<RightDataType> && is_division)
                                 scale_a = right.getScaleMultiplier();
 
                             OpImpl::constant_vector(col_left_const->template getValue<T0>(), col_right->getData(), vec_res,
@@ -1318,7 +1459,7 @@ public:
 
                         typename ResultDataType::FieldType scale_a = type.scaleFactorFor(left, is_multiply);
                         typename ResultDataType::FieldType scale_b = type.scaleFactorFor(right, is_multiply || is_division);
-                        if constexpr (IsDecimal<RightDataType> && is_division)
+                        if constexpr (IsDataTypeDecimal<RightDataType> && is_division)
                             scale_a = right.getScaleMultiplier();
                         if (auto col_right = checkAndGetColumn<ColVecT1>(col_right_raw))
                         {
@@ -1364,7 +1505,7 @@ public:
             using RightDataType = std::decay_t<decltype(right)>;
             using ResultDataType = typename BinaryOperationTraits<Op, LeftDataType, RightDataType>::ResultDataType;
             using OpSpec = Op<typename LeftDataType::FieldType, typename RightDataType::FieldType>;
-            return !std::is_same_v<ResultDataType, InvalidType> && !IsDecimal<ResultDataType> && OpSpec::compilable;
+            return !std::is_same_v<ResultDataType, InvalidType> && !IsDataTypeDecimal<ResultDataType> && OpSpec::compilable;
         });
     }
 
@@ -1377,7 +1518,7 @@ public:
             using RightDataType = std::decay_t<decltype(right)>;
             using ResultDataType = typename BinaryOperationTraits<Op, LeftDataType, RightDataType>::ResultDataType;
             using OpSpec = Op<typename LeftDataType::FieldType, typename RightDataType::FieldType>;
-            if constexpr (!std::is_same_v<ResultDataType, InvalidType> && !IsDecimal<ResultDataType> && OpSpec::compilable)
+            if constexpr (!std::is_same_v<ResultDataType, InvalidType> && !IsDataTypeDecimal<ResultDataType> && OpSpec::compilable)
             {
                 auto & b = static_cast<llvm::IRBuilder<> &>(builder);
                 auto type = std::make_shared<ResultDataType>();
@@ -1447,7 +1588,7 @@ public:
             using DataType = std::decay_t<decltype(type)>;
             using T0 = typename DataType::FieldType;
 
-            if constexpr (IsDecimal<DataType>)
+            if constexpr (IsDataTypeDecimal<DataType>)
             {
                 if constexpr (!allow_decimal)
                     return false;
@@ -1470,7 +1611,7 @@ public:
             using DataType = std::decay_t<decltype(type)>;
             using T0 = typename DataType::FieldType;
 
-            if constexpr (IsDecimal<DataType>)
+            if constexpr (IsDataTypeDecimal<DataType>)
             {
                 if constexpr (allow_decimal)
                 {
@@ -1510,7 +1651,7 @@ public:
         return castType(arguments[0].get(), [&](const auto & type)
         {
             using DataType = std::decay_t<decltype(type)>;
-            return !IsDecimal<DataType> && Op<typename DataType::FieldType>::compilable;
+            return !IsDataTypeDecimal<DataType> && Op<typename DataType::FieldType>::compilable;
         });
     }
 
@@ -1522,7 +1663,7 @@ public:
             using DataType = std::decay_t<decltype(type)>;
             using T0 = typename DataType::FieldType;
             using T1 = typename Op<T0>::ResultType;
-            if constexpr (!std::is_same_v<T1, InvalidType> && !IsDecimal<DataType> && Op<T0>::compilable)
+            if constexpr (!std::is_same_v<T1, InvalidType> && !IsDataTypeDecimal<DataType> && Op<T0>::compilable)
             {
                 auto & b = static_cast<llvm::IRBuilder<> &>(builder);
                 auto * v = nativeCast(b, types[0], values[0](), std::make_shared<DataTypeNumber<T1>>());
@@ -1831,17 +1972,17 @@ public:
             throw Exception{"Number of arguments for function " + getName() + " doesn't match: passed "
                 + toString(arguments.size()) + ", should be at least 2.", ErrorCodes::TOO_LESS_ARGUMENTS_FOR_FUNCTION};
 
-        const auto first_arg = arguments.front().get();
+        const auto & first_arg = arguments.front();
 
-        if (!first_arg->isInteger())
+        if (!isInteger(first_arg))
             throw Exception{"Illegal type " + first_arg->getName() + " of first argument of function " + getName(), ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
 
 
         for (const auto i : ext::range(1, arguments.size()))
         {
-            const auto pos_arg = arguments[i].get();
+            const auto & pos_arg = arguments[i];
 
-            if (!pos_arg->isUnsignedInteger())
+            if (!isUnsignedInteger(pos_arg))
                 throw Exception{"Illegal type " + pos_arg->getName() + " of " + toString(i) + " argument of function " + getName(), ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
         }
 
