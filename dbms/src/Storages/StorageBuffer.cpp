@@ -136,8 +136,6 @@ BlockInputStreams StorageBuffer::read(
     size_t max_block_size,
     unsigned num_streams)
 {
-    checkQueryProcessingStage(processed_stage, context);
-
     BlockInputStreams streams_from_dst;
 
     if (!no_destination)
@@ -601,9 +599,13 @@ void StorageBuffer::writeBlockToDestination(const Block & block, StoragePtr tabl
 
     InterpreterInsertQuery interpreter{insert, context, allow_materialized};
 
+    Block block_to_write;
+    for (const auto & name : columns_intersection)
+        block_to_write.insert(block.getByName(name));
+
     auto block_io = interpreter.execute();
     block_io.out->writePrefix();
-    block_io.out->write(block);
+    block_io.out->write(block_to_write);
     block_io.out->writeSuffix();
 }
 

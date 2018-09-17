@@ -75,6 +75,9 @@ public:
     std::string result_name;
     DataTypePtr result_type;
 
+    /// If COPY_COLUMN can replace the result column.
+    bool can_replace = false;
+
     /// For conditional projections (projections on subset of rows)
     std::string row_projection_column;
     bool is_row_projection_complementary = false;
@@ -109,7 +112,7 @@ public:
                                       const std::string & row_projection_column,
                                       bool is_row_projection_complementary);
     static ExpressionAction removeColumn(const std::string & removed_name);
-    static ExpressionAction copyColumn(const std::string & from_name, const std::string & to_name);
+    static ExpressionAction copyColumn(const std::string & from_name, const std::string & to_name, bool can_replace = false);
     static ExpressionAction project(const NamesWithAliases & projected_columns_);
     static ExpressionAction project(const Names & projected_columns_);
     static ExpressionAction addAliases(const NamesWithAliases & aliased_columns_);
@@ -126,7 +129,7 @@ public:
 
     struct ActionHash
     {
-        size_t operator()(const ExpressionAction & action) const;
+        UInt128 operator()(const ExpressionAction & action) const;
     };
 
 private:
@@ -230,6 +233,20 @@ public:
 
     const Settings & getSettings() const { return settings; }
 
+
+    struct ActionsHash
+    {
+        UInt128 operator()(const ExpressionActions::Actions & actions) const
+        {
+            SipHash hash;
+            for (const ExpressionAction & act : actions)
+                hash.update(ExpressionAction::ActionHash{}(act));
+            UInt128 result;
+            hash.get128(result.low, result.high);
+            return result;
+        }
+    };
+
 private:
     NamesAndTypesList input_columns;
     Actions actions;
@@ -248,18 +265,6 @@ private:
 };
 
 using ExpressionActionsPtr = std::shared_ptr<ExpressionActions>;
-
-struct ActionsHash
-{
-    size_t operator()(const ExpressionActions::Actions & actions) const
-    {
-        SipHash hash;
-        for (const ExpressionAction & act : actions)
-            hash.update(ExpressionAction::ActionHash{}(act));
-        return hash.get64();
-    }
-};
-
 
 
 /** The sequence of transformations over the block.
