@@ -13,6 +13,7 @@
 #include <Common/typeid_cast.h>
 
 #include <Poco/String.h>
+#include <DataTypes/DataTypeLowCardinality.h>
 
 
 namespace DB
@@ -41,6 +42,20 @@ void AggregateFunctionFactory::registerFunction(const String & name, Creator cre
             ErrorCodes::LOGICAL_ERROR);
 }
 
+static DataTypes convertLowCardinalityTypesToNested(const DataTypes & types)
+{
+    DataTypes res_types;
+    res_types.reserve(types.size());
+    for (const auto & type : types)
+    {
+        if (auto * low_cardinality_type = typeid_cast<const DataTypeLowCardinality *>(type.get()))
+            res_types.push_back(low_cardinality_type->getDictionaryType());
+        else
+            res_types.push_back(type);
+    }
+
+    return res_types;
+}
 
 AggregateFunctionPtr AggregateFunctionFactory::get(
     const String & name,
@@ -48,6 +63,8 @@ AggregateFunctionPtr AggregateFunctionFactory::get(
     const Array & parameters,
     int recursion_level) const
 {
+    auto type_without_low_cardinality = convertLowCardinalityTypesToNested(argument_types);
+
     /// If one of types is Nullable, we apply aggregate function combinator "Null".
 
     if (std::any_of(argument_types.begin(), argument_types.end(),
@@ -57,7 +74,7 @@ AggregateFunctionPtr AggregateFunctionFactory::get(
         if (!combinator)
             throw Exception("Logical error: cannot find aggregate function combinator to apply a function to Nullable arguments.", ErrorCodes::LOGICAL_ERROR);
 
-        DataTypes nested_types = combinator->transformArguments(argument_types);
+        DataTypes nested_types = combinator->transformArguments(type_without_low_cardinality);
 
         AggregateFunctionPtr nested_function;
 
@@ -70,7 +87,7 @@ AggregateFunctionPtr AggregateFunctionFactory::get(
         return combinator->transformAggregateFunction(nested_function, argument_types, parameters);
     }
 
-    auto res = getImpl(name, argument_types, parameters, recursion_level);
+    auto res = getImpl(name, type_without_low_cardinality, parameters, recursion_level);
     if (!res)
         throw Exception("Logical error: AggregateFunctionFactory returned nullptr", ErrorCodes::LOGICAL_ERROR);
     return res;
@@ -109,7 +126,7 @@ AggregateFunctionPtr AggregateFunctionFactory::getImpl(
 
         String nested_name = name.substr(0, name.size() - combinator->getName().size());
         DataTypes nested_types = combinator->transformArguments(argument_types);
-        AggregateFunctionPtr nested_function = getImpl(nested_name, nested_types, parameters, recursion_level + 1);
+        AggregateFunctionPtr nested_function = get(nested_name, nested_types, parameters, recursion_level + 1);
         return combinator->transformAggregateFunction(nested_function, argument_types, parameters);
     }
 

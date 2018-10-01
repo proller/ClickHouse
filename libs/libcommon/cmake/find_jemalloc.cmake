@@ -1,4 +1,10 @@
-option (ENABLE_JEMALLOC "Set to TRUE to use jemalloc" ${OS_LINUX})
+if (OS_LINUX AND NOT SANITIZE)
+    set(ENABLE_JEMALLOC_DEFAULT 1)
+else ()
+    set(ENABLE_JEMALLOC_DEFAULT 0)
+endif ()
+
+option (ENABLE_JEMALLOC "Set to TRUE to use jemalloc" ${ENABLE_JEMALLOC_DEFAULT})
 if (OS_LINUX)
     option (USE_INTERNAL_JEMALLOC_LIBRARY "Set to FALSE to use system jemalloc library instead of bundled" ${NOT_UNBUNDLED})
 elseif ()
@@ -6,11 +12,18 @@ elseif ()
 endif()
 
 if (ENABLE_JEMALLOC)
+
+    if (USE_INTERNAL_JEMALLOC_LIBRARY AND NOT EXISTS "${ClickHouse_SOURCE_DIR}/contrib/jemalloc/src/jemalloc.c")
+       message (WARNING "submodule contrib/jemalloc is missing. to fix try run: \n git submodule update --init --recursive")
+       set (USE_INTERNAL_JEMALLOC_LIBRARY 0)
+       set (MISSING_INTERNAL_JEMALLOC_LIBRARY 1)
+    endif ()
+
     if (NOT USE_INTERNAL_JEMALLOC_LIBRARY)
         find_package (JeMalloc)
     endif ()
 
-    if (NOT JEMALLOC_LIBRARIES)
+    if (NOT JEMALLOC_LIBRARIES AND NOT MISSING_INTERNAL_JEMALLOC_LIBRARY)
         set (JEMALLOC_LIBRARIES "jemalloc")
         set (USE_INTERNAL_JEMALLOC_LIBRARY 1)
     endif ()
@@ -19,6 +32,10 @@ if (ENABLE_JEMALLOC)
         set (USE_JEMALLOC 1)
     else ()
         message (FATAL_ERROR "ENABLE_JEMALLOC is set to true, but library was not found")
+    endif ()
+
+    if (SANITIZE)
+        message (FATAL_ERROR "ENABLE_JEMALLOC is set to true, but it cannot be used with sanitizers")
     endif ()
 
     message (STATUS "Using jemalloc=${USE_JEMALLOC}: ${JEMALLOC_LIBRARIES}")

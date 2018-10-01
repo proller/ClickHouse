@@ -76,7 +76,7 @@ SummingSortedBlockInputStream::SummingSortedBlockInputStream(
         }
         else
         {
-            bool is_agg_func = checkDataType<DataTypeAggregateFunction>(column.type.get());
+            bool is_agg_func = WhichDataType(column.type).isAggregateFunction();
             if (!column.type->isSummable() && !is_agg_func)
             {
                 column_numbers_not_to_aggregate.push_back(i);
@@ -273,7 +273,7 @@ Block SummingSortedBlockInputStream::readImpl()
     for (auto & desc : columns_to_aggregate)
     {
         // Wrap aggregated columns in a tuple to match function signature
-        if (!desc.is_agg_func_type && checkDataType<DataTypeTuple>(desc.function->getReturnType().get()))
+        if (!desc.is_agg_func_type && isTuple(desc.function->getReturnType()))
         {
             size_t tuple_size = desc.column_numbers.size();
             MutableColumns tuple_columns(tuple_size);
@@ -286,13 +286,13 @@ Block SummingSortedBlockInputStream::readImpl()
             desc.merged_column = header.safeGetByPosition(desc.column_numbers[0]).column->cloneEmpty();
     }
 
-    merge(merged_columns, queue);
+    merge(merged_columns, queue_without_collation);
     Block res = header.cloneWithColumns(std::move(merged_columns));
 
     /// Place aggregation results into block.
     for (auto & desc : columns_to_aggregate)
     {
-        if (!desc.is_agg_func_type && checkDataType<DataTypeTuple>(desc.function->getReturnType().get()))
+        if (!desc.is_agg_func_type && isTuple(desc.function->getReturnType()))
         {
             /// Unpack tuple into block.
             size_t tuple_size = desc.column_numbers.size();
