@@ -20,7 +20,7 @@
 #include <DataStreams/ConcatBlockInputStream.h>
 #include <DataStreams/RollupBlockInputStream.h>
 #include <DataStreams/CubeBlockInputStream.h>
-#include <DataStreams/ConvertColumnWithDictionaryToFullBlockInputStream.h>
+#include <DataStreams/ConvertColumnLowCardinalityToFullBlockInputStream.h>
 
 #include <Parsers/ASTSelectQuery.h>
 #include <Parsers/ASTSelectWithUnionQuery.h>
@@ -49,6 +49,7 @@
 #include <Parsers/queryToString.h>
 #include <ext/map.h>
 #include <memory>
+#include <DataStreams/ConvertingBlockInputStream.h>
 
 
 namespace DB
@@ -202,8 +203,14 @@ InterpreterSelectQuery::InterpreterSelectQuery(
                 context.addExternalTable(it.first, it.second);
 
         if (query_analyzer->isRewriteSubqueriesPredicate())
-            interpreter_subquery = std::make_unique<InterpreterSelectWithUnionQuery>(
-                table_expression, getSubqueryContext(context), required_columns, QueryProcessingStage::Complete, subquery_depth + 1, only_analyze);
+        {
+            /// remake interpreter_subquery when PredicateOptimizer is rewrite subqueries and main table is subquery
+            if (typeid_cast<ASTSelectWithUnionQuery *>(table_expression.get()))
+                interpreter_subquery = std::make_unique<InterpreterSelectWithUnionQuery>(
+                    table_expression, getSubqueryContext(context), required_columns, QueryProcessingStage::Complete, subquery_depth + 1,
+                    only_analyze);
+        }
+
     }
 
     if (interpreter_subquery)
@@ -308,21 +315,21 @@ InterpreterSelectQuery::AnalysisResult InterpreterSelectQuery::analyzeExpression
             const ExpressionActionsChain::Step & step = chain.steps.at(0);
             res.prewhere_info->remove_prewhere_column = step.can_remove_required_output.at(0);
 
-            Names columns_to_remove_after_sampling;
+            Names columns_to_remove;
             for (size_t i = 1; i < step.required_output.size(); ++i)
             {
                 if (step.can_remove_required_output[i])
-                    columns_to_remove_after_sampling.push_back(step.required_output[i]);
+                    columns_to_remove.push_back(step.required_output[i]);
             }
 
-            if (!columns_to_remove_after_sampling.empty())
+            if (!columns_to_remove.empty())
             {
                 auto columns = res.prewhere_info->prewhere_actions->getSampleBlock().getNamesAndTypesList();
                 ExpressionActionsPtr actions = std::make_shared<ExpressionActions>(columns, context);
-                for (const auto & column : columns_to_remove_after_sampling)
+                for (const auto & column : columns_to_remove)
                     actions->add(ExpressionAction::removeColumn(column));
 
-                res.prewhere_info->after_sampling_actions = std::move(actions);
+                res.prewhere_info->remove_columns_actions = std::move(actions);
             }
         }
         if (has_where)
@@ -336,8 +343,9 @@ InterpreterSelectQuery::AnalysisResult InterpreterSelectQuery::analyzeExpression
     {
         ExpressionActionsChain chain(context);
 
-        ASTPtr sampling_expression = storage && query.sample_size() ? storage->getSamplingExpression() : nullptr;
-        if (query_analyzer->appendPrewhere(chain, !res.first_stage, sampling_expression))
+        ASTPtr sampling_expression = (storage && query.sample_size()) ? storage->getSamplingExpression() : nullptr;
+        ASTPtr primary_expression = (storage && query.final()) ? storage->getPrimaryExpression() : nullptr;
+        if (query_analyzer->appendPrewhere(chain, !res.first_stage, sampling_expression, primary_expression))
         {
             has_prewhere = true;
 
@@ -409,6 +417,22 @@ InterpreterSelectQuery::AnalysisResult InterpreterSelectQuery::analyzeExpression
         res.before_having->prependProjectInput();
 
     res.subqueries_for_sets = query_analyzer->getSubqueriesForSets();
+
+    /// Check that PREWHERE doesn't contain unusual actions. Unusual actions are that can change number of rows.
+    if (res.prewhere_info)
+    {
+        auto check_actions = [](const ExpressionActionsPtr & actions)
+        {
+            if (actions)
+                for (const auto & action : actions->getActions())
+                    if (action.type == ExpressionAction::Type::JOIN || action.type == ExpressionAction::Type::ARRAY_JOIN)
+                        throw Exception("PREWHERE cannot contain ARRAY JOIN or JOIN action", ErrorCodes::ILLEGAL_PREWHERE);
+        };
+
+        check_actions(res.prewhere_info->prewhere_actions);
+        check_actions(res.prewhere_info->alias_actions);
+        check_actions(res.prewhere_info->remove_columns_actions);
+    }
 
     return res;
 }
@@ -542,6 +566,10 @@ void InterpreterSelectQuery::executeImpl(Pipeline & pipeline, const BlockInputSt
                 if (query.limit_length)
                     executePreLimit(pipeline);
             }
+
+            // If there is no global subqueries, we can run subqueries only when recieve them on server.
+            if (!query_analyzer->hasGlobalSubqueries() && !expressions.subqueries_for_sets.empty())
+                executeSubqueriesInSetsAndJoins(pipeline, expressions.subqueries_for_sets);
         }
 
         if (expressions.second_stage)
@@ -647,7 +675,7 @@ void InterpreterSelectQuery::executeImpl(Pipeline & pipeline, const BlockInputSt
         }
     }
 
-    if (!expressions.subqueries_for_sets.empty())
+    if (query_analyzer->hasGlobalSubqueries() && !expressions.subqueries_for_sets.empty())
         executeSubqueriesInSetsAndJoins(pipeline, expressions.subqueries_for_sets);
 }
 
@@ -664,10 +692,10 @@ static void getLimitLengthAndOffset(ASTSelectQuery & query, size_t & length, siz
     }
 }
 
+
 void InterpreterSelectQuery::executeFetchColumns(
     QueryProcessingStage::Enum processing_stage, Pipeline & pipeline, const PrewhereInfoPtr & prewhere_info)
 {
-
     const Settings & settings = context.getSettingsRef();
 
     /// Actions to calculate ALIAS if required.
@@ -794,7 +822,6 @@ void InterpreterSelectQuery::executeFetchColumns(
             }
         }
     }
-
 
     /// Limitation on the number of columns to read.
     /// It's not applied in 'only_analyze' mode, because the query could be analyzed without removal of unnecessary columns.
@@ -962,8 +989,7 @@ void InterpreterSelectQuery::executeAggregation(Pipeline & pipeline, const Expre
 {
     pipeline.transform([&](auto & stream)
     {
-        stream = //std::make_shared<ConvertColumnWithDictionaryToFullBlockInputStream>(
-                std::make_shared<ExpressionBlockInputStream>(stream, expression); //);
+        stream = std::make_shared<ExpressionBlockInputStream>(stream, expression);
     });
 
     Names key_names;
@@ -1199,6 +1225,7 @@ void InterpreterSelectQuery::executeOrder(Pipeline & pipeline)
     /// Merge the sorted blocks.
     pipeline.firstStream() = std::make_shared<MergeSortingBlockInputStream>(
         pipeline.firstStream(), order_descr, settings.max_block_size, limit,
+        settings.max_bytes_before_remerge_sort,
         settings.max_bytes_before_external_sort, context.getTemporaryPath());
 }
 
@@ -1267,6 +1294,17 @@ void InterpreterSelectQuery::executeUnion(Pipeline & pipeline)
     /// If there are still several streams, then we combine them into one
     if (pipeline.hasMoreThanOneStream())
     {
+        /// Unify streams in case they have different headers.
+        auto first_header = pipeline.streams.at(0)->getHeader();
+        for (size_t i = 1; i < pipeline.streams.size(); ++i)
+        {
+            auto & stream = pipeline.streams[i];
+            auto header = stream->getHeader();
+            auto mode = ConvertingBlockInputStream::MatchColumnsMode::Name;
+            if (!blocksHaveEqualStructure(first_header, header))
+                stream = std::make_shared<ConvertingBlockInputStream>(context, stream, first_header, mode);
+        }
+
         pipeline.firstStream() = std::make_shared<UnionBlockInputStream<>>(pipeline.streams, pipeline.stream_with_non_joined_data, max_streams);
         pipeline.stream_with_non_joined_data = nullptr;
         pipeline.streams.resize(1);

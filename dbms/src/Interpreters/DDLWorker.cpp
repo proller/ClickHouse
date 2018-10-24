@@ -424,7 +424,7 @@ void DDLWorker::parseQueryAndResolveHost(DDLTask & task)
     }
 
     if (!task.query || !(task.query_on_cluster = dynamic_cast<ASTQueryWithOnCluster *>(task.query.get())))
-        throw Exception("Recieved unknown DDL query", ErrorCodes::UNKNOWN_TYPE_OF_QUERY);
+        throw Exception("Received unknown DDL query", ErrorCodes::UNKNOWN_TYPE_OF_QUERY);
 
     task.cluster_name = task.query_on_cluster->cluster;
     task.cluster = context.tryGetCluster(task.cluster_name);
@@ -534,6 +534,20 @@ bool DDLWorker::tryExecuteQuery(const String & query, const DDLTask & task, Exec
     LOG_DEBUG(log, "Executed query: " << query);
 
     return true;
+}
+
+void DDLWorker::attachToThreadGroup()
+{
+    if (thread_group)
+    {
+        /// Put all threads to one thread pool
+        CurrentThread::attachToIfDetached(thread_group);
+    }
+    else
+    {
+        CurrentThread::initializeQuery();
+        thread_group = CurrentThread::getGroup();
+    }
 }
 
 
@@ -867,6 +881,7 @@ void DDLWorker::run()
             {
                 if (!Coordination::isHardwareError(e.code))
                     throw;
+                tryLogCurrentException(__PRETTY_FUNCTION__);
             }
         }
         catch (...)
@@ -880,6 +895,8 @@ void DDLWorker::run()
     {
         try
         {
+            attachToThreadGroup();
+
             processTasks();
 
             LOG_DEBUG(log, "Waiting a watch");
@@ -891,7 +908,7 @@ void DDLWorker::run()
             /// TODO: it might delay the execution, move it to separate thread.
             cleanupQueue();
         }
-        catch (Coordination::Exception & e)
+        catch (const Coordination::Exception & e)
         {
             if (Coordination::isHardwareError(e.code))
             {

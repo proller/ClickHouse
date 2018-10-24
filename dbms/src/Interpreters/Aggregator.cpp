@@ -24,8 +24,8 @@
 #include <common/demangle.h>
 #if __has_include(<Interpreters/config_compile.h>)
 #include <Interpreters/config_compile.h>
-#include <Columns/ColumnWithDictionary.h>
-#include <DataTypes/DataTypeWithDictionary.h>
+#include <Columns/ColumnLowCardinality.h>
+#include <DataTypes/DataTypeLowCardinality.h>
 
 #endif
 
@@ -405,7 +405,7 @@ AggregatedDataVariants::Type Aggregator::chooseAggregationMethod()
     {
         DataTypePtr type = (params.src_header ? params.src_header : params.intermediate_header).safeGetByPosition(pos).type;
 
-        if (type->withDictionary())
+        if (type->lowCardinality())
         {
             has_low_cardinality = true;
             type = removeLowCardinality(type);
@@ -748,7 +748,6 @@ bool Aggregator::executeOnBlock(const Block & block, AggregatedDataVariants & re
       * To make them work anyway, we materialize them.
       */
     Columns materialized_columns;
-    // ColumnRawPtrs key_counts;
 
     /// Remember the columns we will work with
     for (size_t i = 0; i < params.keys_size; ++i)
@@ -761,14 +760,13 @@ bool Aggregator::executeOnBlock(const Block & block, AggregatedDataVariants & re
             key_columns[i] = materialized_columns.back().get();
         }
 
-        if (const auto * column_with_dictionary = typeid_cast<const ColumnWithDictionary *>(key_columns[i]))
+        if (const auto * low_cardinality_column = typeid_cast<const ColumnLowCardinality *>(key_columns[i]))
         {
             if (!result.isLowCardinality())
             {
-                materialized_columns.push_back(column_with_dictionary->convertToFullColumn());
+                materialized_columns.push_back(low_cardinality_column->convertToFullColumn());
                 key_columns[i] = materialized_columns.back().get();
             }
-            //key_counts.push_back(materialized_columns.back().get());
         }
     }
 
@@ -787,9 +785,9 @@ bool Aggregator::executeOnBlock(const Block & block, AggregatedDataVariants & re
                 aggregate_columns[i][j] = materialized_columns.back().get();
             }
 
-            if (auto * col_with_dict = typeid_cast<const ColumnWithDictionary *>(aggregate_columns[i][j]))
+            if (auto * col_low_cardinality = typeid_cast<const ColumnLowCardinality *>(aggregate_columns[i][j]))
             {
-                materialized_columns.push_back(col_with_dict->convertToFullColumn());
+                materialized_columns.push_back(col_low_cardinality->convertToFullColumn());
                 aggregate_columns[i][j] = materialized_columns.back().get();
             }
         }
@@ -1134,6 +1132,9 @@ void Aggregator::convertToBlockImpl(
     if (data.empty())
         return;
 
+    if (key_columns.size() != params.keys_size)
+        throw Exception{"Aggregate. Unexpected key columns size.", ErrorCodes::LOGICAL_ERROR};
+
     if (final)
         convertToBlockImplFinal(method, data, key_columns, final_aggregate_columns);
     else
@@ -1153,7 +1154,7 @@ void NO_INLINE Aggregator::convertToBlockImplFinal(
 {
     for (const auto & value : data)
     {
-        method.insertKeyIntoColumns(value, key_columns, params.keys_size, key_sizes);
+        method.insertKeyIntoColumns(value, key_columns, key_sizes);
 
         for (size_t i = 0; i < params.aggregates_size; ++i)
             aggregate_functions[i]->insertResultInto(
@@ -1171,10 +1172,9 @@ void NO_INLINE Aggregator::convertToBlockImplNotFinal(
     MutableColumns & key_columns,
     AggregateColumnsData & aggregate_columns) const
 {
-
     for (auto & value : data)
     {
-        method.insertKeyIntoColumns(value, key_columns, params.keys_size, key_sizes);
+        method.insertKeyIntoColumns(value, key_columns, key_sizes);
 
         /// reserved, so push_back does not throw exceptions
         for (size_t i = 0; i < params.aggregates_size; ++i)
@@ -2087,7 +2087,7 @@ void Aggregator::mergeStream(const BlockInputStreamPtr & stream, AggregatedDataV
 
     /** `minus one` means the absence of information about the bucket
       * - in the case of single-level aggregation, as well as for blocks with "overflowing" values.
-      * If there is at least one block with a bucket number greater than zero, then there was a two-level aggregation.
+      * If there is at least one block with a bucket number greater or equal than zero, then there was a two-level aggregation.
       */
     auto max_bucket = bucket_to_blocks.rbegin()->first;
     size_t has_two_level = max_bucket >= 0;
