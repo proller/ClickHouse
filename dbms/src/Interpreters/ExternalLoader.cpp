@@ -78,7 +78,9 @@ void ExternalLoader::init(bool throw_on_error)
 ExternalLoader::~ExternalLoader()
 {
     destroy.set();
-    reloading_thread.join();
+    /// It can be partially initialized
+    if (reloading_thread.joinable())
+        reloading_thread.join();
 }
 
 
@@ -237,7 +239,7 @@ void ExternalLoader::reloadFromConfigFiles(const bool throw_on_error, const bool
         if (current_config.find(loadable.first) == std::end(current_config))
             removed_loadable_objects.emplace_back(loadable.first);
     }
-    for(const auto & name : removed_loadable_objects)
+    for (const auto & name : removed_loadable_objects)
         loadable_objects.erase(name);
 }
 

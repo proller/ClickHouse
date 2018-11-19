@@ -68,7 +68,7 @@ ConfigProcessor::ConfigProcessor(
     , name_pool(new Poco::XML::NamePool(65521))
     , dom_parser(name_pool)
 {
-    if (log_to_console && Logger::has("ConfigProcessor") == nullptr)
+    if (log_to_console && !Logger::has("ConfigProcessor"))
     {
         channel_ptr = new Poco::ConsoleChannel;
         log = &Logger::create("ConfigProcessor", channel_ptr.get(), Poco::Message::PRIO_TRACE);
@@ -462,6 +462,8 @@ XMLDocumentPtr ConfigProcessor::processConfig(
         std::string include_from_path;
         if (node)
         {
+            /// if we include_from env or zk.
+            doIncludesRecursive(config, nullptr, node, zk_node_cache, contributing_zk_paths);
             include_from_path = node->innerText();
         }
         else

@@ -20,6 +20,14 @@
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
 
+/** Y_IGNORE marker means that this header is not analyzed by Arcadia build system.
+  * "Arcadia" is the name of internal Yandex source code repository.
+  * ClickHouse have limited support for build in Arcadia
+  * (ClickHouse source code is used in another Yandex products as a library).
+  * Some libraries are not enabled when build inside Arcadia is used,
+  *  that what does Y_IGNORE indicate.
+  */
+
 #include <llvm/Analysis/TargetTransformInfo.h> // Y_IGNORE
 #include <llvm/Config/llvm-config.h> // Y_IGNORE
 #include <llvm/IR/BasicBlock.h> // Y_IGNORE
@@ -52,6 +60,7 @@ namespace ProfileEvents
 {
     extern const Event CompileFunction;
     extern const Event CompileExpressionsMicroseconds;
+    extern const Event CompileExpressionsBytes;
 }
 
 namespace DB
@@ -133,6 +142,8 @@ static llvm::TargetMachine * getNativeMachine()
 #if LLVM_VERSION_MAJOR >= 7
 auto wrapJITSymbolResolver(llvm::JITSymbolResolver & jsr)
 {
+#if USE_INTERNAL_LLVM_LIBRARY && LLVM_VERSION_PATCH == 0
+    // REMOVE AFTER contrib/llvm upgrade
     auto flags = [&](llvm::orc::SymbolFlagsMap & flags, const llvm::orc::SymbolNameSet & symbols)
     {
         llvm::orc::SymbolNameSet missing;
@@ -146,6 +157,21 @@ auto wrapJITSymbolResolver(llvm::JITSymbolResolver & jsr)
         }
         return missing;
     };
+#else
+    // Actually this should work for 7.0.0 but now we have OLDER 7.0.0svn in contrib
+    auto flags = [&](const llvm::orc::SymbolNameSet & symbols)
+    {
+        llvm::orc::SymbolFlagsMap flags;
+        for (const auto & symbol : symbols)
+        {
+            auto resolved = jsr.lookupFlags({*symbol});
+            if (resolved && resolved->size())
+                flags.emplace(symbol, resolved->begin()->second);
+        }
+        return flags;
+    };
+#endif
+
     auto symbols = [&](std::shared_ptr<llvm::orc::AsynchronousSymbolQuery> query, llvm::orc::SymbolNameSet symbols)
     {
         llvm::orc::SymbolNameSet missing;
@@ -244,10 +270,11 @@ struct LLVMContext
         module->setTargetTriple(machine->getTargetTriple().getTriple());
     }
 
-    void finalize()
+    /// returns used memory
+    size_t compileAllFunctionsToNativeCode()
     {
         if (!module->size())
-            return;
+            return 0;
         llvm::PassManagerBuilder builder;
         llvm::legacy::PassManager mpm;
         llvm::legacy::FunctionPassManager fpm(module.get());
@@ -296,6 +323,11 @@ struct LLVMContext
                 throw Exception("Function " + name + " failed to link", ErrorCodes::CANNOT_COMPILE_CODE);
             symbols[name] = reinterpret_cast<void *>(*address);
         }
+#if LLVM_VERSION_MAJOR >= 6
+        return memory_mapper->memory_tracker.get();
+#else
+        return 0;
+#endif
     }
 };
 
@@ -307,8 +339,13 @@ class LLVMPreparedFunction : public PreparedFunctionImpl
 
 public:
     LLVMPreparedFunction(std::string name_, std::shared_ptr<LLVMContext> context)
-        : name(std::move(name_)), context(context), function(context->symbols.at(name))
-    {}
+        : name(std::move(name_)), context(context)
+    {
+        auto it = context->symbols.find(name);
+        if (context->symbols.end() == it)
+            throw Exception("Cannot find symbol " + name + " in LLVMContext", ErrorCodes::LOGICAL_ERROR);
+        function = it->second;
+    }
 
     String getName() const override { return name; }
 
@@ -336,7 +373,7 @@ public:
     }
 };
 
-static void compileFunction(std::shared_ptr<LLVMContext> & context, const IFunctionBase & f)
+static void compileFunctionToLLVMByteCode(std::shared_ptr<LLVMContext> & context, const IFunctionBase & f)
 {
     ProfileEvents::increment(ProfileEvents::CompileFunction);
 
@@ -420,7 +457,7 @@ static void compileFunction(std::shared_ptr<LLVMContext> & context, const IFunct
 
 static llvm::Constant * getNativeValue(llvm::Type * type, const IColumn & column, size_t i)
 {
-    if (!type)
+    if (!type || column.size() <= i)
         return nullptr;
     if (auto * constant = typeid_cast<const ColumnConst *>(&column))
         return getNativeValue(type, constant->getDataColumn(), 0);
@@ -477,7 +514,7 @@ LLVMFunction::LLVMFunction(const ExpressionActions::Actions & actions, std::shar
     for (const auto & action : actions)
     {
         const auto & names = action.argument_names;
-        const auto & types = action.function->getArgumentTypes();
+        const auto & types = action.function_base->getArgumentTypes();
         std::vector<CompilableExpression> args;
         for (size_t i = 0; i < names.size(); ++i)
         {
@@ -489,13 +526,22 @@ LLVMFunction::LLVMFunction(const ExpressionActions::Actions & actions, std::shar
             }
             args.push_back(inserted.first->second);
         }
-        subexpressions[action.result_name] = subexpression(*action.function, std::move(args));
-        originals.push_back(action.function);
+        subexpressions[action.result_name] = subexpression(*action.function_base, std::move(args));
+        originals.push_back(action.function_base);
     }
-    compileFunction(context, *this);
+    compileFunctionToLLVMByteCode(context, *this);
 }
 
-PreparedFunctionPtr LLVMFunction::prepare(const Block &) const { return std::make_shared<LLVMPreparedFunction>(name, context); }
+llvm::Value * LLVMFunction::compile(llvm::IRBuilderBase & builder, ValuePlaceholders values) const
+{
+    auto it = subexpressions.find(name);
+    if (subexpressions.end() == it)
+        throw Exception("Cannot find subexpression " + name + " in LLVMFunction", ErrorCodes::LOGICAL_ERROR);
+    return it->second(builder, values);
+}
+
+
+PreparedFunctionPtr LLVMFunction::prepare(const Block &, const ColumnNumbers &, size_t) const { return std::make_shared<LLVMPreparedFunction>(name, context); }
 
 bool LLVMFunction::isDeterministic() const
 {
@@ -643,7 +689,7 @@ std::vector<std::unordered_set<std::optional<size_t>>> getActionsDependents(cons
             case ExpressionAction::APPLY_FUNCTION:
             {
                 dependents[i] = current_dependents[actions[i].result_name];
-                const bool compilable = isCompilable(*actions[i].function);
+                const bool compilable = isCompilable(*actions[i].function_base);
                 for (const auto & name : actions[i].argument_names)
                 {
                     if (compilable)
@@ -675,14 +721,11 @@ void compileFunctions(ExpressionActions::Actions & actions, const Names & output
 
     static LLVMTargetInitializer initializer;
 
-
     auto dependents = getActionsDependents(actions, output_columns);
-    /// Initialize context as late as possible and only if needed
-    std::shared_ptr<LLVMContext> context;
     std::vector<ExpressionActions::Actions> fused(actions.size());
     for (size_t i = 0; i < actions.size(); ++i)
     {
-        if (actions[i].type != ExpressionAction::APPLY_FUNCTION || !isCompilable(*actions[i].function))
+        if (actions[i].type != ExpressionAction::APPLY_FUNCTION || !isCompilable(*actions[i].function_base))
             continue;
 
         fused[i].push_back(actions[i]);
@@ -692,37 +735,38 @@ void compileFunctions(ExpressionActions::Actions & actions, const Names & output
             if (fused[i].size() == 1)
                 continue;
 
-
             auto hash_key = ExpressionActions::ActionsHash{}(fused[i]);
             {
-                std::lock_guard<std::mutex> lock(mutex);
+                std::lock_guard lock(mutex);
                 if (counter[hash_key]++ < min_count_to_compile)
                     continue;
             }
+
             std::shared_ptr<LLVMFunction> fn;
             if (compilation_cache)
             {
-                fn = compilation_cache->get(hash_key);
-                if (!fn)
+                std::tie(fn, std::ignore) = compilation_cache->getOrSet(hash_key, [&inlined_func=std::as_const(fused[i]), &sample_block] ()
                 {
-                    if (!context)
-                        context = std::make_shared<LLVMContext>();
                     Stopwatch watch;
-                    fn = std::make_shared<LLVMFunction>(fused[i], context, sample_block);
+                    std::shared_ptr<LLVMContext> context = std::make_shared<LLVMContext>();
+                    auto result_fn = std::make_shared<LLVMFunction>(inlined_func, context, sample_block);
+                    size_t used_memory = context->compileAllFunctionsToNativeCode();
+                    ProfileEvents::increment(ProfileEvents::CompileExpressionsBytes, used_memory);
                     ProfileEvents::increment(ProfileEvents::CompileExpressionsMicroseconds, watch.elapsedMicroseconds());
-                    compilation_cache->set(hash_key, fn);
-                }
+                    return result_fn;
+                });
             }
             else
             {
-                if (!context)
-                    context = std::make_shared<LLVMContext>();
+                std::shared_ptr<LLVMContext> context = std::make_shared<LLVMContext>();
                 Stopwatch watch;
                 fn = std::make_shared<LLVMFunction>(fused[i], context, sample_block);
+                size_t used_memory = context->compileAllFunctionsToNativeCode();
+                ProfileEvents::increment(ProfileEvents::CompileExpressionsBytes, used_memory);
                 ProfileEvents::increment(ProfileEvents::CompileExpressionsMicroseconds, watch.elapsedMicroseconds());
             }
 
-            actions[i].function = fn;
+            actions[i].function_base = fn;
             actions[i].argument_names = fn->getArgumentNames();
             actions[i].is_function_compiled = true;
 
@@ -734,8 +778,11 @@ void compileFunctions(ExpressionActions::Actions & actions, const Names & output
             fused[*dep].insert(fused[*dep].end(), fused[i].begin(), fused[i].end());
     }
 
-    if (context)
-        context->finalize();
+    for (size_t i = 0; i < actions.size(); ++i)
+    {
+        if (actions[i].type == ExpressionAction::APPLY_FUNCTION && actions[i].is_function_compiled)
+            actions[i].function = actions[i].function_base->prepare({}, {}, 0); /// Arguments are not used for LLVMFunction.
+    }
 }
 
 }

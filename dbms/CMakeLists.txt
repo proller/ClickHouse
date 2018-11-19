@@ -6,17 +6,11 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/find_vectorclass.cmake)
 
 set (CONFIG_VERSION ${CMAKE_CURRENT_BINARY_DIR}/src/Common/config_version.h)
 set (CONFIG_COMMON ${CMAKE_CURRENT_BINARY_DIR}/src/Common/config.h)
-set (CONFIG_BUILD ${CMAKE_CURRENT_BINARY_DIR}/src/Common/config_build.cpp)
 
 include (cmake/version.cmake)
 message (STATUS "Will build ${VERSION_FULL}")
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/src/Common/config.h.in ${CONFIG_COMMON})
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/src/Common/config_version.h.in ${CONFIG_VERSION})
-
-get_property (BUILD_COMPILE_DEFINITIONS DIRECTORY ${ClickHouse_SOURCE_DIR} PROPERTY COMPILE_DEFINITIONS)
-get_property (BUILD_INCLUDE_DIRECTORIES DIRECTORY ${ClickHouse_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
-string (TIMESTAMP BUILD_DATE "%Y-%m-%d" UTC)
-configure_file (${CMAKE_CURRENT_SOURCE_DIR}/src/Common/config_build.cpp.in ${CONFIG_BUILD})
 
 if (NOT MSVC)
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra")
@@ -54,8 +48,6 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     add_definitions ("-fno-tree-loop-distribute-patterns")
 endif ()
 
-find_package (Threads)
-
 add_subdirectory (src)
 
 set(dbms_headers)
@@ -67,7 +59,6 @@ add_headers_and_sources(clickhouse_common_io src/Common)
 add_headers_and_sources(clickhouse_common_io src/Common/HashTable)
 add_headers_and_sources(clickhouse_common_io src/IO)
 
-add_headers_and_sources(dbms src/Analyzers)
 add_headers_and_sources(dbms src/Core)
 add_headers_and_sources(dbms src/DataStreams)
 add_headers_and_sources(dbms src/DataTypes)
@@ -155,19 +146,21 @@ if (CMAKE_BUILD_TYPE_UC STREQUAL "RELEASE" OR CMAKE_BUILD_TYPE_UC STREQUAL "RELW
         PROPERTIES COMPILE_FLAGS -g0)
 endif ()
 
-if (NOT ARCH_ARM)
+if (NOT ARCH_ARM AND CPUID_LIBRARY)
     set (LINK_LIBRARIES_ONLY_ON_X86_64 ${CPUID_LIBRARY})
 endif()
 
 target_link_libraries (clickhouse_common_io
     common
     string_utils
+    widechar_width
     ${LINK_LIBRARIES_ONLY_ON_X86_64}
     ${LZ4_LIBRARY}
     ${ZSTD_LIBRARY}
     ${DOUBLE_CONVERSION_LIBRARIES}
     ${Poco_Net_LIBRARY}
-    ${Poco_Data_LIBRARY}
+    ${Poco_Util_LIBRARY}
+    ${Poco_Foundation_LIBRARY}
     ${ZLIB_LIBRARIES}
     ${EXECINFO_LIBRARY}
     ${ELF_LIBRARY}
@@ -195,25 +188,31 @@ if (NOT USE_INTERNAL_BOOST_LIBRARY)
     target_include_directories (clickhouse_common_io SYSTEM BEFORE PUBLIC ${Boost_INCLUDE_DIRS})
 endif ()
 
+if (Poco_SQL_FOUND AND NOT USE_INTERNAL_POCO_LIBRARY)
+    target_include_directories (clickhouse_common_io SYSTEM PRIVATE ${Poco_SQL_INCLUDE_DIR})
+    target_include_directories (dbms SYSTEM PRIVATE ${Poco_SQL_INCLUDE_DIR})
+endif()
+
 if (USE_POCO_SQLODBC)
     target_link_libraries (clickhouse_common_io ${Poco_SQL_LIBRARY})
     target_link_libraries (dbms ${Poco_SQLODBC_LIBRARY} ${Poco_SQL_LIBRARY})
     if (NOT USE_INTERNAL_POCO_LIBRARY)
-        target_include_directories (clickhouse_common_io SYSTEM PRIVATE ${ODBC_INCLUDE_DIRECTORIES} ${Poco_SQL_INCLUDE_DIRS})
-        target_include_directories (dbms SYSTEM PRIVATE ${ODBC_INCLUDE_DIRECTORIES} ${Poco_SQLODBC_INCLUDE_DIRS} PUBLIC ${Poco_SQL_INCLUDE_DIRS})
+        target_include_directories (clickhouse_common_io SYSTEM PRIVATE ${ODBC_INCLUDE_DIRECTORIES} ${Poco_SQL_INCLUDE_DIR})
+        target_include_directories (dbms SYSTEM PRIVATE ${ODBC_INCLUDE_DIRECTORIES} ${Poco_SQLODBC_INCLUDE_DIR} PUBLIC ${Poco_SQL_INCLUDE_DIR})
     endif()
 endif()
 
-if (Poco_Data_FOUND AND NOT USE_INTERNAL_POCO_LIBRARY)
-    target_include_directories (clickhouse_common_io SYSTEM PRIVATE ${Poco_Data_INCLUDE_DIRS})
-    target_include_directories (dbms SYSTEM PRIVATE ${Poco_Data_INCLUDE_DIRS})
+#if (Poco_Data_FOUND AND NOT USE_INTERNAL_POCO_LIBRARY)
+if (Poco_Data_FOUND)
+    target_include_directories (clickhouse_common_io SYSTEM PRIVATE ${Poco_Data_INCLUDE_DIR})
+    target_include_directories (dbms SYSTEM PRIVATE ${Poco_Data_INCLUDE_DIR})
 endif()
 
 if (USE_POCO_DATAODBC)
     target_link_libraries (clickhouse_common_io ${Poco_Data_LIBRARY})
     target_link_libraries (dbms ${Poco_DataODBC_LIBRARY})
     if (NOT USE_INTERNAL_POCO_LIBRARY)
-        target_include_directories (dbms SYSTEM PRIVATE ${ODBC_INCLUDE_DIRECTORIES} ${Poco_DataODBC_INCLUDE_DIRS})
+        target_include_directories (dbms SYSTEM PRIVATE ${ODBC_INCLUDE_DIRECTORIES} ${Poco_DataODBC_INCLUDE_DIR})
     endif()
 endif()
 
@@ -223,6 +222,7 @@ endif()
 
 if (USE_POCO_NETSSL)
     target_link_libraries (clickhouse_common_io ${Poco_NetSSL_LIBRARY} ${Poco_Crypto_LIBRARY})
+    target_link_libraries (dbms ${Poco_NetSSL_LIBRARY} ${Poco_Crypto_LIBRARY})
 endif()
 
 target_link_libraries (dbms ${Poco_Foundation_LIBRARY})
@@ -262,10 +262,13 @@ if (NOT USE_INTERNAL_ZSTD_LIBRARY)
     target_include_directories (dbms SYSTEM BEFORE PRIVATE ${ZSTD_INCLUDE_DIR})
 endif ()
 
+if (USE_JEMALLOC)
+    target_include_directories (dbms SYSTEM BEFORE PRIVATE ${JEMALLOC_INCLUDE_DIR}) # used in Interpreters/AsynchronousMetrics.cpp
+endif ()
+
 target_include_directories (dbms PUBLIC ${DBMS_INCLUDE_DIR})
 target_include_directories (clickhouse_common_io PUBLIC ${DBMS_INCLUDE_DIR})
 target_include_directories (clickhouse_common_io SYSTEM PUBLIC ${PCG_RANDOM_INCLUDE_DIR})
-target_include_directories (clickhouse_common_io SYSTEM PUBLIC ${Poco_DataODBC_INCLUDE_DIRS})
 target_include_directories (clickhouse_common_io SYSTEM BEFORE PUBLIC ${DOUBLE_CONVERSION_INCLUDE_DIR})
 
 # also for copy_headers.sh:

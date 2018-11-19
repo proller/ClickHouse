@@ -16,16 +16,18 @@
 
 #include <Parsers/ASTInsertQuery.h>
 #include <Parsers/ASTSelectQuery.h>
-#include <Parsers/ASTIdentifier.h>
 #include <Parsers/TablePropertiesQueriesASTs.h>
 #include <Parsers/ParserAlterQuery.h>
 #include <Parsers/parseQuery.h>
 #include <Parsers/ASTLiteral.h>
 #include <Parsers/ASTExpressionList.h>
+#include <Parsers/ASTTablesInSelectQuery.h>
+#include <Parsers/ASTDropQuery.h>
 
 #include <Interpreters/InterpreterSelectQuery.h>
 #include <Interpreters/InterpreterAlterQuery.h>
 #include <Interpreters/InterpreterDescribeQuery.h>
+#include <Interpreters/SyntaxAnalyzer.h>
 #include <Interpreters/ExpressionAnalyzer.h>
 #include <Interpreters/evaluateConstantExpression.h>
 #include <Interpreters/ClusterProxy/executeQuery.h>
@@ -39,10 +41,7 @@
 #include <Poco/DirectoryIterator.h>
 
 #include <memory>
-
 #include <boost/filesystem.hpp>
-#include <Parsers/ASTTablesInSelectQuery.h>
-#include <Parsers/ASTDropQuery.h>
 
 
 namespace DB
@@ -142,6 +141,12 @@ void initializeFileNamesIncrement(const std::string & path, SimpleIncrement & in
 /// For destruction of std::unique_ptr of type that is incomplete in class definition.
 StorageDistributed::~StorageDistributed() = default;
 
+static ExpressionActionsPtr buildShardingKeyExpression(const ASTPtr & sharding_key, const Context & context, NamesAndTypesList columns, bool project)
+{
+    ASTPtr query = sharding_key;
+    auto syntax_result = SyntaxAnalyzer(context, {}).analyze(query, columns);
+    return ExpressionAnalyzer(query, syntax_result, context).getActions(project);
+}
 
 StorageDistributed::StorageDistributed(
     const String & database_name,
@@ -158,7 +163,7 @@ StorageDistributed::StorageDistributed(
     table_name(table_name_),
     remote_database(remote_database_), remote_table(remote_table_),
     context(context_), cluster_name(context.getMacros()->expand(cluster_name_)), has_sharding_key(sharding_key_),
-      sharding_key_expr(sharding_key_ ? ExpressionAnalyzer(sharding_key_, context, nullptr, getColumns().getAllPhysical()).getActions(false) : nullptr),
+    sharding_key_expr(sharding_key_ ? buildShardingKeyExpression(sharding_key_, context, getColumns().getAllPhysical(), false) : nullptr),
     sharding_key_column_name(sharding_key_ ? sharding_key_->getColumnName() : String{}),
     path(data_path_.empty() ? "" : (data_path_ + escapeForFileName(table_name) + '/'))
 {
@@ -250,7 +255,6 @@ BlockInputStreams StorageDistributed::read(
     const unsigned /*num_streams*/)
 {
     auto cluster = getCluster();
-    checkQueryProcessingStage(processed_stage, getQueryProcessingStage(context, cluster));
 
     const Settings & settings = context.getSettingsRef();
 
@@ -259,8 +263,8 @@ BlockInputStreams StorageDistributed::read(
 
     Block header = materializeBlock(InterpreterSelectQuery(query_info.query, context, Names{}, processed_stage).getSampleBlock());
 
-    ClusterProxy::SelectStreamFactory select_stream_factory = remote_table_function_ptr ?
-        ClusterProxy::SelectStreamFactory(
+    ClusterProxy::SelectStreamFactory select_stream_factory = remote_table_function_ptr
+        ? ClusterProxy::SelectStreamFactory(
             header, processed_stage, remote_table_function_ptr, context.getExternalTables())
         : ClusterProxy::SelectStreamFactory(
             header, processed_stage, QualifiedTableName{remote_database, remote_table}, context.getExternalTables());
@@ -346,6 +350,7 @@ namespace
         {"_table", "String"},
         {"_part", "String"},
         {"_part_index", "UInt64"},
+        {"_partition_id", "String"},
         {"_sample_factor", "Float64"},
     };
 }
@@ -402,7 +407,6 @@ size_t StorageDistributed::getShardCount() const
 {
     return getCluster()->getShardCount();
 }
-
 
 ClusterPtr StorageDistributed::getCluster() const
 {
@@ -464,7 +468,7 @@ void registerStorageDistributed(StorageFactory & factory)
         /// Check that sharding_key exists in the table and has numeric type.
         if (sharding_key)
         {
-            auto sharding_expr = ExpressionAnalyzer(sharding_key, args.context, nullptr, args.columns.getAllPhysical()).getActions(true);
+            auto sharding_expr = buildShardingKeyExpression(sharding_key, args.context, args.columns.getAllPhysical(), true);
             const Block & block = sharding_expr->getSampleBlock();
 
             if (block.columns() != 1)

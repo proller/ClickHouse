@@ -122,8 +122,10 @@ template <> inline UInt64 unionCastToUInt64(Float32 x)
 template <typename T>
 class ColumnVector final : public COWPtrHelper<IColumn, ColumnVector<T>>
 {
+    static_assert(!IsDecimalNumber<T>);
+
 private:
-    using Self = ColumnVector<T>;
+    using Self = ColumnVector;
     friend class COWPtrHelper<IColumn, Self>;
 
     struct less;
@@ -191,7 +193,7 @@ public:
         return data.allocated_bytes();
     }
 
-    void insert(const T value)
+    void insertValue(const T value)
     {
         data.push_back(value);
     }
@@ -215,7 +217,7 @@ public:
 
     Field operator[](size_t n) const override
     {
-        return typename NearestFieldType<T>::Type(data[n]);
+        return data[n];
     }
 
     void get(size_t n, Field & res) const override

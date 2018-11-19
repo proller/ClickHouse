@@ -45,7 +45,7 @@ public:
     /// Name of data type family (example: FixedString, Array).
     virtual const char * getFamilyName() const = 0;
 
-    /// Unique type number or zero
+    /// Data type id. It's used for runtime type checks.
     virtual TypeIndex getTypeId() const = 0;
 
     /** Binary serialization for range of values in column - for writing to disk/network, etc.
@@ -304,7 +304,7 @@ public:
     virtual bool shouldAlignRightInPrettyFormats() const { return false; }
 
     /** Does formatted value in any text format can contain anything but valid UTF8 sequences.
-      * Example: String (because it can contain arbitary bytes).
+      * Example: String (because it can contain arbitrary bytes).
       * Counterexamples: numbers, Date, DateTime.
       * For Enum, it depends.
       */
@@ -396,7 +396,7 @@ public:
       */
     virtual bool canBeInsideNullable() const { return false; }
 
-    virtual bool withDictionary() const { return false; }
+    virtual bool lowCardinality() const { return false; }
 
 
     /// Updates avg_value_size_hint for newly read column. Uses to optimize deserialization. Zero expected for first column.
@@ -410,6 +410,11 @@ public:
 struct WhichDataType
 {
     TypeIndex idx;
+
+    /// For late initialization.
+    WhichDataType()
+        : idx(TypeIndex::Nothing)
+    {}
 
     WhichDataType(const IDataType & data_type)
         : idx(data_type.getTypeId())
@@ -474,11 +479,18 @@ struct WhichDataType
 
 /// IDataType helpers (alternative for IDataType virtual methods with single point of truth)
 
+inline bool isDate(const DataTypePtr & data_type) { return WhichDataType(data_type).isDate(); }
 inline bool isDateOrDateTime(const DataTypePtr & data_type) { return WhichDataType(data_type).isDateOrDateTime(); }
 inline bool isEnum(const DataTypePtr & data_type) { return WhichDataType(data_type).isEnum(); }
 inline bool isDecimal(const DataTypePtr & data_type) { return WhichDataType(data_type).isDecimal(); }
 inline bool isTuple(const DataTypePtr & data_type) { return WhichDataType(data_type).isTuple(); }
 inline bool isArray(const DataTypePtr & data_type) { return WhichDataType(data_type).isArray(); }
+
+template <typename T>
+inline bool isUInt8(const T & data_type)
+{
+    return WhichDataType(data_type).isUInt8();
+}
 
 template <typename T>
 inline bool isUnsignedInteger(const T & data_type)

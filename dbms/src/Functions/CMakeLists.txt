@@ -32,46 +32,6 @@ generate_function_register(Arithmetic
     FunctionIntExp10
 )
 
-generate_function_register(Array
-    FunctionArray
-    FunctionArrayElement
-    FunctionHas
-    FunctionIndexOf
-    FunctionCountEqual
-    FunctionArrayEnumerate
-    FunctionArrayEnumerateUniq
-    FunctionArrayEnumerateDense
-    FunctionArrayUniq
-    FunctionArrayDistinct
-    FunctionEmptyArrayUInt8
-    FunctionEmptyArrayUInt16
-    FunctionEmptyArrayUInt32
-    FunctionEmptyArrayUInt64
-    FunctionEmptyArrayInt8
-    FunctionEmptyArrayInt16
-    FunctionEmptyArrayInt32
-    FunctionEmptyArrayInt64
-    FunctionEmptyArrayFloat32
-    FunctionEmptyArrayFloat64
-    FunctionEmptyArrayDate
-    FunctionEmptyArrayDateTime
-    FunctionEmptyArrayString
-    FunctionEmptyArrayToSingle
-    FunctionRange
-    FunctionArrayReduce
-    FunctionArrayReverse
-    FunctionArrayConcat
-    FunctionArraySlice
-    FunctionArrayPushBack
-    FunctionArrayPushFront
-    FunctionArrayPopBack
-    FunctionArrayPopFront
-    FunctionArrayHasAll
-    FunctionArrayHasAny
-    FunctionArrayIntersect
-    FunctionArrayResize
-)
-
 generate_function_register(Projection
     FunctionOneOrZero
     FunctionProject
@@ -90,7 +50,7 @@ add_headers_and_sources(clickhouse_functions ${FUNCTIONS_GENERATED_DIR})
 list(REMOVE_ITEM clickhouse_functions_sources IFunction.cpp FunctionFactory.cpp FunctionHelpers.cpp)
 list(REMOVE_ITEM clickhouse_functions_headers IFunction.h FunctionFactory.h FunctionHelpers.h)
 
-add_library(clickhouse_functions ${clickhouse_functions_sources})
+add_library(clickhouse_functions ${LINK_MODE} ${clickhouse_functions_sources})
 
 target_link_libraries(clickhouse_functions PUBLIC dbms PRIVATE ${CONSISTENT_HASHING_LIBRARY} consistent-hashing-sumbur ${FARMHASH_LIBRARIES} ${METROHASH_LIBRARIES} murmurhash)
 

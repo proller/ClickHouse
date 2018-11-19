@@ -7,7 +7,7 @@
 #include <common/find_first_symbols.h>
 #include <common/StringRef.h>
 #include <Functions/FunctionHelpers.h>
-#include <Functions/FunctionsString.h>
+#include <Functions/FunctionStringToString.h>
 #include <Functions/FunctionsStringArray.h>
 #include <port/memrchr.h>
 
@@ -205,7 +205,8 @@ struct ExtractFirstSignificantSubdomain
         if (!strncmp(last_3_periods[1] + 1, "com.", 4)        /// Note that in ColumnString every value has zero byte after it.
             || !strncmp(last_3_periods[1] + 1, "net.", 4)
             || !strncmp(last_3_periods[1] + 1, "org.", 4)
-            || !strncmp(last_3_periods[1] + 1, "co.", 3))
+            || !strncmp(last_3_periods[1] + 1, "co.", 3)
+            || !strncmp(last_3_periods[1] + 1, "biz.", 4))
         {
             res_data += last_3_periods[2] + 1 - begin;
             res_size = last_3_periods[1] - last_3_periods[2] - 1;

@@ -669,7 +669,7 @@ void BaseDaemon::buildLoggers(Poco::Util::AbstractConfiguration & config)
         std::cerr << "Logging " << log_level << " to " << log_path << std::endl;
 
         // Set up two channel chains.
-        Poco::AutoPtr<FileChannel> log_file = new FileChannel;
+        log_file = new FileChannel;
         log_file->setProperty(Poco::FileChannel::PROP_PATH, Poco::Path(log_path).absolute().toString());
         log_file->setProperty(Poco::FileChannel::PROP_ROTATION, config.getRawString("logger.size", "100M"));
         log_file->setProperty(Poco::FileChannel::PROP_ARCHIVE, "number");
@@ -691,7 +691,7 @@ void BaseDaemon::buildLoggers(Poco::Util::AbstractConfiguration & config)
         createDirectory(errorlog_path);
         std::cerr << "Logging errors to " << errorlog_path << std::endl;
 
-        Poco::AutoPtr<FileChannel> error_log_file = new FileChannel;
+        error_log_file = new FileChannel;
         error_log_file->setProperty(Poco::FileChannel::PROP_PATH, Poco::Path(errorlog_path).absolute().toString());
         error_log_file->setProperty(Poco::FileChannel::PROP_ROTATION, config.getRawString("logger.size", "100M"));
         error_log_file->setProperty(Poco::FileChannel::PROP_ARCHIVE, "number");
@@ -924,7 +924,7 @@ void BaseDaemon::initialize(Application & self)
         if (setrlimit(RLIMIT_CORE, &rlim))
         {
             std::string message = "Cannot set max size of core file to " + std::to_string(rlim.rlim_cur);
-        #if !defined(ADDRESS_SANITIZER) && !defined(THREAD_SANITIZER) && !defined(MEMORY_SANITIZER) && !defined(SANITIZER)
+        #if !defined(ADDRESS_SANITIZER) && !defined(THREAD_SANITIZER) && !defined(MEMORY_SANITIZER) && !defined(SANITIZER) && !defined(__APPLE__)
             throw Poco::Exception(message);
         #else
             /// It doesn't work under address/thread sanitizer. http://lists.llvm.org/pipermail/llvm-bugs/2013-April/027880.html

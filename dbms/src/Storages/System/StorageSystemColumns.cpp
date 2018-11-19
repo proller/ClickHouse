@@ -11,7 +11,6 @@
 #include <Storages/VirtualColumnUtils.h>
 #include <Parsers/queryToString.h>
 #include <Parsers/ASTSelectQuery.h>
-#include <Parsers/ASTLiteral.h>
 #include <Databases/IDatabase.h>
 
 
@@ -166,11 +165,11 @@ protected:
                     else
                     {
                         if (columns_mask[src_index++])
-                            res_columns[res_index++]->insert(static_cast<UInt64>(it->second.data_compressed));
+                            res_columns[res_index++]->insert(it->second.data_compressed);
                         if (columns_mask[src_index++])
-                            res_columns[res_index++]->insert(static_cast<UInt64>(it->second.data_uncompressed));
+                            res_columns[res_index++]->insert(it->second.data_uncompressed);
                         if (columns_mask[src_index++])
-                            res_columns[res_index++]->insert(static_cast<UInt64>(it->second.marks));
+                            res_columns[res_index++]->insert(it->second.marks);
                     }
                 }
 
@@ -198,11 +197,10 @@ BlockInputStreams StorageSystemColumns::read(
     const Names & column_names,
     const SelectQueryInfo & query_info,
     const Context & context,
-    QueryProcessingStage::Enum processed_stage,
+    QueryProcessingStage::Enum /*processed_stage*/,
     const size_t max_block_size,
     const unsigned /*num_streams*/)
 {
-    checkQueryProcessingStage(processed_stage, context);
     check(column_names);
 
     /// Create a mask of what columns are needed in the result.

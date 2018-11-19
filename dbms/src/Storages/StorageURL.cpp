@@ -3,7 +3,6 @@
 
 #include <Interpreters/Context.h>
 #include <Interpreters/evaluateConstantExpression.h>
-#include <Parsers/ASTIdentifier.h>
 #include <Parsers/ASTLiteral.h>
 
 #include <IO/ReadWriteBufferFromHTTP.h>
@@ -160,8 +159,6 @@ BlockInputStreams IStorageURLBase::read(const Names & column_names,
     size_t max_block_size,
     unsigned /*num_streams*/)
 {
-    checkQueryProcessingStage(processed_stage, context);
-
     auto request_uri = uri;
     auto params = getReadURIParams(column_names, query_info, context, processed_stage, max_block_size);
     for (const auto & [param, value] : params)
@@ -172,7 +169,7 @@ BlockInputStreams IStorageURLBase::read(const Names & column_names,
         getReadPOSTDataCallback(column_names, query_info, context, processed_stage, max_block_size),
         format_name,
         getName(),
-        getSampleBlock(),
+        getHeaderBlock(column_names),
         context,
         max_block_size,
         ConnectionTimeouts::getHTTPTimeouts(context.getSettingsRef()))};
