@@ -1,0 +1,1 @@
+../test_distributed_ddl/test.py
