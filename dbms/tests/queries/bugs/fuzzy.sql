@@ -5,6 +5,7 @@ SELECT sequenceCount((CAST((( SELECT NULL ) AS rg, ( SELECT ( SELECT [], '<e', c
 SELECT extractURLParameter('?_', '\0');
 SELECT extractURLParameter('ZiqSZeh?', '\0')
 SELECT 'Xx|sfF', match('', '\0'), [], groupBitAnd(( SELECT cutURLParameter('C,Ai?X', '\0') ) , -2), '\0';
+SELECT cutURLParameter('xx3.#}', '\0');
 SELECT globalNotIn(['"wh'], [NULL]);
 SELECT globalIn([''], [NULL])
 SELECT ( SELECT toDecimal128([], rowNumberInBlock()) ) , lcm('', [[(CAST(('>A') AS String))]]);
