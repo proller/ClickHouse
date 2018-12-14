@@ -7,6 +7,7 @@
 #include <mutex>
 #include <thread>
 #include <atomic>
+#include <optional>
 
 #include <Common/config.h>
 #include <common/MultiVersion.h>
@@ -78,6 +79,7 @@ struct SystemLogs;
 using SystemLogsPtr = std::shared_ptr<SystemLogs>;
 class ActionLocksManager;
 using ActionLocksManagerPtr = std::shared_ptr<ActionLocksManager>;
+class ShellCommand;
 
 #if USE_EMBEDDED_COMPILER
 
@@ -121,6 +123,7 @@ private:
     using ProgressCallback = std::function<void(const Progress & progress)>;
     ProgressCallback progress_callback;                 /// Callback for tracking progress of query execution.
     QueryStatus * process_list_elem = nullptr;   /// For tracking total resource usage for query.
+    std::pair<String, String> insertion_table;  /// Saved insertion table in query context
 
     String default_format;  /// Format, used when server formats data by itself and if query does not have FORMAT specification.
                             /// Thus, used in HTTP interface. If not specified - then some globally default format is used.
@@ -231,6 +234,9 @@ public:
     void setCurrentDatabase(const String & name);
     void setCurrentQueryId(const String & query_id);
 
+    void setInsertionTable(std::pair<String, String> && db_and_table) { insertion_table = db_and_table; }
+    const std::pair<String, String> & getInsertionTable() const { return insertion_table; }
+
     String getDefaultFormat() const;    /// If default_format is not specified, some global default format is returned.
     void setDefaultFormat(const String & name);
 
@@ -276,6 +282,8 @@ public:
 
     /// The port that the server listens for executing SQL queries.
     UInt16 getTCPPort() const;
+
+    std::optional<UInt16> getTCPPortSecure() const;
 
     /// Get query for the CREATE table.
     ASTPtr getCreateTableQuery(const String & database_name, const String & table_name) const;
@@ -441,6 +449,9 @@ public:
     void setCompiledExpressionCache(size_t cache_size);
     void dropCompiledExpressionCache() const;
 #endif
+
+    /// Add started bridge command. It will be killed after context destruction
+    void addXDBCBridgeCommand(std::unique_ptr<ShellCommand> cmd);
 
 private:
     /** Check if the current client has access to the specified database.

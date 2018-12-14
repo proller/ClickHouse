@@ -75,6 +75,10 @@ struct MergeTreeDataPart
     DayNum getMinDate() const;
     DayNum getMaxDate() const;
 
+    /// otherwise, if the partition key includes dateTime column (also a common case), these functions will return min and max values for this column.
+    time_t getMinTime() const;
+    time_t getMaxTime() const;
+
     bool isEmpty() const { return rows_count == 0; }
 
     const MergeTreeData & storage;
@@ -188,7 +192,7 @@ struct MergeTreeDataPart
 
         /// For month-based partitioning.
         MinMaxIndex(DayNum min_date, DayNum max_date)
-            : parallelogram(1, Range(static_cast<UInt64>(min_date), true, static_cast<UInt64>(max_date), true))
+            : parallelogram(1, Range(min_date, true, max_date, true))
             , initialized(true)
         {
         }

@@ -16,7 +16,7 @@ class ASTSelectQuery : public IAST
 {
 public:
     /** Get the text that identifies this element. */
-    String getID() const override { return "SelectQuery"; }
+    String getID(char) const override { return "SelectQuery"; }
 
     ASTPtr clone() const override;
 
@@ -45,7 +45,6 @@ public:
     const ASTTablesInSelectQueryElement * join() const;
     bool array_join_is_left() const;
     bool final() const;
-    void setDatabaseIfNeeded(const String & database_name);
     void replaceDatabaseAndTable(const String & database_name, const String & table_name);
     void addTableFunction(ASTPtr & table_function_ptr);
 
