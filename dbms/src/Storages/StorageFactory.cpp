@@ -94,19 +94,19 @@ StoragePtr StorageFactory::get(
             if (name.empty())
                 throw Exception("Incorrect CREATE query: ENGINE required. Or defined config setting `default_table_engine`", ErrorCodes::ENGINE_REQUIRED);
 
-            if (storage_def->settings && !endsWith(name, "MergeTree") && name != "Kafka")
+            if (storage_def->settings && !endsWith(name, "MergeTree") && name != "Kafka" && name != "Join")
             {
                 throw Exception(
                     "Engine " + name + " doesn't support SETTINGS clause. "
-                    "Currently only the MergeTree family of engines and Kafka engine supports it",
+                    "Currently only the MergeTree family of engines, Kafka engine and Join engine support it",
                     ErrorCodes::BAD_ARGUMENTS);
             }
 
-            if ((storage_def->partition_by || storage_def->order_by || storage_def->sample_by)
+            if ((storage_def->partition_by || storage_def->primary_key || storage_def->order_by || storage_def->sample_by)
                 && !endsWith(name, "MergeTree"))
             {
                 throw Exception(
-                    "Engine " + name + " doesn't support PARTITION BY, ORDER BY or SAMPLE BY clauses. "
+                    "Engine " + name + " doesn't support PARTITION BY, PRIMARY KEY, ORDER BY or SAMPLE BY clauses. "
                     "Currently only the MergeTree family of engines supports them", ErrorCodes::BAD_ARGUMENTS);
             }
 

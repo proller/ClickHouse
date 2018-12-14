@@ -48,9 +48,9 @@ DUMP(wb.str());
 }
 
 /** Get the text that identifies this element. */
-String ASTFunction::getID() const
+String ASTFunction::getID(char delim) const
 {
-    return "Function_" + name;
+    return "Function" + (delim + name);
 }
 
 ASTPtr ASTFunction::clone() const
