@@ -190,6 +190,15 @@ MergeTreeDataPart::ColumnSize MergeTreeDataPart::getTotalColumnsSize() const
 }
 
 
+size_t MergeTreeDataPart::getFileSizeOrZero(const String & file_name) const
+{
+    auto checksum = checksums.files.find(file_name);
+    if (checksum == checksums.files.end())
+        return 0;
+    return checksum->second.file_size;
+}
+
+
 /** Returns the name of a column with minimum compressed size (as returned by getColumnSize()).
   * If no checksums are present returns the name of the first physically existing column.
   */
@@ -460,6 +469,11 @@ void MergeTreeDataPart::makeCloneInDetached(const String & prefix) const
 
 void MergeTreeDataPart::loadColumnsChecksumsIndexes(bool require_columns_checksums, bool check_consistency)
 {
+    /// Memory should not be limited during ATTACH TABLE query.
+    /// This is already true at the server startup but must be also ensured for manual table ATTACH.
+    /// Motivation: memory for index is shared between queries - not belong to the query itself.
+    auto temporarily_disable_memory_tracker = getCurrentMemoryTrackerActionLock();
+
     loadColumns(require_columns_checksums);
     loadChecksums(require_columns_checksums);
     loadIndex();
