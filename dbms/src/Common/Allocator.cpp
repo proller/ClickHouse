@@ -19,6 +19,11 @@
 #define MAP_ANONYMOUS MAP_ANON
 #endif
 
+#define ALLOCATOR_TRIVIAL 0
+#if ALLOCATOR_DEBUG
+#include "StackTrace.h"
+#endif
+
 
 namespace DB
 {
@@ -42,18 +47,22 @@ namespace ErrorCodes
   *
   * PS. This is also required, because tcmalloc can not allocate a chunk of memory greater than 16 GB.
   */
+#if !ALLOCATOR_TRIVIAL
 static constexpr size_t MMAP_THRESHOLD = 64 * (1ULL << 20);
 static constexpr size_t MMAP_MIN_ALIGNMENT = 4096;
 static constexpr size_t MALLOC_MIN_ALIGNMENT = 8;
+#endif
 
 
 template <bool clear_memory_>
 void * Allocator<clear_memory_>::alloc(size_t size, size_t alignment)
 {
+
     CurrentMemoryTracker::alloc(size);
 
     void * buf;
 
+#if !ALLOCATOR_TRIVIAL
     if (size >= MMAP_THRESHOLD)
     {
         if (alignment > MMAP_MIN_ALIGNMENT)
@@ -67,9 +76,11 @@ void * Allocator<clear_memory_>::alloc(size_t size, size_t alignment)
         /// No need for zero-fill, because mmap guarantees it.
     }
     else
+
     {
         if (alignment <= MALLOC_MIN_ALIGNMENT)
         {
+#endif
             if (clear_memory)
                 buf = ::calloc(size, 1);
             else
@@ -77,6 +88,7 @@ void * Allocator<clear_memory_>::alloc(size_t size, size_t alignment)
 
             if (nullptr == buf)
                 DB::throwFromErrno("Allocator: Cannot malloc " + formatReadableSizeWithBinarySuffix(size) + ".", DB::ErrorCodes::CANNOT_ALLOCATE_MEMORY);
+#if !ALLOCATOR_TRIVIAL
         }
         else
         {
@@ -90,6 +102,17 @@ void * Allocator<clear_memory_>::alloc(size_t size, size_t alignment)
                 memset(buf, 0, size);
         }
     }
+#endif
+    
+#if ALLOCATOR_DEBUG
+    {
+        std::lock_guard<std::mutex> lock(allocator_mutex);
+        allocator_map[buf] = size;
+    }
+#endif
+#if ALLOCATOR_DEBUG_PRINT
+    std::cerr<<"Allocator<"<<clear_memory_ <<">::alloc ptr="<< buf << ", size=" << size << ", alignment=" << alignment<< std::endl;
+#endif
 
     return buf;
 }
@@ -98,28 +121,73 @@ void * Allocator<clear_memory_>::alloc(size_t size, size_t alignment)
 template <bool clear_memory_>
 void Allocator<clear_memory_>::free(void * buf, size_t size)
 {
+    
+#if ALLOCATOR_DEBUG
+    {
+        std::lock_guard<std::mutex> lock(allocator_mutex);
+        if (allocator_map[buf] != size) {
+            std::cerr<<"Allocator: wtf: free: sizes mismatch saved="<< allocator_map[buf] << ", user=" << size << ", ptr=" << buf << ", allocations=" << allocator_map.size()<< std::endl;
+            std::cerr<< StackTrace().toString() << std::endl;
+              if (allocator_map[buf])
+                  std::terminate();
+          }
+    }
+#endif
+
+
+#if !ALLOCATOR_TRIVIAL
     if (size >= MMAP_THRESHOLD)
     {
+
         if (0 != munmap(buf, size))
             DB::throwFromErrno("Allocator: Cannot munmap " + formatReadableSizeWithBinarySuffix(size) + ".", DB::ErrorCodes::CANNOT_MUNMAP);
     }
     else
+#endif
     {
         ::free(buf);
     }
 
     CurrentMemoryTracker::free(size);
+
+#if ALLOCATOR_DEBUG
+    {
+        std::lock_guard<std::mutex> lock(allocator_mutex);
+        allocator_map.erase(buf);
+    }
+#endif
+#if ALLOCATOR_DEBUG_PRINT
+    std::cerr<<"Allocator<"<<clear_memory_<<">::free ptr=" << buf << " : "<<size << std::endl;
+#endif
 }
 
 
 template <bool clear_memory_>
 void * Allocator<clear_memory_>::realloc(void * buf, size_t old_size, size_t new_size, size_t alignment)
 {
+#if ALLOCATOR_DEBUG_PRINT || ALLOCATOR_DEBUG
+    const auto old_buf = buf;
+#endif
+#if ALLOCATOR_DEBUG
+    {
+        std::lock_guard<std::mutex> lock(allocator_mutex);
+        if (allocator_map[buf] != old_size) {
+            std::cerr << "Allocator: wtf: realloc: sizes mismatch saved=" << allocator_map[buf] << " user=" << old_size << " => " << new_size<< " ptr=" << buf <<  " alignment=" << alignment << std::endl;
+            std::cerr<< StackTrace().toString() << std::endl;
+            if (allocator_map[buf])
+                std::terminate();
+        }
+    }
+#endif
+
+
     if (old_size == new_size)
     {
         /// nothing to do.
     }
+#if !ALLOCATOR_TRIVIAL
     else if (old_size < MMAP_THRESHOLD && new_size < MMAP_THRESHOLD && alignment <= MALLOC_MIN_ALIGNMENT)
+#endif
     {
         CurrentMemoryTracker::realloc(old_size, new_size);
 
@@ -131,6 +199,7 @@ void * Allocator<clear_memory_>::realloc(void * buf, size_t old_size, size_t new
         if (clear_memory && new_size > old_size)
             memset(reinterpret_cast<char *>(buf) + old_size, 0, new_size - old_size);
     }
+#if !ALLOCATOR_TRIVIAL
     else if (old_size >= MMAP_THRESHOLD && new_size >= MMAP_THRESHOLD)
     {
         CurrentMemoryTracker::realloc(old_size, new_size);
@@ -155,11 +224,31 @@ void * Allocator<clear_memory_>::realloc(void * buf, size_t old_size, size_t new
     }
     else
     {
+        CurrentMemoryTracker::realloc(old_size, new_size);
+
         void * new_buf = alloc(new_size, alignment);
         memcpy(new_buf, buf, old_size);
         free(buf, old_size);
         buf = new_buf;
     }
+#endif
+    
+
+#if ALLOCATOR_DEBUG
+    {
+        std::lock_guard<std::mutex> lock(allocator_mutex);
+        allocator_map.erase(old_buf); /// can be erased inside free()
+
+        if (allocator_map[buf]) {
+            std::cerr << "Allocator: wtf: realloc: already alocd ptr="<< buf << " saved=" << allocator_map[buf] << std::endl;
+            std::cerr<< StackTrace().toString() << std::endl;
+        }
+        allocator_map[buf] = new_size;
+    }
+#endif
+#if ALLOCATOR_DEBUG_PRINT
+    std::cerr<<"Allocator<"<<clear_memory_<<">::realloc ptr="<< old_buf << " => " << buf  << " " << old_size << " => "<< new_size << " alignment=" << alignment << std::endl;
+#endif
 
     return buf;
 }

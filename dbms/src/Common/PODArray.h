@@ -16,6 +16,7 @@
 #include <Common/BitHelpers.h>
 #include <Common/memcpySmall.h>
 
+#include <iostream>
 
 namespace DB
 {
@@ -95,6 +96,8 @@ protected:
     template <typename ... TAllocatorParams>
     void alloc(size_t bytes, TAllocatorParams &&... allocator_params)
     {
+
+        //std::cerr << __FILE__ << ":" << __LINE__ << " alloc():" << allocated_bytes() <<  " bytes=" << bytes << " pad_left=" << pad_left <<" pad_right=" << pad_right << " ptr=" << (void*)c_start<< "\n";
         c_start = c_end = reinterpret_cast<char *>(TAllocator::alloc(bytes, std::forward<TAllocatorParams>(allocator_params)...)) + pad_left;
         c_end_of_storage = c_start + bytes - pad_right - pad_left;
 
@@ -107,6 +110,8 @@ protected:
         if (c_start == null)
             return;
 
+        //std::cerr << __FILE__ << ":" << __LINE__ << " dealloc():" << allocated_bytes() << " pad_left=" << pad_left <<" pad_right=" << pad_right << " ptr=" << (void*)c_start << "\n";
+        
         TAllocator::free(c_start - pad_left, allocated_bytes());
     }
 
@@ -126,6 +131,9 @@ protected:
             + pad_left;
 
         c_end = c_start + end_diff;
+    
+        //std::cerr << __FILE__ << ":" << __LINE__ << " realloc():" << allocated_bytes() << " bytes=" << bytes << " pad_left=" << pad_left << " pad_right=" << pad_right << " ptr=" << (void*)c_start << "\n";
+        
         c_end_of_storage = c_start + bytes - pad_right - pad_left;
     }
 

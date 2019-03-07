@@ -2,6 +2,15 @@
 
 #include <string.h>
 
+#define ALLOCATOR_DEBUG 0
+#define ALLOCATOR_DEBUG_PRINT 0
+
+#if ALLOCATOR_DEBUG
+#include <mutex>
+#include <unordered_map>
+#endif
+
+
 
 /** Responsible for allocating / freeing memory. Used, for example, in PODArray, Arena.
   * Also used in hash tables.
@@ -35,7 +44,13 @@ protected:
     {
         return 0;
     }
+   
 };
+
+#if ALLOCATOR_DEBUG
+static std::mutex allocator_mutex;
+static std::unordered_map<void *, size_t> allocator_map;
+#endif
 
 
 /** When using AllocatorWithStackMemory, located on the stack,
