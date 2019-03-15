@@ -59,6 +59,12 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     if (NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8)
         set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra-semi-stmt -Wshadow-field -Wstring-plus-int")
     endif ()
+
+    if (NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9)
+        if (WEVERYTHING)
+            set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-ctad-maybe-unsupported")
+        endif ()
+    endif ()
 endif ()
 
 if (USE_DEBUG_HELPERS)
@@ -178,7 +184,9 @@ target_link_libraries (clickhouse_common_io
     string_utils
     widechar_width
     ${LINK_LIBRARIES_ONLY_ON_X86_64}
+        PUBLIC
     ${DOUBLE_CONVERSION_LIBRARIES}
+        PRIVATE
     pocoext
         PUBLIC
     ${Poco_Net_LIBRARY}
@@ -200,7 +208,7 @@ target_link_libraries (clickhouse_common_io
         PRIVATE
     ${CMAKE_DL_LIBS}
         PUBLIC
-    roaring	
+    roaring
 )
 
 
@@ -345,6 +353,6 @@ if (ENABLE_TESTS AND USE_GTEST)
     # attach all dbms gtest sources
     grep_gtest_sources(${ClickHouse_SOURCE_DIR}/dbms dbms_gtest_sources)
     add_executable(unit_tests_dbms ${dbms_gtest_sources})
-    target_link_libraries(unit_tests_dbms PRIVATE gtest_main dbms clickhouse_common_zookeeper)
+    target_link_libraries(unit_tests_dbms PRIVATE ${GTEST_BOTH_LIBRARIES} dbms clickhouse_common_zookeeper)
     add_check(unit_tests_dbms)
 endif ()
