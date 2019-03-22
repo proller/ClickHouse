@@ -23,7 +23,7 @@
 #include <Storages/CompressionCodecSelector.h>
 #include <TableFunctions/TableFunctionFactory.h>
 #include <Interpreters/ActionLocksManager.h>
-#include <Interpreters/Settings.h>
+#include <Core/Settings.h>
 #include <Interpreters/ExpressionJIT.h>
 #include <Interpreters/RuntimeComponentsFactory.h>
 #include <Interpreters/ISecurityManager.h>
@@ -41,6 +41,7 @@
 #include <Interpreters/QueryThreadLog.h>
 #include <Interpreters/PartLog.h>
 #include <Interpreters/Context.h>
+#include <Interpreters/DDLWorker.h>
 #include <Common/DNSResolver.h>
 #include <IO/ReadBufferFromFile.h>
 #include <IO/UncompressedCache.h>
@@ -141,7 +142,7 @@ struct ContextShared
     std::optional<BackgroundSchedulePool> schedule_pool;    /// A thread pool that can run different jobs in background (used in replicated tables)
     MultiVersion<Macros> macros;                            /// Substitutions extracted from config.
     std::optional<Compiler> compiler;                     /// Used for dynamic compilation of queries' parts if it necessary.
-    std::shared_ptr<DDLWorker> ddl_worker;                  /// Process ddl commands from zk.
+    std::unique_ptr<DDLWorker> ddl_worker;                  /// Process ddl commands from zk.
     /// Rules for selecting the compression settings, depending on the size of the part.
     mutable std::unique_ptr<CompressionCodecSelector> compression_codec_selector;
     std::optional<MergeTreeSettings> merge_tree_settings; /// Settings of MergeTree* engines.
@@ -243,10 +244,18 @@ struct ContextShared
             return;
         shutdown_called = true;
 
-        system_logs.reset();
+        {
+            std::lock_guard lock(mutex);
+
+            /** After this point, system logs will shutdown their threads and no longer write any data.
+            * It will prevent recreation of system tables at shutdown.
+            * Note that part changes at shutdown won't be logged to part log.
+            */
+            system_logs.reset();
+        }
 
         /** At this point, some tables may have threads that block our mutex.
-          * To complete them correctly, we will copy the current list of tables,
+          * To shutdown them correctly, we will copy the current list of tables,
           *  and ask them all to finish their work.
           * Then delete all objects with tables.
           */
@@ -257,6 +266,8 @@ struct ContextShared
             std::lock_guard lock(mutex);
             current_databases = databases;
         }
+
+        /// We still hold "databases" in Context (instead of std::move) for Buffer tables to flush data correctly.
 
         for (auto & database : current_databases)
             database.second->shutdown();
@@ -274,6 +285,7 @@ struct ContextShared
         external_models.reset();
         background_pool.reset();
         schedule_pool.reset();
+        ddl_worker.reset();
     }
 
 private:
@@ -890,8 +902,7 @@ StoragePtr Context::executeTableFunction(const ASTPtr & table_expression)
 
     if (!res)
     {
-        TableFunctionPtr table_function_ptr = TableFunctionFactory::instance().get(
-            typeid_cast<const ASTFunction *>(table_expression.get())->name, *this);
+        TableFunctionPtr table_function_ptr = TableFunctionFactory::instance().get(table_expression->as<ASTFunction>()->name, *this);
 
         /// Run it and remember the result
         res = table_function_ptr->execute(table_expression, *this);
@@ -1201,6 +1212,8 @@ EmbeddedDictionaries & Context::getEmbeddedDictionariesImpl(const bool throw_on_
 
 ExternalDictionaries & Context::getExternalDictionariesImpl(const bool throw_on_error) const
 {
+    const auto & config = getConfigRef();
+
     std::lock_guard lock(shared->external_dictionaries_mutex);
 
     if (!shared->external_dictionaries)
@@ -1212,6 +1225,7 @@ ExternalDictionaries & Context::getExternalDictionariesImpl(const bool throw_on_
 
         shared->external_dictionaries.emplace(
             std::move(config_repository),
+            config,
             *this->global_context,
             throw_on_error);
     }
@@ -1360,12 +1374,12 @@ BackgroundSchedulePool & Context::getSchedulePool()
     return *shared->schedule_pool;
 }
 
-void Context::setDDLWorker(std::shared_ptr<DDLWorker> ddl_worker)
+void Context::setDDLWorker(std::unique_ptr<DDLWorker> ddl_worker)
 {
     auto lock = getLock();
     if (shared->ddl_worker)
         throw Exception("DDL background thread has already been initialized.", ErrorCodes::LOGICAL_ERROR);
-    shared->ddl_worker = ddl_worker;
+    shared->ddl_worker = std::move(ddl_worker);
 }
 
 DDLWorker & Context::getDDLWorker() const
@@ -1544,51 +1558,47 @@ Compiler & Context::getCompiler()
 void Context::initializeSystemLogs()
 {
     auto lock = getLock();
-
-    if (!global_context)
-        throw Exception("Logical error: no global context for system logs", ErrorCodes::LOGICAL_ERROR);
-
     shared->system_logs.emplace(*global_context, getConfigRef());
 }
 
 
-QueryLog * Context::getQueryLog()
+std::shared_ptr<QueryLog> Context::getQueryLog()
 {
     auto lock = getLock();
 
     if (!shared->system_logs || !shared->system_logs->query_log)
-        return nullptr;
+        return {};
 
-    return shared->system_logs->query_log.get();
+    return shared->system_logs->query_log;
 }
 
 
-QueryThreadLog * Context::getQueryThreadLog()
+std::shared_ptr<QueryThreadLog> Context::getQueryThreadLog()
 {
     auto lock = getLock();
 
     if (!shared->system_logs || !shared->system_logs->query_thread_log)
-        return nullptr;
+        return {};
 
-    return shared->system_logs->query_thread_log.get();
+    return shared->system_logs->query_thread_log;
 }
 
 
-PartLog * Context::getPartLog(const String & part_database)
+std::shared_ptr<PartLog> Context::getPartLog(const String & part_database)
 {
     auto lock = getLock();
 
-    /// System logs are shutting down.
+    /// No part log or system logs are shutting down.
     if (!shared->system_logs || !shared->system_logs->part_log)
-        return nullptr;
+        return {};
 
     /// Will not log operations on system tables (including part_log itself).
     /// It doesn't make sense and not allow to destruct PartLog correctly due to infinite logging and flushing,
     /// and also make troubles on startup.
     if (part_database == shared->system_logs->part_log_database)
-        return nullptr;
+        return {};
 
-    return shared->system_logs->part_log.get();
+    return shared->system_logs->part_log;
 }
 
 
@@ -1815,6 +1825,19 @@ void Context::addXDBCBridgeCommand(std::unique_ptr<ShellCommand> cmd)
     auto lock = getLock();
     shared->bridge_commands.emplace_back(std::move(cmd));
 }
+
+
+IHostContextPtr & Context::getHostContext()
+{
+    return host_context;
+}
+
+
+const IHostContextPtr & Context::getHostContext() const
+{
+    return host_context;
+}
+
 
 std::shared_ptr<ActionLocksManager> Context::getActionLocksManager()
 {
