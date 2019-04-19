@@ -18,7 +18,6 @@ namespace DB
 
 namespace ErrorCodes
 {
-    extern const int LOGICAL_ERROR;
     extern const int TOO_DEEP_AST;
     extern const int CYCLIC_ALIASES;
 }
@@ -130,35 +129,48 @@ void QueryNormalizer::visit(ASTIdentifier & node, ASTPtr & ast, Data & data)
 }
 
 /// mark table identifiers as 'not columns'
-void QueryNormalizer::visit(ASTTablesInSelectQueryElement & node, const ASTPtr &, Data &)
+void QueryNormalizer::visit(ASTTablesInSelectQueryElement & node, const ASTPtr &, Data & data)
 {
+    /// mark table Identifiers as 'not a column'
     if (node.table_expression)
     {
-        auto & expr = static_cast<ASTTableExpression &>(*node.table_expression);
+        auto & expr = node.table_expression->as<ASTTableExpression &>();
         setIdentifierSpecial(expr.database_and_table_name);
+    }
+
+    /// normalize JOIN ON section
+    if (node.table_join)
+    {
+        auto & join = node.table_join->as<ASTTableJoin &>();
+        if (join.on_expression)
+            visit(join.on_expression, data);
     }
 }
 
-/// special visitChildren() for ASTSelectQuery
-void QueryNormalizer::visit(ASTSelectQuery & select, const ASTPtr & ast, Data & data)
+static bool needVisitChild(const ASTPtr & child)
 {
-    for (auto & child : ast->children)
-    {
-        if (typeid_cast<const ASTSelectQuery *>(child.get()) ||
-            typeid_cast<const ASTTableExpression *>(child.get()))
-            continue;
+    if (child->as<ASTSelectQuery>() || child->as<ASTTableExpression>())
+        return false;
+    return true;
+}
 
-        visit(child, data);
-    }
+/// special visitChildren() for ASTSelectQuery
+void QueryNormalizer::visit(ASTSelectQuery & select, const ASTPtr &, Data & data)
+{
+    for (auto & child : select.children)
+        if (needVisitChild(child))
+            visit(child, data);
 
+#if 1 /// TODO: legacy?
     /// If the WHERE clause or HAVING consists of a single alias, the reference must be replaced not only in children,
     /// but also in where_expression and having_expression.
-    if (select.prewhere_expression)
-        visit(select.prewhere_expression, data);
-    if (select.where_expression)
-        visit(select.where_expression, data);
-    if (select.having_expression)
-        visit(select.having_expression, data);
+    if (select.prewhere())
+        visit(select.refPrewhere(), data);
+    if (select.where())
+        visit(select.refWhere(), data);
+    if (select.having())
+        visit(select.refHaving(), data);
+#endif
 }
 
 /// Don't go into subqueries.
@@ -167,31 +179,28 @@ void QueryNormalizer::visit(ASTSelectQuery & select, const ASTPtr & ast, Data & 
 ///  on aliases in expressions of the form 123 AS x, arrayMap(x -> 1, [2]).
 void QueryNormalizer::visitChildren(const ASTPtr & node, Data & data)
 {
-    ASTFunction * func_node = typeid_cast<ASTFunction *>(node.get());
-    if (func_node && func_node->name == "lambda")
+    if (const auto * func_node = node->as<ASTFunction>())
     {
         /// We skip the first argument. We also assume that the lambda function can not have parameters.
-        for (size_t i = 1, size = func_node->arguments->children.size(); i < size; ++i)
+        size_t first_pos = 0;
+        if (func_node->name == "lambda")
+            first_pos = 1;
+
+        auto & func_children = func_node->arguments->children;
+
+        for (size_t i = first_pos; i < func_children.size(); ++i)
         {
-            auto & child = func_node->arguments->children[i];
+            auto & child = func_children[i];
 
-            if (typeid_cast<const ASTSelectQuery *>(child.get()) ||
-                typeid_cast<const ASTTableExpression *>(child.get()))
-                continue;
-
-            visit(child, data);
+            if (needVisitChild(child))
+                visit(child, data);
         }
     }
-    else if (!typeid_cast<ASTSelectQuery *>(node.get()))
+    else if (!node->as<ASTSelectQuery>())
     {
         for (auto & child : node->children)
-        {
-            if (typeid_cast<const ASTSelectQuery *>(child.get()) ||
-                typeid_cast<const ASTTableExpression *>(child.get()))
-                continue;
-
-            visit(child, data);
-        }
+            if (needVisitChild(child))
+                visit(child, data);
     }
 }
 
@@ -218,13 +227,13 @@ void QueryNormalizer::visit(ASTPtr & ast, Data & data)
             data.current_alias = my_alias;
     }
 
-    if (auto * node = typeid_cast<ASTFunction *>(ast.get()))
+    if (auto * node = ast->as<ASTFunction>())
         visit(*node, ast, data);
-    if (auto * node = typeid_cast<ASTIdentifier *>(ast.get()))
+    if (auto * node = ast->as<ASTIdentifier>())
         visit(*node, ast, data);
-    if (auto * node = typeid_cast<ASTTablesInSelectQueryElement *>(ast.get()))
+    if (auto * node = ast->as<ASTTablesInSelectQueryElement>())
         visit(*node, ast, data);
-    if (auto * node = typeid_cast<ASTSelectQuery *>(ast.get()))
+    if (auto * node = ast->as<ASTSelectQuery>())
         visit(*node, ast, data);
 
     /// If we replace the root of the subtree, we will be called again for the new root, in case the alias is replaced by an alias.
