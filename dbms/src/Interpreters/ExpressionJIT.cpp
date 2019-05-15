@@ -138,7 +138,7 @@ static llvm::TargetMachine * getNativeMachine()
     );
 }
 
-#if LLVM_VERSION_MAJOR >= 7
+#if LLVM_VERSION_MAJOR >= 7 && LLVM_VERSION_MAJOR < 8
 auto wrapJITSymbolResolver(llvm::JITSymbolResolver & jsr)
 {
 #if USE_INTERNAL_LLVM_LIBRARY && LLVM_VERSION_PATCH == 0
@@ -203,6 +203,7 @@ struct LLVMContext
     ModulePtr module;
     std::unique_ptr<llvm::TargetMachine> machine;
     std::shared_ptr<llvm::SectionMemoryManager> memory_manager;
+    std::shared_ptr<SymbolResolver> Resolver;
     llvm::orc::RTDyldObjectLinkingLayer object_layer;
     llvm::orc::IRCompileLayer<decltype(object_layer), llvm::orc::SimpleCompiler> compile_layer;
     llvm::DataLayout layout;
@@ -221,7 +222,8 @@ struct LLVMContext
 #if LLVM_VERSION_MAJOR >= 7
         , object_layer(execution_session, [this](llvm::orc::VModuleKey)
         {
-            return llvm::orc::RTDyldObjectLinkingLayer::Resources{memory_manager, wrapJITSymbolResolver(*memory_manager)};
+            //return llvm::orc::RTDyldObjectLinkingLayer::Resources{memory_manager, wrapJITSymbolResolver(*memory_manager)};
+            return llvm::orc::RTDyldObjectLinkingLayer::Resources{std::make_shared<SectionMemoryManager>(), Resolver};
         })
 #else
         , object_layer([this]() { return memory_manager; })
