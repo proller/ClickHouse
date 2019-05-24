@@ -1,3 +1,4 @@
+#pragma once
 #include <Core/Types.h>
 #include <Common/Exception.h>
 #include <common/DateLUTImpl.h>
@@ -64,9 +65,9 @@ struct ToStartOfDayImpl
     {
         return time_zone.toDate(t);
     }
-    static inline UInt32 execute(UInt16, const DateLUTImpl &)
+    static inline UInt32 execute(UInt16 d, const DateLUTImpl & time_zone)
     {
-        return dateIsNotSupported(name);
+        return time_zone.toDate(DayNum(d));
     }
 
     using FactorTransform = ZeroTransform;
@@ -178,6 +179,22 @@ struct ToStartOfFiveMinuteImpl
     static inline UInt32 execute(UInt32 t, const DateLUTImpl & time_zone)
     {
         return time_zone.toStartOfFiveMinute(t);
+    }
+    static inline UInt32 execute(UInt16, const DateLUTImpl &)
+    {
+        return dateIsNotSupported(name);
+    }
+
+    using FactorTransform = ZeroTransform;
+};
+
+struct ToStartOfTenMinutesImpl
+{
+    static constexpr auto name = "toStartOfTenMinutes";
+
+    static inline UInt32 execute(UInt32 t, const DateLUTImpl & time_zone)
+    {
+        return time_zone.toStartOfTenMinutes(t);
     }
     static inline UInt32 execute(UInt16, const DateLUTImpl &)
     {

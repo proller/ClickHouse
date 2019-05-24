@@ -1,19 +1,28 @@
 #pragma once
 
-#include <type_traits>
+#include <AggregateFunctions/FactoryHelpers.h>
 
-#include <IO/WriteHelpers.h>
-#include <IO/ReadHelpers.h>
-
-#include <DataTypes/DataTypesNumber.h>
-#include <DataTypes/DataTypeArray.h>
+/// These must be exposed in header for the purpose of dynamic compilation.
+#include <AggregateFunctions/QuantileReservoirSampler.h>
+#include <AggregateFunctions/QuantileReservoirSamplerDeterministic.h>
+#include <AggregateFunctions/QuantileExact.h>
+#include <AggregateFunctions/QuantileExactWeighted.h>
+#include <AggregateFunctions/QuantileTiming.h>
+#include <AggregateFunctions/QuantileTDigest.h>
 
 #include <AggregateFunctions/IAggregateFunction.h>
 #include <AggregateFunctions/QuantilesCommon.h>
-
 #include <Columns/ColumnArray.h>
-#include <Columns/ColumnsNumber.h>
 #include <Columns/ColumnDecimal.h>
+#include <Columns/ColumnsNumber.h>
+#include <DataTypes/DataTypeArray.h>
+#include <DataTypes/DataTypeDate.h>
+#include <DataTypes/DataTypeDateTime.h>
+#include <DataTypes/DataTypesNumber.h>
+#include <IO/ReadHelpers.h>
+#include <IO/WriteHelpers.h>
+
+#include <type_traits>
 
 
 namespace DB
@@ -23,6 +32,8 @@ namespace ErrorCodes
 {
     extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
 }
+
+template <typename> class QuantileTiming;
 
 
 /** Generic aggregate function for calculation of quantiles.
@@ -36,10 +47,10 @@ template <
     typename Data,
     /// Structure with static member "name", containing the name of the aggregate function.
     typename Name,
-    /// If true, the function accept second argument
+    /// If true, the function accepts the second argument
     /// (in can be "weight" to calculate quantiles or "determinator" that is used instead of PRNG).
     /// Second argument is always obtained through 'getUInt' method.
-    bool have_second_arg,
+    bool has_second_arg,
     /// If non-void, the function will return float of specified type with possibly interpolated results and NaN if there was no values.
     /// Otherwise it will return Value type and default value if there was no values.
     /// As an example, the function cannot return floats, if the SQL type of argument is Date or DateTime.
@@ -49,12 +60,12 @@ template <
     bool returns_many
 >
 class AggregateFunctionQuantile final : public IAggregateFunctionDataHelper<Data,
-    AggregateFunctionQuantile<Value, Data, Name, have_second_arg, FloatReturnType, returns_many>>
+    AggregateFunctionQuantile<Value, Data, Name, has_second_arg, FloatReturnType, returns_many>>
 {
 private:
     using ColVecType = std::conditional_t<IsDecimalNumber<Value>, ColumnDecimal<Value>, ColumnVector<Value>>;
 
-    static constexpr bool returns_float = !std::is_same_v<FloatReturnType, void>;
+    static constexpr bool returns_float = !(std::is_same_v<FloatReturnType, void>);
     static_assert(!IsDecimalNumber<Value> || !returns_float);
 
     QuantileLevels<Float64> levels;
@@ -62,14 +73,23 @@ private:
     /// Used when there are single level to get.
     Float64 level = 0.5;
 
-    DataTypePtr argument_type;
+    DataTypePtr & argument_type;
 
 public:
     AggregateFunctionQuantile(const DataTypePtr & argument_type, const Array & params)
-        : levels(params, returns_many), level(levels.levels[0]), argument_type(argument_type)
+        : IAggregateFunctionDataHelper<Data, AggregateFunctionQuantile<Value, Data, Name, has_second_arg, FloatReturnType, returns_many>>({argument_type}, params)
+        , levels(params, returns_many), level(levels.levels[0]), argument_type(this->argument_types[0])
     {
         if (!returns_many && levels.size() > 1)
             throw Exception("Aggregate function " + getName() + " require one parameter or less", ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+
+        if constexpr (std::is_same_v<Data, QuantileTiming<Value>>)
+        {
+            /// QuantileTiming only supports integers (it works only for unsigned integers but signed are also accepted for convenience).
+            if (!isInteger(argument_type))
+                throw Exception("Argument for function " + std::string(Name::name) + " must be integer, but it has type "
+                    + argument_type->getName(), ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+        }
     }
 
     String getName() const override { return Name::name; }
@@ -91,8 +111,11 @@ public:
 
     void add(AggregateDataPtr place, const IColumn ** columns, size_t row_num, Arena *) const override
     {
+        /// Out of range conversion may occur. This is Ok.
+
         const auto & column = static_cast<const ColVecType &>(*columns[0]);
-        if constexpr (have_second_arg)
+
+        if constexpr (has_second_arg)
             this->data(place).add(
                 column.getData()[row_num],
                 columns[1]->getUInt(row_num));
@@ -127,7 +150,7 @@ public:
             ColumnArray::Offsets & offsets_to = arr_to.getOffsets();
 
             size_t size = levels.size();
-            offsets_to.push_back((offsets_to.size() == 0 ? 0 : offsets_to.back()) + size);
+            offsets_to.push_back(offsets_to.back() + size);
 
             if (!size)
                 return;
@@ -138,7 +161,7 @@ public:
                 size_t old_size = data_to.size();
                 data_to.resize(data_to.size() + size);
 
-                data.getManyFloat(levels.levels.data(), levels.permutation.data(), size, &data_to[old_size]);
+                data.getManyFloat(levels.levels.data(), levels.permutation.data(), size, data_to.data() + old_size);
             }
             else
             {
@@ -146,7 +169,7 @@ public:
                 size_t old_size = data_to.size();
                 data_to.resize(data_to.size() + size);
 
-                data.getMany(levels.levels.data(), levels.permutation.data(), size, &data_to[old_size]);
+                data.getMany(levels.levels.data(), levels.permutation.data(), size, data_to.data() + old_size);
             }
         }
         else
@@ -159,21 +182,19 @@ public:
     }
 
     const char * getHeaderFilePath() const override { return __FILE__; }
+
+    static void assertSecondArg(const DataTypes & types)
+    {
+        if constexpr (has_second_arg)
+        {
+            assertBinary(Name::name, types);
+            if (!isUnsignedInteger(types[1]))
+                throw Exception("Second argument (weight) for function " + std::string(Name::name) + " must be unsigned integer, but it has type " + types[1]->getName(), ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+        }
+        else
+            assertUnary(Name::name, types);
+    }
 };
-
-}
-
-
-/// These must be exposed in header for the purpose of dynamic compilation.
-#include <AggregateFunctions/QuantileReservoirSampler.h>
-#include <AggregateFunctions/QuantileReservoirSamplerDeterministic.h>
-#include <AggregateFunctions/QuantileExact.h>
-#include <AggregateFunctions/QuantileExactWeighted.h>
-#include <AggregateFunctions/QuantileTiming.h>
-#include <AggregateFunctions/QuantileTDigest.h>
-
-namespace DB
-{
 
 struct NameQuantile { static constexpr auto name = "quantile"; };
 struct NameQuantiles { static constexpr auto name = "quantiles"; };

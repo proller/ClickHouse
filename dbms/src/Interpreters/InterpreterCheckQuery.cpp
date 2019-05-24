@@ -19,14 +19,14 @@ InterpreterCheckQuery::InterpreterCheckQuery(const ASTPtr & query_ptr_, const Co
 
 BlockIO InterpreterCheckQuery::execute()
 {
-    ASTCheckQuery & alter = typeid_cast<ASTCheckQuery &>(*query_ptr);
-    String & table_name = alter.table;
+    const auto & alter = query_ptr->as<ASTCheckQuery &>();
+    const String & table_name = alter.table;
     String database_name = alter.database.empty() ? context.getCurrentDatabase() : alter.database;
 
     StoragePtr table = context.getTable(database_name, table_name);
 
     auto column = ColumnUInt8::create();
-    column->insert(UInt64(table->checkData()));
+    column->insertValue(UInt64(table->checkData()));
     result = Block{{ std::move(column), std::make_shared<DataTypeUInt8>(), "result" }};
 
     BlockIO res;

@@ -1,14 +1,17 @@
 # Roadmap
 
-## Q4 2018
+## Q2 2019
 
-- JOIN syntax compatible with SQL standard:
-    - Mutliple `JOIN`s in single `SELECT`
+- DDL for dictionaries
+- Integration with S3-like object stores
+- Multiple storages for hot/cold data, JBOD support
+
+## Q3 2019
 
 - JOIN execution improvements:
     - Distributed join not limited by memory
-
-- Protobuf and Parquet input and output formats
 - Resource pools for more precise distribution of cluster capacity between users
+- Fine-grained authorization
+- Integration with external authentication services
 
 [Original article](https://clickhouse.yandex/docs/en/roadmap/) <!--hide-->

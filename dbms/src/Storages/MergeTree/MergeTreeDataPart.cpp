@@ -2,9 +2,8 @@
 
 #include <IO/ReadHelpers.h>
 #include <IO/WriteHelpers.h>
-#include <IO/CompressedStream.h>
-#include <IO/CompressedReadBuffer.h>
-#include <IO/CompressedWriteBuffer.h>
+#include <Compression/CompressedReadBuffer.h>
+#include <Compression/CompressedWriteBuffer.h>
 #include <IO/ReadBufferFromString.h>
 #include <IO/WriteBufferFromString.h>
 #include <IO/ReadBufferFromFile.h>
@@ -14,6 +13,7 @@
 #include <Common/escapeForFileName.h>
 #include <Common/StringUtils/StringUtils.h>
 #include <Common/localBackup.h>
+#include <Compression/CompressionInfo.h>
 #include <Storages/MergeTree/MergeTreeDataPart.h>
 #include <Storages/MergeTree/MergeTreeData.h>
 
@@ -22,9 +22,7 @@
 #include <Poco/DirectoryIterator.h>
 
 #include <common/logger_useful.h>
-
-#define MERGE_TREE_MARK_SIZE (2 * sizeof(UInt64))
-
+#include <common/JSON.h>
 
 namespace DB
 {
@@ -37,6 +35,7 @@ namespace ErrorCodes
     extern const int CORRUPTED_DATA;
     extern const int NOT_FOUND_EXPECTED_DATA_PART;
     extern const int BAD_SIZE_OF_FILE_IN_DATA_PART;
+    extern const int BAD_TTL_FILE;
 }
 
 
@@ -45,15 +44,15 @@ static ReadBufferFromFile openForReading(const String & path)
     return ReadBufferFromFile(path, std::min(static_cast<Poco::File::FileSize>(DBMS_DEFAULT_BUFFER_SIZE), Poco::File(path).getSize()));
 }
 
-void MergeTreeDataPart::MinMaxIndex::load(const MergeTreeData & storage, const String & part_path)
+void MergeTreeDataPart::MinMaxIndex::load(const MergeTreeData & data, const String & part_path)
 {
-    size_t minmax_idx_size = storage.minmax_idx_column_types.size();
+    size_t minmax_idx_size = data.minmax_idx_column_types.size();
     parallelogram.reserve(minmax_idx_size);
     for (size_t i = 0; i < minmax_idx_size; ++i)
     {
-        String file_name = part_path + "minmax_" + escapeForFileName(storage.minmax_idx_columns[i]) + ".idx";
+        String file_name = part_path + "minmax_" + escapeForFileName(data.minmax_idx_columns[i]) + ".idx";
         ReadBufferFromFile file = openForReading(file_name);
-        const DataTypePtr & type = storage.minmax_idx_column_types[i];
+        const DataTypePtr & type = data.minmax_idx_column_types[i];
 
         Field min_val;
         type->deserializeBinary(min_val, file);
@@ -65,24 +64,29 @@ void MergeTreeDataPart::MinMaxIndex::load(const MergeTreeData & storage, const S
     initialized = true;
 }
 
-void MergeTreeDataPart::MinMaxIndex::store(const MergeTreeData & storage, const String & part_path, Checksums & checksums) const
+void MergeTreeDataPart::MinMaxIndex::store(const MergeTreeData & data, const String & part_path, Checksums & out_checksums) const
+{
+    store(data.minmax_idx_columns, data.minmax_idx_column_types, part_path, out_checksums);
+}
+
+void MergeTreeDataPart::MinMaxIndex::store(const Names & column_names, const DataTypes & data_types, const String & part_path, Checksums & out_checksums) const
 {
     if (!initialized)
         throw Exception("Attempt to store uninitialized MinMax index for part " + part_path + ". This is a bug.",
             ErrorCodes::LOGICAL_ERROR);
 
-    for (size_t i = 0; i < storage.minmax_idx_columns.size(); ++i)
+    for (size_t i = 0; i < column_names.size(); ++i)
     {
-        String file_name = "minmax_" + escapeForFileName(storage.minmax_idx_columns[i]) + ".idx";
-        const DataTypePtr & type = storage.minmax_idx_column_types[i];
+        String file_name = "minmax_" + escapeForFileName(column_names[i]) + ".idx";
+        const DataTypePtr & type = data_types.at(i);
 
         WriteBufferFromFile out(part_path + file_name);
         HashingWriteBuffer out_hashing(out);
         type->serializeBinary(parallelogram[i].left, out_hashing);
         type->serializeBinary(parallelogram[i].right, out_hashing);
         out_hashing.next();
-        checksums.files[file_name].file_size = out_hashing.count();
-        checksums.files[file_name].file_hash = out_hashing.getHash();
+        out_checksums.files[file_name].file_size = out_hashing.count();
+        out_checksums.files[file_name].file_hash = out_hashing.getHash();
     }
 }
 
@@ -132,13 +136,24 @@ void MergeTreeDataPart::MinMaxIndex::merge(const MinMaxIndex & other)
 
 
 MergeTreeDataPart::MergeTreeDataPart(MergeTreeData & storage_, const String & name_)
-    : storage(storage_), name(name_), info(MergeTreePartInfo::fromPartName(name_, storage.format_version))
+    : storage(storage_)
+    , name(name_)
+    , info(MergeTreePartInfo::fromPartName(name_, storage.format_version))
 {
 }
 
+MergeTreeDataPart::MergeTreeDataPart(const MergeTreeData & storage_, const String & name_, const MergeTreePartInfo & info_)
+    : storage(storage_)
+    , name(name_)
+    , info(info_)
+{
+}
+
+
 /// Takes into account the fact that several columns can e.g. share their .size substreams.
 /// When calculating totals these should be counted only once.
-MergeTreeDataPart::ColumnSize MergeTreeDataPart::getColumnSizeImpl(const String & name, const IDataType & type, std::unordered_set<String> * processed_substreams) const
+MergeTreeDataPart::ColumnSize MergeTreeDataPart::getColumnSizeImpl(
+    const String & column_name, const IDataType & type, std::unordered_set<String> * processed_substreams) const
 {
     ColumnSize size;
     if (checksums.empty())
@@ -146,7 +161,7 @@ MergeTreeDataPart::ColumnSize MergeTreeDataPart::getColumnSizeImpl(const String 
 
     type.enumerateStreams([&](const IDataType::SubstreamPath & substream_path)
     {
-        String file_name = IDataType::getFileNameForStream(name, substream_path);
+        String file_name = IDataType::getFileNameForStream(column_name, substream_path);
 
         if (processed_substreams && !processed_substreams->insert(file_name).second)
             return;
@@ -158,7 +173,7 @@ MergeTreeDataPart::ColumnSize MergeTreeDataPart::getColumnSizeImpl(const String 
             size.data_uncompressed += bin_checksum->second.uncompressed_size;
         }
 
-        auto mrk_checksum = checksums.files.find(file_name + ".mrk");
+        auto mrk_checksum = checksums.files.find(file_name + storage.index_granularity_info.marks_file_extension);
         if (mrk_checksum != checksums.files.end())
             size.marks += mrk_checksum->second.file_size;
     }, {});
@@ -166,9 +181,9 @@ MergeTreeDataPart::ColumnSize MergeTreeDataPart::getColumnSizeImpl(const String 
     return size;
 }
 
-MergeTreeDataPart::ColumnSize MergeTreeDataPart::getColumnSize(const String & name, const IDataType & type) const
+MergeTreeDataPart::ColumnSize MergeTreeDataPart::getColumnSize(const String & column_name, const IDataType & type) const
 {
-    return getColumnSizeImpl(name, type, nullptr);
+    return getColumnSizeImpl(column_name, type, nullptr);
 }
 
 MergeTreeDataPart::ColumnSize MergeTreeDataPart::getTotalColumnsSize() const
@@ -184,16 +199,24 @@ MergeTreeDataPart::ColumnSize MergeTreeDataPart::getTotalColumnsSize() const
 }
 
 
+size_t MergeTreeDataPart::getFileSizeOrZero(const String & file_name) const
+{
+    auto checksum = checksums.files.find(file_name);
+    if (checksum == checksums.files.end())
+        return 0;
+    return checksum->second.file_size;
+}
+
 /** Returns the name of a column with minimum compressed size (as returned by getColumnSize()).
   * If no checksums are present returns the name of the first physically existing column.
   */
 String MergeTreeDataPart::getColumnNameWithMinumumCompressedSize() const
 {
-    const auto & columns = storage.getColumns().getAllPhysical();
+    const auto & storage_columns = storage.getColumns().getAllPhysical();
     const std::string * minimum_size_column = nullptr;
     UInt64 minimum_size = std::numeric_limits<UInt64>::max();
 
-    for (const auto & column : columns)
+    for (const auto & column : storage_columns)
     {
         if (!hasColumnFiles(column.name))
             continue;
@@ -248,7 +271,6 @@ String MergeTreeDataPart::getNewName(const MergeTreePartInfo & new_part_info) co
         return new_part_info.getPartName();
 }
 
-
 DayNum MergeTreeDataPart::getMinDate() const
 {
     if (storage.minmax_idx_date_column_pos != -1 && minmax_idx.initialized)
@@ -266,6 +288,22 @@ DayNum MergeTreeDataPart::getMaxDate() const
         return DayNum();
 }
 
+time_t MergeTreeDataPart::getMinTime() const
+{
+    if (storage.minmax_idx_time_column_pos != -1 && minmax_idx.initialized)
+        return minmax_idx.parallelogram[storage.minmax_idx_time_column_pos].left.get<UInt64>();
+    else
+        return 0;
+}
+
+
+time_t MergeTreeDataPart::getMaxTime() const
+{
+    if (storage.minmax_idx_time_column_pos != -1 && minmax_idx.initialized)
+        return minmax_idx.parallelogram[storage.minmax_idx_time_column_pos].right.get<UInt64>();
+    else
+        return 0;
+}
 
 MergeTreeDataPart::~MergeTreeDataPart()
 {
@@ -313,8 +351,20 @@ void MergeTreeDataPart::remove() const
     if (relative_path.empty())
         throw Exception("Part relative_path cannot be empty. This is bug.", ErrorCodes::LOGICAL_ERROR);
 
+    /** Atomic directory removal:
+      * - rename directory to temporary name;
+      * - remove it recursive.
+      *
+      * For temporary name we use "delete_tmp_" prefix.
+      *
+      * NOTE: We cannot use "tmp_delete_" prefix, because there is a second thread,
+      *  that calls "clearOldTemporaryDirectories" and removes all directories, that begin with "tmp_" and are old enough.
+      * But when we removing data part, it can be old enough. And rename doesn't change mtime.
+      * And a race condition can happen that will lead to "File not found" error here.
+      */
+
     String from = storage.full_path + relative_path;
-    String to = storage.full_path + "tmp_delete_" + name;
+    String to = storage.full_path + "delete_tmp_" + name;
 
     Poco::File from_dir{from};
     Poco::File to_dir{to};
@@ -417,6 +467,11 @@ void MergeTreeDataPart::renameToDetached(const String & prefix) const
 }
 
 
+UInt64 MergeTreeDataPart::getMarksCount() const
+{
+    return index_granularity.getMarksCount();
+}
+
 void MergeTreeDataPart::makeCloneInDetached(const String & prefix) const
 {
     Poco::Path src(getFullPath());
@@ -427,28 +482,64 @@ void MergeTreeDataPart::makeCloneInDetached(const String & prefix) const
 
 void MergeTreeDataPart::loadColumnsChecksumsIndexes(bool require_columns_checksums, bool check_consistency)
 {
+    /// Memory should not be limited during ATTACH TABLE query.
+    /// This is already true at the server startup but must be also ensured for manual table ATTACH.
+    /// Motivation: memory for index is shared between queries - not belong to the query itself.
+    auto temporarily_disable_memory_tracker = getCurrentMemoryTrackerActionLock();
+
     loadColumns(require_columns_checksums);
     loadChecksums(require_columns_checksums);
-    loadIndex();
-    loadRowsCount(); /// Must be called after loadIndex() as it uses the value of `marks_count`.
+    loadIndexGranularity();
+    loadIndex(); /// Must be called after loadIndexGranularity as it uses the value of `index_granularity`
+    loadRowsCount(); /// Must be called after loadIndex() as it uses the value of `index_granularity`.
     loadPartitionAndMinMaxIndex();
+    loadTTLInfos();
     if (check_consistency)
         checkConsistency(require_columns_checksums);
 }
 
+void MergeTreeDataPart::loadIndexGranularity()
+{
+    if (columns.empty())
+        throw Exception("No columns in part " + name, ErrorCodes::NO_FILE_IN_DATA_PART);
+    const auto & granularity_info = storage.index_granularity_info;
+
+    /// We can use any column, it doesn't matter
+    std::string marks_file_path = granularity_info.getMarksFilePath(getFullPath() + escapeForFileName(columns.front().name));
+    if (!Poco::File(marks_file_path).exists())
+        throw Exception("Marks file '" + marks_file_path + "' doesn't exist", ErrorCodes::NO_FILE_IN_DATA_PART);
+
+    size_t marks_file_size = Poco::File(marks_file_path).getSize();
+
+    /// old version of marks with static index granularity
+    if (!granularity_info.is_adaptive)
+    {
+        size_t marks_count = marks_file_size / granularity_info.mark_size_in_bytes;
+        index_granularity.resizeWithFixedGranularity(marks_count, granularity_info.fixed_index_granularity); /// all the same
+    }
+    else
+    {
+        ReadBufferFromFile buffer(marks_file_path, marks_file_size, -1);
+        while (!buffer.eof())
+        {
+            buffer.seek(sizeof(size_t) * 2, SEEK_CUR); /// skip offset_in_compressed file and offset_in_decompressed_block
+            size_t granularity;
+            readIntBinary(granularity, buffer);
+            index_granularity.appendMark(granularity);
+        }
+        if (index_granularity.getMarksCount() * granularity_info.mark_size_in_bytes != marks_file_size)
+            throw Exception("Cannot read all marks from file " + marks_file_path, ErrorCodes::CANNOT_READ_ALL_DATA);
+    }
+    index_granularity.setInitialized();
+}
 
 void MergeTreeDataPart::loadIndex()
 {
-    if (!marks_count)
-    {
-        if (columns.empty())
-            throw Exception("No columns in part " + name, ErrorCodes::NO_FILE_IN_DATA_PART);
+    /// It can be empty in case of mutations
+    if (!index_granularity.isInitialized())
+        throw Exception("Index granularity is not loaded before index loading", ErrorCodes::LOGICAL_ERROR);
 
-        marks_count = Poco::File(getFullPath() + escapeForFileName(columns.front().name) + ".mrk")
-            .getSize() / MERGE_TREE_MARK_SIZE;
-    }
-
-    size_t key_size = storage.primary_sort_columns.size();
+    size_t key_size = storage.primary_key_columns.size();
 
     if (key_size)
     {
@@ -458,29 +549,30 @@ void MergeTreeDataPart::loadIndex()
         for (size_t i = 0; i < key_size; ++i)
         {
             loaded_index[i] = storage.primary_key_data_types[i]->createColumn();
-            loaded_index[i]->reserve(marks_count);
+            loaded_index[i]->reserve(index_granularity.getMarksCount());
         }
 
         String index_path = getFullPath() + "primary.idx";
         ReadBufferFromFile index_file = openForReading(index_path);
 
-        for (size_t i = 0; i < marks_count; ++i)    //-V756
+        for (size_t i = 0; i < index_granularity.getMarksCount(); ++i)    //-V756
             for (size_t j = 0; j < key_size; ++j)
-                storage.primary_key_data_types[j]->deserializeBinary(*loaded_index[j].get(), index_file);
+                storage.primary_key_data_types[j]->deserializeBinary(*loaded_index[j], index_file);
 
         for (size_t i = 0; i < key_size; ++i)
-            if (loaded_index[i]->size() != marks_count)
+        {
+            loaded_index[i]->protect();
+            if (loaded_index[i]->size() != index_granularity.getMarksCount())
                 throw Exception("Cannot read all data from index file " + index_path
-                    + "(expected size: " + toString(marks_count) + ", read: " + toString(loaded_index[i]->size()) + ")",
+                    + "(expected size: " + toString(index_granularity.getMarksCount()) + ", read: " + toString(loaded_index[i]->size()) + ")",
                     ErrorCodes::CANNOT_READ_ALL_DATA);
+        }
 
         if (!index_file.eof())
             throw Exception("Index file " + index_path + " is unexpectedly long", ErrorCodes::EXPECTED_END_OF_FILE);
 
         index.assign(std::make_move_iterator(loaded_index.begin()), std::make_move_iterator(loaded_index.end()));
     }
-
-    bytes_on_disk = calculateTotalSizeOnDisk(getFullPath());
 }
 
 void MergeTreeDataPart::loadPartitionAndMinMaxIndex()
@@ -503,10 +595,10 @@ void MergeTreeDataPart::loadPartitionAndMinMaxIndex()
             minmax_idx.load(storage, full_path);
     }
 
-    String calculated_partition_id = partition.getID(storage);
+    String calculated_partition_id = partition.getID(storage.partition_key_sample);
     if (calculated_partition_id != info.partition_id)
         throw Exception(
-            "While loading part "  + getFullPath() + ": calculated partition ID: " + calculated_partition_id
+            "While loading part " + getFullPath() + ": calculated partition ID: " + calculated_partition_id
             + " differs from partition ID in part name: " + info.partition_id,
             ErrorCodes::CORRUPTED_DATA);
 }
@@ -514,21 +606,30 @@ void MergeTreeDataPart::loadPartitionAndMinMaxIndex()
 void MergeTreeDataPart::loadChecksums(bool require)
 {
     String path = getFullPath() + "checksums.txt";
-    if (!Poco::File(path).exists())
+    Poco::File checksums_file(path);
+    if (checksums_file.exists())
+    {
+        ReadBufferFromFile file = openForReading(path);
+        if (checksums.read(file))
+        {
+            assertEOF(file);
+            bytes_on_disk = checksums.getTotalSizeOnDisk();
+        }
+        else
+            bytes_on_disk = calculateTotalSizeOnDisk(getFullPath());
+    }
+    else
     {
         if (require)
             throw Exception("No checksums.txt in part " + name, ErrorCodes::NO_FILE_IN_DATA_PART);
 
-        return;
+        bytes_on_disk = calculateTotalSizeOnDisk(getFullPath());
     }
-    ReadBufferFromFile file = openForReading(path);
-    if (checksums.read(file))
-        assertEOF(file);
 }
 
 void MergeTreeDataPart::loadRowsCount()
 {
-    if (marks_count == 0)
+    if (index_granularity.empty())
     {
         rows_count = 0;
     }
@@ -544,12 +645,10 @@ void MergeTreeDataPart::loadRowsCount()
     }
     else
     {
-        size_t rows_approx = storage.index_granularity * marks_count;
-
         for (const NameAndTypePair & column : columns)
         {
             ColumnPtr column_col = column.type->createColumn();
-            if (!column_col->isFixedAndContiguous())
+            if (!column_col->isFixedAndContiguous() || column_col->lowCardinality())
                 continue;
 
             size_t column_size = getColumnSize(column.name, *column.type).data_uncompressed;
@@ -567,16 +666,45 @@ void MergeTreeDataPart::loadRowsCount()
                     ErrorCodes::LOGICAL_ERROR);
             }
 
-            if (!(rows_count <= rows_approx && rows_approx < rows_count + storage.index_granularity))
+            size_t last_mark_index_granularity = index_granularity.getLastMarkRows();
+            size_t rows_approx = index_granularity.getTotalRows();
+            if (!(rows_count <= rows_approx && rows_approx < rows_count + last_mark_index_granularity))
                 throw Exception(
                     "Unexpected size of column " + column.name + ": " + toString(rows_count) + " rows, expected "
-                    + toString(rows_approx) + "+-" + toString(storage.index_granularity) + " rows according to the index",
+                    + toString(rows_approx) + "+-" + toString(last_mark_index_granularity) + " rows according to the index",
                     ErrorCodes::LOGICAL_ERROR);
 
             return;
         }
 
         throw Exception("Data part doesn't contain fixed size column (even Date column)", ErrorCodes::LOGICAL_ERROR);
+    }
+}
+
+void MergeTreeDataPart::loadTTLInfos()
+{
+    String path = getFullPath() + "ttl.txt";
+    if (Poco::File(path).exists())
+    {
+        ReadBufferFromFile in = openForReading(path);
+        assertString("ttl format version: ", in);
+        size_t format_version;
+        readText(format_version, in);
+        assertChar('\n', in);
+
+        if (format_version == 1)
+        {
+            try
+            {
+                ttl_infos.read(in);
+            }
+            catch (const JSONException &)
+            {
+                throw Exception("Error while parsing file ttl.txt in part: " + name, ErrorCodes::BAD_TTL_FILE);
+            }
+        }
+        else
+            throw Exception("Unknown ttl format version: " + toString(format_version), ErrorCodes::BAD_TTL_FILE);
     }
 }
 
@@ -631,7 +759,7 @@ void MergeTreeDataPart::checkConsistency(bool require_part_metadata)
 
     if (!checksums.empty())
     {
-        if (!storage.primary_sort_columns.empty() && !checksums.files.count("primary.idx"))
+        if (!storage.primary_key_columns.empty() && !checksums.files.count("primary.idx"))
             throw Exception("No checksum for primary.idx", ErrorCodes::NO_FILE_IN_DATA_PART);
 
         if (require_part_metadata)
@@ -642,7 +770,7 @@ void MergeTreeDataPart::checkConsistency(bool require_part_metadata)
                 name_type.type->enumerateStreams([&](const IDataType::SubstreamPath & substream_path)
                 {
                     String file_name = IDataType::getFileNameForStream(name_type.name, substream_path);
-                    String mrk_file_name = file_name + ".mrk";
+                    String mrk_file_name = file_name + storage.index_granularity_info.marks_file_extension;
                     String bin_file_name = file_name + ".bin";
                     if (!checksums.files.count(mrk_file_name))
                         throw Exception("No " + mrk_file_name + " file checksum for column " + name_type.name + " in part " + path,
@@ -659,7 +787,7 @@ void MergeTreeDataPart::checkConsistency(bool require_part_metadata)
             if (!checksums.files.count("count.txt"))
                 throw Exception("No checksum for count.txt", ErrorCodes::NO_FILE_IN_DATA_PART);
 
-            if (storage.partition_expr && !checksums.files.count("partition.dat"))
+            if (storage.partition_key_expr && !checksums.files.count("partition.dat"))
                 throw Exception("No checksum for partition.dat", ErrorCodes::NO_FILE_IN_DATA_PART);
 
             if (!isEmpty())
@@ -685,14 +813,14 @@ void MergeTreeDataPart::checkConsistency(bool require_part_metadata)
         };
 
         /// Check that the primary key index is not empty.
-        if (!storage.primary_sort_columns.empty())
+        if (!storage.primary_key_columns.empty())
             check_file_not_empty(path + "primary.idx");
 
         if (storage.format_version >= MERGE_TREE_DATA_MIN_FORMAT_VERSION_WITH_CUSTOM_PARTITIONING)
         {
             check_file_not_empty(path + "count.txt");
 
-            if (storage.partition_expr)
+            if (storage.partition_key_expr)
                 check_file_not_empty(path + "partition.dat");
 
             for (const String & col_name : storage.minmax_idx_columns)
@@ -706,7 +834,7 @@ void MergeTreeDataPart::checkConsistency(bool require_part_metadata)
         {
             name_type.type->enumerateStreams([&](const IDataType::SubstreamPath & substream_path)
             {
-                Poco::File file(IDataType::getFileNameForStream(name_type.name, substream_path) + ".mrk");
+                Poco::File file(IDataType::getFileNameForStream(name_type.name, substream_path) + storage.index_granularity_info.marks_file_extension);
 
                 /// Missing file is Ok for case when new column was added.
                 if (file.exists())
@@ -737,7 +865,7 @@ bool MergeTreeDataPart::hasColumnFiles(const String & column) const
 
     String escaped_column = escapeForFileName(column);
     return Poco::File(prefix + escaped_column + ".bin").exists()
-        && Poco::File(prefix + escaped_column + ".mrk").exists();
+        && Poco::File(prefix + escaped_column + storage.index_granularity_info.marks_file_extension).exists();
 }
 
 
@@ -771,9 +899,9 @@ String MergeTreeDataPart::stateToString(MergeTreeDataPart::State state)
             return "Outdated";
         case State::Deleting:
             return "Deleting";
-        default:
-            throw Exception("Unknown part state " + toString(static_cast<int>(state)), ErrorCodes::LOGICAL_ERROR);
     }
+
+    __builtin_unreachable();
 }
 
 String MergeTreeDataPart::stateString() const
@@ -786,8 +914,8 @@ void MergeTreeDataPart::assertState(const std::initializer_list<MergeTreeDataPar
     if (!checkState(affordable_states))
     {
         String states_str;
-        for (auto state : affordable_states)
-            states_str += stateToString(state) + " ";
+        for (auto affordable_state : affordable_states)
+            states_str += stateToString(affordable_state) + " ";
 
         throw Exception("Unexpected state of part " + getNameWithState() + ". Expected: " + states_str, ErrorCodes::NOT_FOUND_EXPECTED_DATA_PART);
     }

@@ -129,19 +129,6 @@ std::vector<MutableColumnPtr> ColumnFunction::scatter(IColumn::ColumnIndex num_c
     return columns;
 }
 
-void ColumnFunction::insertDefault()
-{
-    for (auto & column : captured_columns)
-        column.column->assumeMutableRef().insertDefault();
-    ++size_;
-}
-void ColumnFunction::popBack(size_t n)
-{
-    for (auto & column : captured_columns)
-        column.column->assumeMutableRef().popBack(n);
-    size_ -= n;
-}
-
 size_t ColumnFunction::byteSize() const
 {
     size_t total_size = 0;
@@ -183,7 +170,7 @@ void ColumnFunction::appendArgument(const ColumnWithTypeAndName & column)
     auto index = captured_columns.size();
     if (!column.type->equals(*argumnet_types[index]))
         throw Exception("Cannot capture column " + std::to_string(argumnet_types.size()) +
-                        "because it has incompatible type: got " + column.type->getName() +
+                        " because it has incompatible type: got " + column.type->getName() +
                         ", but " + argumnet_types[index]->getName() + " is expected.", ErrorCodes::LOGICAL_ERROR);
 
     captured_columns.push_back(column);

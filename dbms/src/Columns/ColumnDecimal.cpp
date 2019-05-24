@@ -2,11 +2,14 @@
 #include <Common/Arena.h>
 #include <Common/SipHash.h>
 
+#include <common/unaligned.h>
+
 #include <IO/WriteHelpers.h>
 
 #include <Columns/ColumnsCommon.h>
 #include <Columns/ColumnDecimal.h>
 #include <DataStreams/ColumnGathererStream.h>
+
 
 template <typename T> bool decimalLess(T x, T y, UInt32 x_scale, UInt32 y_scale);
 
@@ -21,7 +24,7 @@ namespace ErrorCodes
 }
 
 template <typename T>
-int ColumnDecimal<T>::compareAt(size_t n, size_t m, const IColumn & rhs_, int ) const
+int ColumnDecimal<T>::compareAt(size_t n, size_t m, const IColumn & rhs_, int) const
 {
     auto other = static_cast<const Self &>(rhs_);
     const T & a = data[n];
@@ -41,7 +44,7 @@ StringRef ColumnDecimal<T>::serializeValueIntoArena(size_t n, Arena & arena, cha
 template <typename T>
 const char * ColumnDecimal<T>::deserializeAndInsertFromArena(const char * pos)
 {
-    data.push_back(*reinterpret_cast<const T *>(pos));
+    data.push_back(unalignedLoad<T>(pos));
     return pos + sizeof(T);
 }
 
@@ -137,7 +140,7 @@ void ColumnDecimal<T>::insertRangeFrom(const IColumn & src, size_t start, size_t
 
     size_t old_size = data.size();
     data.resize(old_size + length);
-    memcpy(&data[old_size], &src_vec.data[start], length * sizeof(data[0]));
+    memcpy(data.data() + old_size, &src_vec.data[start], length * sizeof(data[0]));
 }
 
 template <typename T>
@@ -213,8 +216,8 @@ void ColumnDecimal<T>::getExtremes(Field & min, Field & max) const
 {
     if (data.size() == 0)
     {
-        min = typename NearestFieldType<T>::Type(0, scale);
-        max = typename NearestFieldType<T>::Type(0, scale);
+        min = NearestFieldType<T>(0, scale);
+        max = NearestFieldType<T>(0, scale);
         return;
     }
 
@@ -229,8 +232,8 @@ void ColumnDecimal<T>::getExtremes(Field & min, Field & max) const
             cur_max = x;
     }
 
-    min = typename NearestFieldType<T>::Type(cur_min, scale);
-    max = typename NearestFieldType<T>::Type(cur_max, scale);
+    min = NearestFieldType<T>(cur_min, scale);
+    max = NearestFieldType<T>(cur_max, scale);
 }
 
 template class ColumnDecimal<Decimal32>;

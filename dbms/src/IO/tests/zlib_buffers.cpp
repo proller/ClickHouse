@@ -23,7 +23,7 @@ try
 
     {
         DB::WriteBufferFromFile buf("test_zlib_buffers.gz", DBMS_DEFAULT_BUFFER_SIZE, O_WRONLY | O_CREAT | O_TRUNC);
-        DB::ZlibDeflatingWriteBuffer deflating_buf(buf, DB::ZlibCompressionMethod::Gzip, /* compression_level = */ 3);
+        DB::ZlibDeflatingWriteBuffer deflating_buf(buf, DB::CompressionMethod::Gzip, /* compression_level = */ 3);
 
         stopwatch.restart();
         for (size_t i = 0; i < n; ++i)
@@ -41,7 +41,7 @@ try
 
     {
         DB::ReadBufferFromFile buf("test_zlib_buffers.gz");
-        DB::ZlibInflatingReadBuffer inflating_buf(buf, DB::ZlibCompressionMethod::Gzip);
+        DB::ZlibInflatingReadBuffer inflating_buf(buf, DB::CompressionMethod::Gzip);
 
         stopwatch.restart();
         for (size_t i = 0; i < n; ++i)
@@ -51,7 +51,7 @@ try
             inflating_buf.ignore();
 
             if (x != i)
-                throw DB::Exception("Failed!, read: " + std::to_string(x) + ", expected: " + std::to_string(i));
+                throw DB::Exception("Failed!, read: " + std::to_string(x) + ", expected: " + std::to_string(i), 0);
         }
         stopwatch.stop();
         std::cout << "Reading done. Elapsed: " << stopwatch.elapsedSeconds() << " s."

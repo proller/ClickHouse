@@ -1,4 +1,4 @@
-#if defined(__linux__)
+#if defined(__linux__) || defined(__FreeBSD__)
 
 #include <IO/ReadBufferAIO.h>
 #include <IO/AIOContextPool.h>
@@ -115,16 +115,24 @@ bool ReadBufferAIO::nextImpl()
 
     /// If the end of the file is just reached, do nothing else.
     if (is_eof)
-        return true;
+        return bytes_read != 0;
 
     /// Create an asynchronous request.
     prepare();
 
+#if defined(__FreeBSD__)
+    request.aio.aio_lio_opcode = LIO_READ;
+    request.aio.aio_fildes = fd;
+    request.aio.aio_buf = reinterpret_cast<volatile void *>(buffer_begin);
+    request.aio.aio_nbytes = region_aligned_size;
+    request.aio.aio_offset = region_aligned_begin;
+#else
     request.aio_lio_opcode = IOCB_CMD_PREAD;
     request.aio_fildes = fd;
     request.aio_buf = reinterpret_cast<UInt64>(buffer_begin);
     request.aio_nbytes = region_aligned_size;
     request.aio_offset = region_aligned_begin;
+#endif
 
     /// Send the request.
     try
@@ -178,6 +186,9 @@ off_t ReadBufferAIO::doSeek(off_t off, int whence)
             /// Moved past the buffer.
             pos = working_buffer.end();
             first_unread_pos_in_file = new_pos_in_file;
+
+            /// If we go back, than it's not eof
+            is_eof = false;
 
             /// We can not use the result of the current asynchronous request.
             skip();

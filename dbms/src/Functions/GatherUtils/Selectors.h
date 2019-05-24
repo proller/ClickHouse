@@ -4,7 +4,7 @@
 #include <Functions/GatherUtils/ArraySourceVisitor.h>
 #include <Functions/GatherUtils/ArraySinkVisitor.h>
 #include <Functions/GatherUtils/ValueSourceVisitor.h>
-#include <Core/TypeListNumber.h>
+
 
 namespace DB::GatherUtils
 {
@@ -179,7 +179,7 @@ struct ArrayAndValueSourceSelectorBySink : public ArraySinkSelector<ArrayAndValu
         if (array_source.isConst() && value_source.isConst())
             checkTypeAndCallConcat(typeid_cast<ConstSource<ArraySource> *>(&array_source),
                                    typeid_cast<ConstSource<ValueSource> *>(&value_source));
-        else if(array_source.isConst())
+        else if (array_source.isConst())
             checkTypeAndCallConcat(typeid_cast<ConstSource<ArraySource> *>(&array_source),
                                    typeid_cast<ValueSource *>(&value_source));
         else if (value_source.isConst())

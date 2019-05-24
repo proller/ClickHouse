@@ -5,8 +5,6 @@
 
 #include <ext/bit_cast.h>
 
-#include <AggregateFunctions/UniquesHashSet.h>
-
 #include <IO/WriteHelpers.h>
 #include <IO/ReadHelpers.h>
 
@@ -14,15 +12,14 @@
 #include <DataTypes/DataTypeTuple.h>
 
 #include <Interpreters/AggregationCommon.h>
+
 #include <Common/HashTable/HashSet.h>
 #include <Common/HyperLogLogWithSmallSetOptimization.h>
 #include <Common/CombinedCardinalityEstimator.h>
-#include <Common/MemoryTracker.h>
-
 #include <Common/typeid_cast.h>
 
+#include <AggregateFunctions/UniquesHashSet.h>
 #include <AggregateFunctions/IAggregateFunction.h>
-#include <AggregateFunctions/UniqCombinedBiasData.h>
 #include <AggregateFunctions/UniqVariadicHash.h>
 
 
@@ -124,46 +121,6 @@ struct AggregateFunctionUniqExactData<String>
     static String getName() { return "uniqExact"; }
 };
 
-template <typename T>
-struct AggregateFunctionUniqCombinedData
-{
-    using Key = UInt32;
-    using Set = CombinedCardinalityEstimator<
-        Key,
-        HashSet<Key, TrivialHash, HashTableGrower<>>,
-        16,
-        14,
-        17,
-        TrivialHash,
-        UInt32,
-        HyperLogLogBiasEstimator<UniqCombinedBiasData>,
-        HyperLogLogMode::FullFeatured>;
-
-    Set set;
-
-    static String getName() { return "uniqCombined"; }
-};
-
-template <>
-struct AggregateFunctionUniqCombinedData<String>
-{
-    using Key = UInt64;
-    using Set = CombinedCardinalityEstimator<
-        Key,
-        HashSet<Key, TrivialHash, HashTableGrower<>>,
-        16,
-        14,
-        17,
-        TrivialHash,
-        UInt64,
-        HyperLogLogBiasEstimator<UniqCombinedBiasData>,
-        HyperLogLogMode::FullFeatured>;
-
-    Set set;
-
-    static String getName() { return "uniqCombined"; }
-};
-
 
 namespace detail
 {
@@ -199,39 +156,6 @@ template <> struct AggregateFunctionUniqTraits<Float64>
     }
 };
 
-/** Hash function for uniqCombined.
-  */
-template <typename T> struct AggregateFunctionUniqCombinedTraits
-{
-    static UInt32 hash(T x) { return static_cast<UInt32>(intHash64(x)); }
-};
-
-template <> struct AggregateFunctionUniqCombinedTraits<UInt128>
-{
-    static UInt32 hash(UInt128 x)
-    {
-        return sipHash64(x);
-    }
-};
-
-template <> struct AggregateFunctionUniqCombinedTraits<Float32>
-{
-    static UInt32 hash(Float32 x)
-    {
-        UInt64 res = ext::bit_cast<UInt64>(x);
-        return static_cast<UInt32>(intHash64(res));
-    }
-};
-
-template <> struct AggregateFunctionUniqCombinedTraits<Float64>
-{
-    static UInt32 hash(Float64 x)
-    {
-        UInt64 res = ext::bit_cast<UInt64>(x);
-        return static_cast<UInt32>(intHash64(res));
-    }
-};
-
 
 /** The structure for the delegation work to add one element to the `uniq` aggregate functions.
   * Used for partial specialization to add strings.
@@ -248,19 +172,6 @@ struct OneAdder
             {
                 const auto & value = static_cast<const ColumnVector<T> &>(column).getData()[row_num];
                 data.set.insert(AggregateFunctionUniqTraits<T>::hash(value));
-            }
-            else
-            {
-                StringRef value = column.getDataAt(row_num);
-                data.set.insert(CityHash_v1_0_2::CityHash64(value.data, value.size));
-            }
-        }
-        else if constexpr (std::is_same_v<Data, AggregateFunctionUniqCombinedData<T>>)
-        {
-            if constexpr (!std::is_same_v<T, String>)
-            {
-                const auto & value = static_cast<const ColumnVector<T> &>(column).getData()[row_num];
-                data.set.insert(AggregateFunctionUniqCombinedTraits<T>::hash(value));
             }
             else
             {
@@ -297,6 +208,9 @@ template <typename T, typename Data>
 class AggregateFunctionUniq final : public IAggregateFunctionDataHelper<Data, AggregateFunctionUniq<T, Data>>
 {
 public:
+    AggregateFunctionUniq(const DataTypes & argument_types_)
+        : IAggregateFunctionDataHelper<Data, AggregateFunctionUniq<T, Data>>(argument_types_, {}) {}
+
     String getName() const override { return Data::getName(); }
 
     DataTypePtr getReturnType() const override
@@ -345,6 +259,7 @@ private:
 
 public:
     AggregateFunctionUniqVariadic(const DataTypes & arguments)
+        : IAggregateFunctionDataHelper<Data, AggregateFunctionUniqVariadic<Data, is_exact, argument_is_tuple>>(arguments, {})
     {
         if (argument_is_tuple)
             num_args = typeid_cast<const DataTypeTuple &>(*arguments[0]).getElements().size();
@@ -386,6 +301,5 @@ public:
 
     const char * getHeaderFilePath() const override { return __FILE__; }
 };
-
 
 }

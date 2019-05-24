@@ -1,37 +1,32 @@
 #pragma once
-#include <Common/config.h>
-#if USE_RDKAFKA
 
-#include <mutex>
-
-#include <ext/shared_ptr_helper.h>
-#include <Core/NamesAndTypes.h>
 #include <Core/BackgroundSchedulePool.h>
-#include <Storages/IStorage.h>
+#include <Core/NamesAndTypes.h>
 #include <DataStreams/IBlockOutputStream.h>
+#include <Storages/IStorage.h>
+#include <Storages/Kafka/ReadBufferFromKafkaConsumer.h>
 #include <Poco/Event.h>
 #include <Poco/Semaphore.h>
+#include <ext/shared_ptr_helper.h>
 
-struct rd_kafka_s;
-struct rd_kafka_conf_s;
+#include <cppkafka/cppkafka.h>
+#include <mutex>
 
 namespace DB
 {
-
-class StorageKafka;
 
 /** Implements a Kafka queue table engine that can be used as a persistent queue / buffer,
   * or as a basic building block for creating pipelines with a continuous insertion / ETL.
   */
 class StorageKafka : public ext::shared_ptr_helper<StorageKafka>, public IStorage
 {
-friend class KafkaBlockInputStream;
-friend class KafkaBlockOutputStream;
+    friend class KafkaBlockInputStream;
+    friend class KafkaBlockOutputStream;
 
 public:
     std::string getName() const override { return "Kafka"; }
     std::string getTableName() const override { return table_name; }
-    std::string getDatabaseName() const { return database_name; }
+    std::string getDatabaseName() const override { return database_name; }
 
     void startup() override;
     void shutdown() override;
@@ -44,7 +39,7 @@ public:
         size_t max_block_size,
         unsigned num_streams) override;
 
-    void rename(const String & /*new_path_to_db*/, const String & new_database_name, const String & new_table_name) override
+    void rename(const String & /* new_path_to_db */, const String & new_database_name, const String & new_table_name) override
     {
         table_name = new_table_name;
         database_name = new_database_name;
@@ -53,26 +48,10 @@ public:
     void updateDependencies() override;
 
 private:
-    /// Each engine typically has one consumer (able to process 1..N partitions)
-    /// It is however possible to create multiple consumers per table, as long
-    /// as the total number of consumers is <= number of partitions.
-    struct Consumer
-    {
-        Consumer(struct rd_kafka_conf_s * conf);
-        ~Consumer();
-
-        void subscribe(const Names & topics);
-        void unsubscribe();
-        void close();
-
-        struct rd_kafka_s * stream = nullptr;
-    };
-    using ConsumerPtr = std::shared_ptr<Consumer>;
-
     // Configuration and state
     String table_name;
     String database_name;
-    Context & context;
+    Context global_context;
     Names topics;
     const String brokers;
     const String group;
@@ -84,7 +63,7 @@ private:
     /// Total number of consumers
     size_t num_consumers;
     /// Maximum block size for insertion into this table
-    size_t max_block_size;
+    UInt64 max_block_size;
     /// Number of actually created consumers.
     /// Can differ from num_consumers in case of exception in startup() (or if startup() hasn't been called).
     /// In this case we still need to be able to shutdown() properly.
@@ -94,16 +73,21 @@ private:
     // Consumer list
     Poco::Semaphore semaphore;
     std::mutex mutex;
-    std::vector<ConsumerPtr> consumers; /// Available consumers
+    std::vector<BufferPtr> buffers; /// available buffers for Kafka consumers
+
+    size_t skip_broken;
+
+    bool intermediate_commit;
 
     // Stream thread
     BackgroundSchedulePool::TaskHolder task;
     std::atomic<bool> stream_cancelled{false};
 
-    void consumerConfiguration(struct rd_kafka_conf_s * conf);
-    ConsumerPtr claimConsumer();
-    ConsumerPtr tryClaimConsumer(long wait_ms);
-    void pushConsumer(ConsumerPtr c);
+    cppkafka::Configuration createConsumerConfiguration();
+    BufferPtr createBuffer();
+    BufferPtr claimBuffer();
+    BufferPtr tryClaimBuffer(long wait_ms);
+    void pushBuffer(BufferPtr buf);
 
     void streamThread();
     bool streamToViews();
@@ -117,9 +101,8 @@ protected:
         const ColumnsDescription & columns_,
         const String & brokers_, const String & group_, const Names & topics_,
         const String & format_name_, char row_delimiter_, const String & schema_name_,
-        size_t num_consumers_, size_t max_block_size_);
+        size_t num_consumers_, UInt64 max_block_size_, size_t skip_broken,
+        bool intermediate_commit_);
 };
 
 }
-
-#endif

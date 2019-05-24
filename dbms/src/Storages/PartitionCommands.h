@@ -1,28 +1,30 @@
 #pragma once
 
-#include <Core/Types.h>
 #include <Core/Field.h>
+#include <Core/Types.h>
 #include <Parsers/IAST.h>
-#include <vector>
+#include <Storages/IStorage_fwd.h>
+
 #include <optional>
+#include <vector>
 
 
 namespace DB
 {
 
-class IStorage;
 class ASTAlterCommand;
 
 struct PartitionCommand
 {
     enum Type
     {
-        DROP_PARTITION,
         ATTACH_PARTITION,
-        REPLACE_PARTITION,
-        FETCH_PARTITION,
-        FREEZE_PARTITION,
         CLEAR_COLUMN,
+        DROP_PARTITION,
+        FETCH_PARTITION,
+        FREEZE_ALL_PARTITIONS,
+        FREEZE_PARTITION,
+        REPLACE_PARTITION,
     };
 
     Type type;

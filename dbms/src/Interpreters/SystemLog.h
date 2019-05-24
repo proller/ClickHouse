@@ -1,6 +1,7 @@
 #pragma once
 
 #include <thread>
+#include <atomic>
 #include <boost/noncopyable.hpp>
 #include <common/logger_useful.h>
 #include <Core/Types.h>
@@ -18,8 +19,8 @@
 #include <Interpreters/InterpreterRenameQuery.h>
 #include <Interpreters/InterpreterInsertQuery.h>
 #include <Common/setThreadName.h>
+#include <Common/ThreadPool.h>
 #include <IO/WriteHelpers.h>
-#include <common/logger_useful.h>
 #include <Poco/Util/AbstractConfiguration.h>
 
 
@@ -63,11 +64,14 @@ class PartLog;
 ///  because SystemLog destruction makes insert query while flushing data into underlying tables
 struct SystemLogs
 {
+    SystemLogs(Context & global_context, const Poco::Util::AbstractConfiguration & config);
     ~SystemLogs();
 
-    std::unique_ptr<QueryLog> query_log;                /// Used to log queries.
-    std::unique_ptr<QueryThreadLog> query_thread_log;   /// Used to log query threads.
-    std::unique_ptr<PartLog> part_log;                  /// Used to log operations with parts
+    std::shared_ptr<QueryLog> query_log;                /// Used to log queries.
+    std::shared_ptr<QueryThreadLog> query_thread_log;   /// Used to log query threads.
+    std::shared_ptr<PartLog> part_log;                  /// Used to log operations with parts
+
+    String part_log_database;
 };
 
 
@@ -75,7 +79,6 @@ template <typename LogElement>
 class SystemLog : private boost::noncopyable
 {
 public:
-
     using Self = SystemLog;
 
     /** Parameter: table name where to write log.
@@ -100,13 +103,23 @@ public:
       */
     void add(const LogElement & element)
     {
+        if (is_shutdown)
+            return;
+
         /// Without try we could block here in case of queue overflow.
         if (!queue.tryPush({false, element}))
             LOG_ERROR(log, "SystemLog queue is full");
     }
 
     /// Flush data in the buffer to disk
-    void flush(bool quiet = false);
+    void flush()
+    {
+        if (!is_shutdown)
+            flushImpl(false);
+    }
+
+    /// Stop the background flush thread before destructor. No more data will be written.
+    void shutdown();
 
 protected:
     Context & context;
@@ -115,6 +128,7 @@ protected:
     const String storage_def;
     StoragePtr table;
     const size_t flush_interval_milliseconds;
+    std::atomic<bool> is_shutdown{false};
 
     using QueueItem = std::pair<bool, LogElement>;        /// First element is shutdown flag for thread.
 
@@ -132,7 +146,7 @@ protected:
 
     /** In this thread, data is pulled from 'queue' and stored in 'data', and then written into table.
       */
-    std::thread saving_thread;
+    ThreadFromGlobalPool saving_thread;
 
     void threadFunction();
 
@@ -142,6 +156,8 @@ protected:
       */
     bool is_prepared = false;
     void prepareTable();
+
+    void flushImpl(bool quiet);
 };
 
 
@@ -158,16 +174,27 @@ SystemLog<LogElement>::SystemLog(Context & context_,
     log = &Logger::get("SystemLog (" + database_name + "." + table_name + ")");
 
     data.reserve(DBMS_SYSTEM_LOG_QUEUE_SIZE);
-    saving_thread = std::thread([this] { threadFunction(); });
+    saving_thread = ThreadFromGlobalPool([this] { threadFunction(); });
+}
+
+
+template <typename LogElement>
+void SystemLog<LogElement>::shutdown()
+{
+    bool old_val = false;
+    if (!is_shutdown.compare_exchange_strong(old_val, true))
+        return;
+
+    /// Tell thread to shutdown.
+    queue.push({true, {}});
+    saving_thread.join();
 }
 
 
 template <typename LogElement>
 SystemLog<LogElement>::~SystemLog()
 {
-    /// Tell thread to shutdown.
-    queue.push({true, {}});
-    saving_thread.join();
+    shutdown();
 }
 
 
@@ -233,7 +260,7 @@ void SystemLog<LogElement>::threadFunction()
             if (milliseconds_elapsed >= flush_interval_milliseconds)
             {
                 /// Write data to a table.
-                flush(true);
+                flushImpl(true);
                 time_after_last_write.restart();
             }
         }
@@ -248,7 +275,7 @@ void SystemLog<LogElement>::threadFunction()
 
 
 template <typename LogElement>
-void SystemLog<LogElement>::flush(bool quiet)
+void SystemLog<LogElement>::flushImpl(bool quiet)
 {
     std::unique_lock lock(data_mutex);
 
@@ -354,7 +381,10 @@ void SystemLog<LogElement>::prepareTable()
         create->table = table_name;
 
         Block sample = LogElement::createBlock();
-        create->set(create->columns, InterpreterCreateQuery::formatColumns(sample.getNamesAndTypesList()));
+
+        auto new_columns_list = std::make_shared<ASTColumns>();
+        new_columns_list->set(new_columns_list->columns, InterpreterCreateQuery::formatColumns(sample.getNamesAndTypesList()));
+        create->set(create->columns_list, new_columns_list);
 
         ParserStorage storage_parser;
         ASTPtr storage_ast = parseQuery(
@@ -371,25 +401,5 @@ void SystemLog<LogElement>::prepareTable()
 
     is_prepared = true;
 }
-
-/// Creates a system log with MergeTree engines using parameters from config
-template<typename TSystemLog>
-std::unique_ptr<TSystemLog> createDefaultSystemLog(
-        Context & context_,
-        const String & default_database_name,
-        const String & default_table_name,
-        Poco::Util::AbstractConfiguration & config,
-        const String & config_prefix)
-{
-    String database     = config.getString(config_prefix + ".database",     default_database_name);
-    String table        = config.getString(config_prefix + ".table",        default_table_name);
-    String partition_by = config.getString(config_prefix + ".partition_by", "toYYYYMM(event_date)");
-    String engine = "ENGINE = MergeTree PARTITION BY (" + partition_by + ") ORDER BY (event_date, event_time) SETTINGS index_granularity = 1024";
-
-    size_t flush_interval_milliseconds = config.getUInt64("query_log.flush_interval_milliseconds", DEFAULT_QUERY_LOG_FLUSH_INTERVAL_MILLISECONDS);
-
-    return std::make_unique<TSystemLog>(context_, database, table, engine, flush_interval_milliseconds);
-}
-
 
 }

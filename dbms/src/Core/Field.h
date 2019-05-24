@@ -9,6 +9,8 @@
 #include <Common/UInt128.h>
 #include <Core/Types.h>
 #include <Core/Defines.h>
+#include <Core/UUID.h>
+#include <common/DayNum.h>
 #include <common/strong_typedef.h>
 
 
@@ -21,12 +23,48 @@ namespace ErrorCodes
     extern const int BAD_GET;
     extern const int NOT_IMPLEMENTED;
     extern const int LOGICAL_ERROR;
+    extern const int ILLEGAL_TYPE_OF_ARGUMENT;
 }
 
 class Field;
 using Array = std::vector<Field>;
 using TupleBackend = std::vector<Field>;
 STRONG_TYPEDEF(TupleBackend, Tuple) /// Array and Tuple are different types with equal representation inside Field.
+
+struct AggregateFunctionStateData
+{
+    String name; /// Name with arguments.
+    String data;
+
+    bool operator < (const AggregateFunctionStateData &) const
+    {
+        throw Exception("Operator < is not implemented for AggregateFunctionStateData.", ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+    }
+
+    bool operator <= (const AggregateFunctionStateData &) const
+    {
+        throw Exception("Operator <= is not implemented for AggregateFunctionStateData.", ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+    }
+
+    bool operator > (const AggregateFunctionStateData &) const
+    {
+        throw Exception("Operator > is not implemented for AggregateFunctionStateData.", ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+    }
+
+    bool operator >= (const AggregateFunctionStateData &) const
+    {
+        throw Exception("Operator >= is not implemented for AggregateFunctionStateData.", ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+    }
+
+    bool operator == (const AggregateFunctionStateData & rhs) const
+    {
+        if (name != rhs.name)
+            throw Exception("Comparing aggregate functions with different types: " + name + " and " + rhs.name,
+                    ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+
+        return data == rhs.data;
+    }
+};
 
 template <typename T> bool decimalEqual(T x, T y, UInt32 x_scale, UInt32 y_scale);
 template <typename T> bool decimalLess(T x, T y, UInt32 x_scale, UInt32 y_scale);
@@ -129,6 +167,7 @@ public:
             Decimal32  = 19,
             Decimal64  = 20,
             Decimal128 = 21,
+            AggregateFunctionState = 22,
         };
 
         static const int MIN_NON_POD = 16;
@@ -149,6 +188,7 @@ public:
                 case Decimal32:  return "Decimal32";
                 case Decimal64:  return "Decimal64";
                 case Decimal128: return "Decimal128";
+                case AggregateFunctionState: return "AggregateFunctionState";
             }
 
             throw Exception("Bad type of Field", ErrorCodes::BAD_TYPE_OF_FIELD);
@@ -181,10 +221,7 @@ public:
     }
 
     template <typename T>
-    Field(T && rhs, std::integral_constant<int, Field::TypeToEnum<std::decay_t<T>>::value> * = nullptr)
-    {
-        createConcrete(std::forward<T>(rhs));
-    }
+    Field(T && rhs, std::enable_if_t<!std::is_same_v<std::decay_t<T>, Field>, void *> = nullptr);
 
     /// Create a string inplace.
     Field(const char * data, size_t size)
@@ -242,18 +279,7 @@ public:
 
     template <typename T>
     std::enable_if_t<!std::is_same_v<std::decay_t<T>, Field>, Field &>
-    operator= (T && rhs)
-    {
-        if (which != TypeToEnum<std::decay_t<T>>::value)
-        {
-            destroy();
-            createConcrete(std::forward<T>(rhs));
-        }
-        else
-            assignConcrete(std::forward<T>(rhs));
-
-        return *this;
-    }
+    operator= (T && rhs);
 
     ~Field()
     {
@@ -337,6 +363,7 @@ public:
             case Types::Decimal32:  return get<DecimalField<Decimal32>>()  < rhs.get<DecimalField<Decimal32>>();
             case Types::Decimal64:  return get<DecimalField<Decimal64>>()  < rhs.get<DecimalField<Decimal64>>();
             case Types::Decimal128: return get<DecimalField<Decimal128>>() < rhs.get<DecimalField<Decimal128>>();
+            case Types::AggregateFunctionState:  return get<AggregateFunctionStateData>() < rhs.get<AggregateFunctionStateData>();
         }
 
         throw Exception("Bad type of Field", ErrorCodes::BAD_TYPE_OF_FIELD);
@@ -368,6 +395,7 @@ public:
             case Types::Decimal32:  return get<DecimalField<Decimal32>>()  <= rhs.get<DecimalField<Decimal32>>();
             case Types::Decimal64:  return get<DecimalField<Decimal64>>()  <= rhs.get<DecimalField<Decimal64>>();
             case Types::Decimal128: return get<DecimalField<Decimal128>>() <= rhs.get<DecimalField<Decimal128>>();
+            case Types::AggregateFunctionState:  return get<AggregateFunctionStateData>() <= rhs.get<AggregateFunctionStateData>();
         }
 
         throw Exception("Bad type of Field", ErrorCodes::BAD_TYPE_OF_FIELD);
@@ -397,6 +425,7 @@ public:
             case Types::Decimal32:  return get<DecimalField<Decimal32>>()  == rhs.get<DecimalField<Decimal32>>();
             case Types::Decimal64:  return get<DecimalField<Decimal64>>()  == rhs.get<DecimalField<Decimal64>>();
             case Types::Decimal128: return get<DecimalField<Decimal128>>() == rhs.get<DecimalField<Decimal128>>();
+            case Types::AggregateFunctionState:  return get<AggregateFunctionStateData>() == rhs.get<AggregateFunctionStateData>();
         }
 
         throw Exception("Bad type of Field", ErrorCodes::BAD_TYPE_OF_FIELD);
@@ -410,7 +439,7 @@ public:
 private:
     std::aligned_union_t<DBMS_MIN_FIELD_SIZE - sizeof(Types::Which),
         Null, UInt64, UInt128, Int64, Int128, Float64, String, Array, Tuple,
-        DecimalField<Decimal32>, DecimalField<Decimal64>, DecimalField<Decimal128>
+        DecimalField<Decimal32>, DecimalField<Decimal64>, DecimalField<Decimal128>, AggregateFunctionStateData
         > storage;
 
     Types::Which which;
@@ -461,9 +490,7 @@ private:
             case Types::Decimal32:  f(field.template get<DecimalField<Decimal32>>()); return;
             case Types::Decimal64:  f(field.template get<DecimalField<Decimal64>>()); return;
             case Types::Decimal128: f(field.template get<DecimalField<Decimal128>>()); return;
-
-            default:
-                throw Exception("Bad type of Field", ErrorCodes::BAD_TYPE_OF_FIELD);
+            case Types::AggregateFunctionState: f(field.template get<AggregateFunctionStateData>()); return;
         }
     }
 
@@ -516,6 +543,9 @@ private:
             case Types::Tuple:
                 destroy<Tuple>();
                 break;
+            case Types::AggregateFunctionState:
+                destroy<AggregateFunctionStateData>();
+                break;
             default:
                  break;
         }
@@ -546,6 +576,7 @@ template <> struct Field::TypeToEnum<Tuple>   { static const Types::Which value 
 template <> struct Field::TypeToEnum<DecimalField<Decimal32>>{ static const Types::Which value = Types::Decimal32; };
 template <> struct Field::TypeToEnum<DecimalField<Decimal64>>{ static const Types::Which value = Types::Decimal64; };
 template <> struct Field::TypeToEnum<DecimalField<Decimal128>>{ static const Types::Which value = Types::Decimal128; };
+template <> struct Field::TypeToEnum<AggregateFunctionStateData>{ static const Types::Which value = Types::AggregateFunctionState; };
 
 template <> struct Field::EnumToType<Field::Types::Null>    { using Type = Null; };
 template <> struct Field::EnumToType<Field::Types::UInt64>  { using Type = UInt64; };
@@ -559,6 +590,7 @@ template <> struct Field::EnumToType<Field::Types::Tuple>   { using Type = Tuple
 template <> struct Field::EnumToType<Field::Types::Decimal32> { using Type = DecimalField<Decimal32>; };
 template <> struct Field::EnumToType<Field::Types::Decimal64> { using Type = DecimalField<Decimal64>; };
 template <> struct Field::EnumToType<Field::Types::Decimal128> { using Type = DecimalField<Decimal128>; };
+template <> struct Field::EnumToType<Field::Types::AggregateFunctionState> { using Type = DecimalField<AggregateFunctionStateData>; };
 
 
 template <typename T>
@@ -588,36 +620,94 @@ T safeGet(Field & field)
 
 template <> struct TypeName<Array> { static std::string get() { return "Array"; } };
 template <> struct TypeName<Tuple> { static std::string get() { return "Tuple"; } };
+template <> struct TypeName<AggregateFunctionStateData> { static std::string get() { return "AggregateFunctionState"; } };
 
 
-template <typename T> struct NearestFieldType;
+template <typename T> struct NearestFieldTypeImpl;
 
-template <> struct NearestFieldType<UInt8>   { using Type = UInt64; };
-template <> struct NearestFieldType<UInt16>  { using Type = UInt64; };
-template <> struct NearestFieldType<UInt32>  { using Type = UInt64; };
-template <> struct NearestFieldType<UInt64>  { using Type = UInt64; };
-template <> struct NearestFieldType<UInt128> { using Type = UInt128; };
-template <> struct NearestFieldType<Int8>    { using Type = Int64; };
-template <> struct NearestFieldType<Int16>   { using Type = Int64; };
-template <> struct NearestFieldType<Int32>   { using Type = Int64; };
-template <> struct NearestFieldType<Int64>   { using Type = Int64; };
-template <> struct NearestFieldType<Int128>  { using Type = Int128; };
-template <> struct NearestFieldType<Decimal32>   { using Type = DecimalField<Decimal32>; };
-template <> struct NearestFieldType<Decimal64>   { using Type = DecimalField<Decimal64>; };
-template <> struct NearestFieldType<Decimal128>  { using Type = DecimalField<Decimal128>; };
-template <> struct NearestFieldType<Float32> { using Type = Float64; };
-template <> struct NearestFieldType<Float64> { using Type = Float64; };
-template <> struct NearestFieldType<String>  { using Type = String; };
-template <> struct NearestFieldType<Array>   { using Type = Array; };
-template <> struct NearestFieldType<Tuple>   { using Type = Tuple; };
-template <> struct NearestFieldType<bool>    { using Type = UInt64; };
-template <> struct NearestFieldType<Null>    { using Type = Null; };
+/// char may be signed or unsigned, and behave identically to signed char or unsigned char,
+///  but they are always three different types.
+/// signedness of char is different in Linux on x86 and Linux on ARM.
+template <> struct NearestFieldTypeImpl<char> { using Type = std::conditional_t<std::is_signed_v<char>, Int64, UInt64>; };
+template <> struct NearestFieldTypeImpl<signed char> { using Type = Int64; };
+template <> struct NearestFieldTypeImpl<unsigned char> { using Type = UInt64; };
 
+template <> struct NearestFieldTypeImpl<UInt16> { using Type = UInt64; };
+template <> struct NearestFieldTypeImpl<UInt32> { using Type = UInt64; };
+
+template <> struct NearestFieldTypeImpl<DayNum> { using Type = UInt64; };
+template <> struct NearestFieldTypeImpl<UInt128> { using Type = UInt128; };
+template <> struct NearestFieldTypeImpl<UUID> { using Type = UInt128; };
+template <> struct NearestFieldTypeImpl<Int16> { using Type = Int64; };
+template <> struct NearestFieldTypeImpl<Int32> { using Type = Int64; };
+
+/// long and long long are always different types that may behave identically or not.
+/// This is different on Linux and Mac.
+template <> struct NearestFieldTypeImpl<long> { using Type = Int64; };
+template <> struct NearestFieldTypeImpl<long long> { using Type = Int64; };
+template <> struct NearestFieldTypeImpl<unsigned long> { using Type = UInt64; };
+template <> struct NearestFieldTypeImpl<unsigned long long> { using Type = UInt64; };
+
+template <> struct NearestFieldTypeImpl<Int128> { using Type = Int128; };
+template <> struct NearestFieldTypeImpl<Decimal32> { using Type = DecimalField<Decimal32>; };
+template <> struct NearestFieldTypeImpl<Decimal64> { using Type = DecimalField<Decimal64>; };
+template <> struct NearestFieldTypeImpl<Decimal128> { using Type = DecimalField<Decimal128>; };
+template <> struct NearestFieldTypeImpl<DecimalField<Decimal32>> { using Type = DecimalField<Decimal32>; };
+template <> struct NearestFieldTypeImpl<DecimalField<Decimal64>> { using Type = DecimalField<Decimal64>; };
+template <> struct NearestFieldTypeImpl<DecimalField<Decimal128>> { using Type = DecimalField<Decimal128>; };
+template <> struct NearestFieldTypeImpl<Float32> { using Type = Float64; };
+template <> struct NearestFieldTypeImpl<Float64> { using Type = Float64; };
+template <> struct NearestFieldTypeImpl<const char *> { using Type = String; };
+template <> struct NearestFieldTypeImpl<String> { using Type = String; };
+template <> struct NearestFieldTypeImpl<Array> { using Type = Array; };
+template <> struct NearestFieldTypeImpl<Tuple> { using Type = Tuple; };
+template <> struct NearestFieldTypeImpl<bool> { using Type = UInt64; };
+template <> struct NearestFieldTypeImpl<Null> { using Type = Null; };
+
+template <> struct NearestFieldTypeImpl<AggregateFunctionStateData> { using Type = AggregateFunctionStateData; };
 
 template <typename T>
-typename NearestFieldType<T>::Type nearestFieldType(const T & x)
+using NearestFieldType = typename NearestFieldTypeImpl<T>::Type;
+
+template <typename T>
+decltype(auto) nearestFieldType(T && x)
 {
-    return typename NearestFieldType<T>::Type(x);
+    using U = NearestFieldType<std::decay_t<T>>;
+    if constexpr (std::is_same_v<std::decay_t<T>, U>)
+        return std::forward<T>(x);
+    else
+        return U(x);
+}
+
+/// This (rather tricky) code is to avoid ambiguity in expressions like
+/// Field f = 1;
+/// instead of
+/// Field f = Int64(1);
+/// Things to note:
+/// 1. float <--> int needs explicit cast
+/// 2. customized types needs explicit cast
+template <typename T>
+Field::Field(T && rhs, std::enable_if_t<!std::is_same_v<std::decay_t<T>, Field>, void *>)
+{
+    auto && val = nearestFieldType(std::forward<T>(rhs));
+    createConcrete(std::forward<decltype(val)>(val));
+}
+
+template <typename T>
+std::enable_if_t<!std::is_same_v<std::decay_t<T>, Field>, Field &>
+Field::operator= (T && rhs)
+{
+    auto && val = nearestFieldType(std::forward<T>(rhs));
+    using U = decltype(val);
+    if (which != TypeToEnum<std::decay_t<U>>::value)
+    {
+        destroy();
+        createConcrete(std::forward<U>(val));
+    }
+    else
+        assignConcrete(std::forward<U>(val));
+
+    return *this;
 }
 
 

@@ -3,6 +3,7 @@
 #include <Core/Types.h>
 #include <Common/ConcurrentBoundedQueue.h>
 #include <Common/CurrentMetrics.h>
+#include <Common/ThreadPool.h>
 #include <Common/ZooKeeper/IKeeper.h>
 
 #include <IO/ReadBuffer.h>
@@ -41,7 +42,7 @@
   * - extremely creepy code for implementation of "chroot" feature.
   *
   * As of 2018, there are no active maintainers of libzookeeper:
-  * - bugs in JIRA are fixed only occasionaly with ad-hoc patches by library users.
+  * - bugs in JIRA are fixed only occasionally with ad-hoc patches by library users.
   *
   * libzookeeper is a classical example of bad code written in C.
   *
@@ -209,8 +210,8 @@ private:
     Watches watches;
     std::mutex watches_mutex;
 
-    std::thread send_thread;
-    std::thread receive_thread;
+    ThreadFromGlobalPool send_thread;
+    ThreadFromGlobalPool receive_thread;
 
     void connect(
         const Addresses & addresses,
@@ -239,5 +240,32 @@ private:
 
     CurrentMetrics::Increment active_session_metric_increment{CurrentMetrics::ZooKeeperSession};
 };
+
+struct ZooKeeperResponse;
+using ZooKeeperResponsePtr = std::shared_ptr<ZooKeeperResponse>;
+
+/// Exposed in header file for Yandex.Metrica code.
+struct ZooKeeperRequest : virtual Request
+{
+    ZooKeeper::XID xid = 0;
+    bool has_watch = false;
+    /// If the request was not send and the error happens, we definitely sure, that is has not been processed by the server.
+    /// If the request was sent and we didn't get the response and the error happens, then we cannot be sure was it processed or not.
+    bool probably_sent = false;
+
+    ZooKeeperRequest() = default;
+    ZooKeeperRequest(const ZooKeeperRequest &) = default;
+    virtual ~ZooKeeperRequest() = default;
+
+    virtual ZooKeeper::OpNum getOpNum() const = 0;
+
+    /// Writes length, xid, op_num, then the rest.
+    void write(WriteBuffer & out) const;
+
+    virtual void writeImpl(WriteBuffer &) const = 0;
+
+    virtual ZooKeeperResponsePtr makeResponse() const = 0;
+};
+
 
 }

@@ -6,7 +6,7 @@
 #include <Common/getFQDNOrHostName.h>
 #include <Common/isLocalAddress.h>
 #include <Common/ProfileEvents.h>
-#include <Interpreters/Settings.h>
+#include <Core/Settings.h>
 
 
 namespace ProfileEvents
@@ -61,6 +61,9 @@ IConnectionPool::Entry ConnectionPoolWithFailover::get(const Settings * settings
         get_priority = [](size_t i) { return i; };
         break;
     case LoadBalancing::RANDOM:
+        break;
+    case LoadBalancing::FIRST_OR_RANDOM:
+        get_priority = [](size_t i) -> size_t { return i >= 1; };
         break;
     }
 
@@ -134,6 +137,9 @@ std::vector<ConnectionPoolWithFailover::TryResult> ConnectionPoolWithFailover::g
         break;
     case LoadBalancing::RANDOM:
         break;
+    case LoadBalancing::FIRST_OR_RANDOM:
+        get_priority = [](size_t i) -> size_t { return i >= 1; };
+        break;
     }
 
     bool fallback_to_stale_replicas = settings ? bool(settings->fallback_to_stale_replicas_for_distributed_queries) : true;
@@ -203,7 +209,7 @@ ConnectionPoolWithFailover::tryGetEntry(
             LOG_TRACE(
                     log, "Server " << result.entry->getDescription() << " has unacceptable replica delay "
                     << "for table " << table_to_check->database << "." << table_to_check->table
-                    << ": "  << delay);
+                    << ": " << delay);
             ProfileEvents::increment(ProfileEvents::DistributedConnectionStaleReplica);
         }
     }

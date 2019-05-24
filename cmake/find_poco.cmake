@@ -36,6 +36,8 @@ elseif (NOT MISSING_INTERNAL_POCO_LIBRARY)
     set (ENABLE_DATA_SQLITE 0 CACHE BOOL "")
     set (ENABLE_DATA_MYSQL 0 CACHE BOOL "")
     set (ENABLE_DATA_POSTGRESQL 0 CACHE BOOL "")
+    set (ENABLE_ENCODINGS 0 CACHE BOOL "")
+
     # new after 2.0.0:
     set (POCO_ENABLE_ZIP 0 CACHE BOOL "")
     set (POCO_ENABLE_PAGECOMPILER 0 CACHE BOOL "")
@@ -74,7 +76,7 @@ elseif (NOT MISSING_INTERNAL_POCO_LIBRARY)
             set (Poco_SQLODBC_INCLUDE_DIR
                 "${ClickHouse_SOURCE_DIR}/contrib/poco/SQL/ODBC/include/"
                 "${ClickHouse_SOURCE_DIR}/contrib/poco/Data/ODBC/include/"
-                ${ODBC_INCLUDE_DIRECTORIES}
+                ${ODBC_INCLUDE_DIRS}
                 )
             set (Poco_SQLODBC_LIBRARY PocoSQLODBC ${ODBC_LIBRARIES} ${LTDL_LIBRARY})
         endif ()
@@ -86,15 +88,15 @@ elseif (NOT MISSING_INTERNAL_POCO_LIBRARY)
             set (USE_POCO_DATAODBC 1)
             set (Poco_DataODBC_INCLUDE_DIR
                 "${ClickHouse_SOURCE_DIR}/contrib/poco/Data/ODBC/include/"
-                ${ODBC_INCLUDE_DIRECTORIES}
+                ${ODBC_INCLUDE_DIRS}
             )
             set (Poco_DataODBC_LIBRARY PocoDataODBC ${ODBC_LIBRARIES} ${LTDL_LIBRARY})
         endif ()
     endif ()
 
     if (OPENSSL_FOUND AND (NOT DEFINED ENABLE_POCO_NETSSL OR ENABLE_POCO_NETSSL))
-        set (Poco_NetSSL_LIBRARY PocoNetSSL)
-        set (Poco_Crypto_LIBRARY PocoCrypto)
+        set (Poco_NetSSL_LIBRARY PocoNetSSL ${OPENSSL_LIBRARIES})
+        set (Poco_Crypto_LIBRARY PocoCrypto ${OPENSSL_LIBRARIES})
     endif ()
 
     if (USE_STATIC_LIBRARIES AND USE_INTERNAL_ZLIB_LIBRARY)

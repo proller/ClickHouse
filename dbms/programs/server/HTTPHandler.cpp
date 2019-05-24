@@ -1,26 +1,27 @@
+#include "HTTPHandler.h"
+
 #include <chrono>
 #include <iomanip>
-
 #include <Poco/File.h>
 #include <Poco/Net/HTTPBasicCredentials.h>
 #include <Poco/Net/HTTPServerRequest.h>
+#include <Poco/Net/HTTPServerRequestImpl.h>
 #include <Poco/Net/HTTPServerResponse.h>
 #include <Poco/Net/NetException.h>
-
 #include <ext/scope_guard.h>
-
 #include <Core/ExternalTable.h>
 #include <Common/StringUtils/StringUtils.h>
 #include <Common/escapeForFileName.h>
 #include <Common/getFQDNOrHostName.h>
 #include <Common/CurrentThread.h>
 #include <Common/setThreadName.h>
+#include <Common/config.h>
+#include <Compression/CompressedReadBuffer.h>
+#include <Compression/CompressedWriteBuffer.h>
 #include <IO/ReadBufferFromIStream.h>
 #include <IO/ZlibInflatingReadBuffer.h>
+#include <IO/BrotliReadBuffer.h>
 #include <IO/ReadBufferFromString.h>
-#include <IO/ConcatReadBuffer.h>
-#include <IO/CompressedReadBuffer.h>
-#include <IO/CompressedWriteBuffer.h>
 #include <IO/WriteBufferFromString.h>
 #include <IO/WriteBufferFromHTTPServerResponse.h>
 #include <IO/WriteBufferFromFile.h>
@@ -30,16 +31,11 @@
 #include <IO/CascadeWriteBuffer.h>
 #include <IO/MemoryReadWriteBuffer.h>
 #include <IO/WriteBufferFromTemporaryFile.h>
-
-#include <DataStreams/IProfilingBlockInputStream.h>
-
+#include <DataStreams/IBlockInputStream.h>
 #include <Interpreters/executeQuery.h>
 #include <Interpreters/Quota.h>
 #include <Common/typeid_cast.h>
-
 #include <Poco/Net/HTTPStream.h>
-
-#include "HTTPHandler.h"
 
 namespace DB
 {
@@ -270,7 +266,6 @@ void HTTPHandler::processQuery(
     std::string query_id = params.get("query_id", "");
     context.setUser(user, password, request.clientAddress(), quota_key);
     context.setCurrentQueryId(query_id);
-    CurrentThread::attachQueryContext(context);
 
     /// The user could specify session identifier and session timeout.
     /// It allows to modify settings, create temporary tables and reuse them in subsequent requests.
@@ -301,7 +296,7 @@ void HTTPHandler::processQuery(
     /// The client can pass a HTTP header indicating supported compression method (gzip or deflate).
     String http_response_compression_methods = request.get("Accept-Encoding", "");
     bool client_supports_http_compression = false;
-    ZlibCompressionMethod http_response_compression_method {};
+    CompressionMethod http_response_compression_method {};
 
     if (!http_response_compression_methods.empty())
     {
@@ -310,12 +305,17 @@ void HTTPHandler::processQuery(
         if (std::string::npos != http_response_compression_methods.find("gzip"))
         {
             client_supports_http_compression = true;
-            http_response_compression_method = ZlibCompressionMethod::Gzip;
+            http_response_compression_method = CompressionMethod::Gzip;
         }
         else if (std::string::npos != http_response_compression_methods.find("deflate"))
         {
             client_supports_http_compression = true;
-            http_response_compression_method = ZlibCompressionMethod::Zlib;
+            http_response_compression_method = CompressionMethod::Zlib;
+        }
+        else if (http_response_compression_methods == "br")
+        {
+            client_supports_http_compression = true;
+            http_response_compression_method = CompressionMethod::Brotli;
         }
     }
 
@@ -397,19 +397,25 @@ void HTTPHandler::processQuery(
     String http_request_compression_method_str = request.get("Content-Encoding", "");
     if (!http_request_compression_method_str.empty())
     {
-        ZlibCompressionMethod method;
         if (http_request_compression_method_str == "gzip")
         {
-            method = ZlibCompressionMethod::Gzip;
+            in_post = std::make_unique<ZlibInflatingReadBuffer>(*in_post_raw, CompressionMethod::Gzip);
         }
         else if (http_request_compression_method_str == "deflate")
         {
-            method = ZlibCompressionMethod::Zlib;
+            in_post = std::make_unique<ZlibInflatingReadBuffer>(*in_post_raw, CompressionMethod::Zlib);
         }
+#if USE_BROTLI
+        else if (http_request_compression_method_str == "br")
+        {
+            in_post = std::make_unique<BrotliReadBuffer>(*in_post_raw);
+        }
+#endif
         else
+        {
             throw Exception("Unknown Content-Encoding of HTTP request: " + http_request_compression_method_str,
-                ErrorCodes::UNKNOWN_COMPRESSION_METHOD);
-        in_post = std::make_unique<ZlibInflatingReadBuffer>(*in_post_raw, method);
+                    ErrorCodes::UNKNOWN_COMPRESSION_METHOD);
+        }
     }
     else
         in_post = std::move(in_post_raw);
@@ -491,8 +497,7 @@ void HTTPHandler::processQuery(
             settings.readonly = 2;
     }
 
-    auto readonly_before_query = settings.readonly;
-
+    SettingsChanges settings_changes;
     for (auto it = params.begin(); it != params.end(); ++it)
     {
         if (it->first == "database")
@@ -509,20 +514,12 @@ void HTTPHandler::processQuery(
         else
         {
             /// All other query parameters are treated as settings.
-            String value;
-            /// Setting is skipped if value wasn't changed.
-            if (!settings.tryGet(it->first, value) || it->second != value)
-            {
-                if (readonly_before_query == 1)
-                    throw Exception("Cannot override setting (" + it->first + ") in readonly mode", ErrorCodes::READONLY);
-
-                if (readonly_before_query && it->first == "readonly")
-                    throw Exception("Setting 'readonly' cannot be overrided in readonly mode", ErrorCodes::READONLY);
-
-                context.setSetting(it->first, it->second);
-            }
+            settings_changes.push_back({it->first, it->second});
         }
     }
+
+    context.checkSettingsConstraints(settings_changes);
+    context.applySettingsChanges(settings_changes);
 
     /// HTTP response compression is turned on only if the client signalled that they support it
     /// (using Accept-Encoding header) and 'enable_http_compression' setting is turned on.
@@ -559,12 +556,53 @@ void HTTPHandler::processQuery(
     client_info.http_method = http_method;
     client_info.http_user_agent = request.get("User-Agent", "");
 
+    auto appendCallback = [&context] (ProgressCallback callback)
+    {
+        auto prev = context.getProgressCallback();
+
+        context.setProgressCallback([prev, callback] (const Progress & progress)
+        {
+            if (prev)
+                prev(progress);
+
+            callback(progress);
+        });
+    };
+
     /// While still no data has been sent, we will report about query execution progress by sending HTTP headers.
     if (settings.send_progress_in_http_headers)
-        context.setProgressCallback([&used_output] (const Progress & progress) { used_output.out->onProgress(progress); });
+        appendCallback([&used_output] (const Progress & progress) { used_output.out->onProgress(progress); });
+
+    if (settings.readonly > 0 && settings.cancel_http_readonly_queries_on_client_close)
+    {
+        Poco::Net::StreamSocket & socket = dynamic_cast<Poco::Net::HTTPServerRequestImpl &>(request).socket();
+
+        appendCallback([&context, &socket](const Progress &)
+        {
+            /// Assume that at the point this method is called no one is reading data from the socket any more.
+            /// True for read-only queries.
+            try
+            {
+                char b;
+                int status = socket.receiveBytes(&b, 1, MSG_DONTWAIT | MSG_PEEK);
+                if (status == 0)
+                    context.killCurrentQuery();
+            }
+            catch (Poco::TimeoutException &)
+            {
+            }
+            catch (...)
+            {
+                context.killCurrentQuery();
+            }
+        });
+    }
+
+    customizeContext(context);
 
     executeQuery(*in, *used_output.out_maybe_delayed_and_compressed, /* allow_into_outfile = */ false, context,
-        [&response] (const String & content_type) { response.setContentType(content_type); });
+        [&response] (const String & content_type) { response.setContentType(content_type); },
+        [&response] (const String & current_query_id) { response.add("X-ClickHouse-Query-Id", current_query_id); });
 
     if (used_output.hasDelayed())
     {
@@ -648,6 +686,7 @@ void HTTPHandler::trySendExceptionToClient(const std::string & s, int exception_
 void HTTPHandler::handleRequest(Poco::Net::HTTPServerRequest & request, Poco::Net::HTTPServerResponse & response)
 {
     setThreadName("HTTPHandler");
+    ThreadStatus thread_status;
 
     Output used_output;
 

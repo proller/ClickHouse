@@ -98,11 +98,10 @@ struct HashTableCell
 /// HashTableCell(const value_type & value_, const State & state) : key(value_) {}
 
     /// Get what the value_type of the container will be.
-    value_type & getValue()             { return key; }
+    value_type & getValueMutable() { return key; }
     const value_type & getValue() const { return key; }
 
     /// Get the key.
-    static Key & getKey(value_type & value)             { return value; }
     static const Key & getKey(const value_type & value) { return value; }
 
     /// Are the keys at the cells equal?
@@ -142,7 +141,7 @@ struct HashTableCell
 
     /// Deserialization, in binary and text form.
     void read(DB::ReadBuffer & rb)        { DB::readBinary(key, rb); }
-    void readText(DB::ReadBuffer & rb)    { DB::writeDoubleQuoted(key, rb); }
+    void readText(DB::ReadBuffer & rb)    { DB::readDoubleQuoted(key, rb); }
 };
 
 
@@ -229,8 +228,8 @@ public:
     void setHasZero() { has_zero = true; }
     void clearHasZero() { has_zero = false; }
 
-    Cell * zeroValue()              { return reinterpret_cast<Cell*>(&zero_value_storage); }
-    const Cell * zeroValue() const  { return reinterpret_cast<const Cell*>(&zero_value_storage); }
+    Cell * zeroValue()             { return reinterpret_cast<Cell*>(&zero_value_storage); }
+    const Cell * zeroValue() const { return reinterpret_cast<const Cell*>(&zero_value_storage); }
 };
 
 template <typename Cell>
@@ -240,8 +239,8 @@ struct ZeroValueStorage<false, Cell>
     void setHasZero() { throw DB::Exception("HashTable: logical error", DB::ErrorCodes::LOGICAL_ERROR); }
     void clearHasZero() {}
 
-    Cell * zeroValue()              { return nullptr; }
-    const Cell * zeroValue() const  { return nullptr; }
+    Cell * zeroValue()             { return nullptr; }
+    const Cell * zeroValue() const { return nullptr; }
 };
 
 
@@ -420,7 +419,7 @@ protected:
     void destroyElements()
     {
         if (!std::is_trivially_destructible_v<Cell>)
-            for (iterator it = begin(); it != end(); ++it)
+            for (iterator it = begin(), it_end = end(); it != it_end; ++it)
                 it.ptr->~Cell();
     }
 
@@ -445,19 +444,22 @@ protected:
 
         Derived & operator++()
         {
+            /// If iterator was pointed to ZeroValueStorage, move it to the beginning of the main buffer.
             if (unlikely(ptr->isZero(*container)))
                 ptr = container->buf;
             else
                 ++ptr;
 
-            while (ptr < container->buf + container->grower.bufSize() && ptr->isZero(*container))
+            /// Skip empty cells in the main buffer.
+            auto buf_end = container->buf + container->grower.bufSize();
+            while (ptr < buf_end && ptr->isZero(*container))
                 ++ptr;
 
             return static_cast<Derived &>(*this);
         }
 
-        auto & operator* () const { return ptr->getValue(); }
-        auto * operator->() const { return &ptr->getValue(); }
+        auto & operator* () const { return *ptr; }
+        auto * operator->() const { return ptr; }
 
         auto getPtr() const { return ptr; }
         size_t getHash() const { return ptr->getHash(*container); }
@@ -491,17 +493,40 @@ public:
         alloc(grower);
     }
 
+    HashTable(HashTable && rhs)
+        : buf(nullptr)
+    {
+        *this = std::move(rhs);
+    }
+
     ~HashTable()
     {
         destroyElements();
         free();
     }
 
+    HashTable & operator= (HashTable && rhs)
+    {
+        destroyElements();
+        free();
+
+        std::swap(buf, rhs.buf);
+        std::swap(m_size, rhs.m_size);
+        std::swap(grower, rhs.grower);
+
+        Hash::operator=(std::move(rhs));
+        Allocator::operator=(std::move(rhs));
+        Cell::State::operator=(std::move(rhs));
+        ZeroValueStorage<Cell::need_zero_value_storage, Cell>::operator=(std::move(rhs));
+
+        return *this;
+    }
+
     class Reader final : private Cell::State
     {
     public:
         Reader(DB::ReadBuffer & in_)
-        : in(in_)
+            : in(in_)
         {
         }
 
@@ -541,7 +566,7 @@ public:
         DB::ReadBuffer & in;
         Cell cell;
         size_t read_count = 0;
-        size_t size;
+        size_t size = 0;
         bool is_eof = false;
         bool is_initialized = false;
     };
@@ -569,11 +594,14 @@ public:
             return iteratorToZero();
 
         const Cell * ptr = buf;
-        while (ptr < buf + grower.bufSize() && ptr->isZero(*this))
+        auto buf_end = buf + grower.bufSize();
+        while (ptr < buf_end && ptr->isZero(*this))
             ++ptr;
 
         return const_iterator(this, ptr);
     }
+
+    const_iterator cbegin() const { return begin(); }
 
     iterator begin()
     {
@@ -584,13 +612,15 @@ public:
             return iteratorToZero();
 
         Cell * ptr = buf;
-        while (ptr < buf + grower.bufSize() && ptr->isZero(*this))
+        auto buf_end = buf + grower.bufSize();
+        while (ptr < buf_end && ptr->isZero(*this))
             ++ptr;
 
         return iterator(this, ptr);
     }
 
     const_iterator end() const         { return const_iterator(this, buf + grower.bufSize()); }
+    const_iterator cend() const        { return end(); }
     iterator end()                     { return iterator(this, buf + grower.bufSize()); }
 
 
@@ -627,12 +657,8 @@ protected:
         return false;
     }
 
-
-    /// Only for non-zero keys. Find the right place, insert the key there, if it does not already exist. Set iterator to the cell in output parameter.
-    void ALWAYS_INLINE emplaceNonZero(Key x, iterator & it, bool & inserted, size_t hash_value)
+    void ALWAYS_INLINE emplaceNonZeroImpl(size_t place_value, Key x, iterator & it, bool & inserted, size_t hash_value)
     {
-        size_t place_value = findCell(x, hash_value, grower.place(hash_value));
-
         it = iterator(this, &buf[place_value]);
 
         if (!buf[place_value].isZero(*this))
@@ -665,6 +691,21 @@ protected:
 
             it = find(x, hash_value);
         }
+    }
+
+    /// Only for non-zero keys. Find the right place, insert the key there, if it does not already exist. Set iterator to the cell in output parameter.
+    void ALWAYS_INLINE emplaceNonZero(Key x, iterator & it, bool & inserted, size_t hash_value)
+    {
+        size_t place_value = findCell(x, hash_value, grower.place(hash_value));
+        emplaceNonZeroImpl(place_value, x, it, inserted, hash_value);
+    }
+
+    /// Same but find place using object. Hack for ReverseIndex.
+    template <typename ObjectToCompareWith>
+    void ALWAYS_INLINE emplaceNonZero(Key x, iterator & it, bool & inserted, size_t hash_value, const ObjectToCompareWith & object)
+    {
+        size_t place_value = findCell(object, hash_value, grower.place(hash_value));
+        emplaceNonZeroImpl(place_value, x, it, inserted, hash_value);
     }
 
 
@@ -722,6 +763,13 @@ public:
             emplaceNonZero(x, it, inserted, hash_value);
     }
 
+    /// Same, but search position by object. Hack for ReverseIndex.
+    template <typename ObjectToCompareWith>
+    void ALWAYS_INLINE emplace(Key x, iterator & it, bool & inserted, size_t hash_value, const ObjectToCompareWith & object)
+    {
+        if (!emplaceIfZero(x, it, inserted, hash_value))
+            emplaceNonZero(x, it, inserted, hash_value, object);
+    }
 
     /// Copy the cell from another hash table. It is assumed that the cell is not zero, and also that there was no such key in the table yet.
     void ALWAYS_INLINE insertUniqueNonZero(const Cell * cell, size_t hash_value)
@@ -811,9 +859,9 @@ public:
         if (this->hasZero())
             this->zeroValue()->write(wb);
 
-        for (size_t i = 0; i < grower.bufSize(); ++i)
-            if (!buf[i].isZero(*this))
-                buf[i].write(wb);
+        for (auto ptr = buf, buf_end = buf + grower.bufSize(); ptr < buf_end; ++ptr)
+            if (!ptr->isZero(*this))
+                ptr->write(wb);
     }
 
     void writeText(DB::WriteBuffer & wb) const
@@ -827,12 +875,12 @@ public:
             this->zeroValue()->writeText(wb);
         }
 
-        for (size_t i = 0; i < grower.bufSize(); ++i)
+        for (auto ptr = buf, buf_end = buf + grower.bufSize(); ptr < buf_end; ++ptr)
         {
-            if (!buf[i].isZero(*this))
+            if (!ptr->isZero(*this))
             {
                 DB::writeChar(',', wb);
-                buf[i].writeText(wb);
+                ptr->writeText(wb);
             }
         }
     }

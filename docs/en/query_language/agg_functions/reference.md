@@ -1,17 +1,14 @@
-<a name="aggregate_functions_reference"></a>
 
 # Function reference
 
-## count()
+## count() {#agg_function-count}
 
 Counts the number of rows. Accepts zero arguments and returns UInt64.
 The syntax `COUNT(DISTINCT x)` is not supported. The separate `uniq` aggregate function exists for this purpose.
 
 A `SELECT count() FROM table` query is not optimized, because the number of entries in the table is not stored separately. It will select some small column from the table and count the number of values in it.
 
-<a name="agg_function-any"></a>
-
-## any(x)
+## any(x) {#agg_function-any}
 
 Selects the first encountered value.
 The query can be executed in any order and even in a different order each time, so the result of this function is indeterminate.
@@ -35,7 +32,7 @@ anyHeavy(column)
 
 **Example**
 
-Take the [OnTime](../../getting_started/example_datasets/ontime.md#example_datasets-ontime) data set and select any frequently occurring value in the `AirlineID` column.
+Take the [OnTime](../../getting_started/example_datasets/ontime.md) data set and select any frequently occurring value in the `AirlineID` column.
 
 ``` sql
 SELECT anyHeavy(AirlineID) AS res
@@ -81,7 +78,7 @@ binary     decimal
 01010101 = 85
 ```
 
-The query:
+Query:
 
 ```
 SELECT groupBitAnd(num) FROM t
@@ -182,15 +179,57 @@ binary     decimal
 01101000 = 104
 ```
 
-## min(x)
+
+##groupBitmap
+
+Bitmap or Aggregate calculations from a unsigned integer column, return cardinality of type UInt64, if add suffix -State, then return [bitmap object](../functions/bitmap_functions.md).
+
+```
+groupBitmap(expr)
+```
+
+**Parameters**
+
+`expr` – An expression that results in `UInt*` type.
+
+**Return value**
+
+Value of the `UInt64` type.
+
+**Example**
+
+Test data:
+
+```
+userid
+1
+1
+2
+3
+```
+
+Query:
+
+```
+SELECT groupBitmap(userid) as num FROM t
+```
+
+Result:
+
+```
+num
+3
+```
+
+## min(x) {#agg_function-min}
 
 Calculates the minimum.
 
-## max(x)
+## max(x) {#agg_function-max}
 
 Calculates the maximum.
 
-## argMin(arg, val)
+## argMin(arg, val) {#agg_function-argMin}
 
 Calculates the 'arg' value for a minimal 'val' value. If there are several different values of 'arg' for minimal values of 'val', the first of these values encountered is output.
 
@@ -209,13 +248,12 @@ SELECT argMin(user, salary) FROM salary
 └──────────────────────┘
 ```
 
-## argMax(arg, val)
+## argMax(arg, val) {#agg_function-argMax}
 
 Calculates the 'arg' value for a maximum 'val' value. If there are several different values of 'arg' for maximum values of 'val', the first of these values encountered is output.
 
-<a name="agg_function-sum"></a>
 
-## sum(x)
+## sum(x) {#agg_function-sum}
 
 Calculates the sum.
 Only works for numbers.
@@ -226,9 +264,8 @@ Computes the sum of the numbers, using the same data type for the result as for 
 
 Only works for numbers.
 
-<a name="agg_function-summap"></a>
 
-## sumMap(key, value)
+## sumMap(key, value) {#agg_functions-summap}
 
 Totals the 'value' array according to the keys specified in the 'key' array.
 The number of elements in 'key' and 'value' must be the same for each row that is totaled.
@@ -264,15 +301,67 @@ GROUP BY timeslot
 └─────────────────────┴──────────────────────────────────────────────┘
 ```
 
-## avg(x)
+## timeSeriesGroupSum(uid, timestamp, value) {#agg_function-timeseriesgroupsum}
+timeSeriesGroupSum can aggregate different time series that sample timestamp not alignment.
+It will use linear interpolation between two sample timestamp and then sum time-series together.
+
+`uid` is the time series unique id, UInt64.
+`timestamp` is Int64 type in order to support millisecond or microsecond.
+`value` is the metric.
+
+Before use this function, timestamp should be in ascend order
+
+Example:
+```
+┌─uid─┬─timestamp─┬─value─┐
+│ 1   │     2     │   0.2 │
+│ 1   │     7     │   0.7 │
+│ 1   │    12     │   1.2 │
+│ 1   │    17     │   1.7 │
+│ 1   │    25     │   2.5 │
+│ 2   │     3     │   0.6 │
+│ 2   │     8     │   1.6 │
+│ 2   │    12     │   2.4 │
+│ 2   │    18     │   3.6 │
+│ 2   │    24     │   4.8 │
+└─────┴───────────┴───────┘
+```
+```
+CREATE TABLE time_series(
+    uid       UInt64,
+    timestamp Int64,
+    value     Float64
+) ENGINE = Memory;
+INSERT INTO time_series VALUES
+    (1,2,0.2),(1,7,0.7),(1,12,1.2),(1,17,1.7),(1,25,2.5),
+    (2,3,0.6),(2,8,1.6),(2,12,2.4),(2,18,3.6),(2,24,4.8);
+
+SELECT timeSeriesGroupSum(uid, timestamp, value)
+FROM (
+    SELECT * FROM time_series order by timestamp ASC
+);
+```
+And the result will be:
+```
+[(2,0.2),(3,0.9),(7,2.1),(8,2.4),(12,3.6),(17,5.1),(18,5.4),(24,7.2),(25,2.5)]
+```
+
+## timeSeriesGroupRateSum(uid, ts, val) {#agg_function-timeseriesgroupratesum}
+Similarly timeSeriesGroupRateSum, timeSeriesGroupRateSum will Calculate the rate of time-series and then sum rates together.
+Also, timestamp should be in ascend order before use this function.
+
+Use this function, the result above case will be:
+```
+[(2,0),(3,0.1),(7,0.3),(8,0.3),(12,0.3),(17,0.3),(18,0.3),(24,0.3),(25,0.1)]
+```
+
+## avg(x) {#agg_function-avg}
 
 Calculates the average.
 Only works for numbers.
 The result is always Float64.
 
-<a name="agg_function-uniq"></a>
-
-## uniq(x)
+## uniq(x) {#agg_function-uniq}
 
 Calculates the approximate number of different values of the argument. Works for numbers, strings, dates, date-with-time, and for multiple arguments and tuple arguments.
 
@@ -283,15 +372,17 @@ The result is determinate (it doesn't depend on the order of query processing).
 
 This function provides excellent accuracy even for data sets with extremely high cardinality (over 10 billion elements). It is recommended for default use.
 
-## uniqCombined(x)
+## uniqCombined(HLL_precision)(x)
 
 Calculates the approximate number of different values of the argument. Works for numbers, strings, dates, date-with-time, and for multiple arguments and tuple arguments.
 
-A combination of three algorithms is used: array, hash table and [HyperLogLog](https://en.wikipedia.org/wiki/HyperLogLog) with an error correction table. The memory consumption is several times smaller than for the `uniq` function, and the accuracy is several times higher. Performance is slightly lower than for the `uniq` function, but sometimes it can be even higher than it, such as with distributed queries that transmit a large number of aggregation states over the network. The maximum state size is 96 KiB (HyperLogLog of 217 6-bit cells).
+A combination of three algorithms is used: array, hash table and [HyperLogLog](https://en.wikipedia.org/wiki/HyperLogLog) with an error correction table. For small number of distinct elements, the array is used. When the set size becomes larger the hash table is used, while it is smaller than HyperLogLog data structure. For larger number of elements, the HyperLogLog is used, and it will occupy fixed amount of memory.
 
-The result is determinate (it doesn't depend on the order of query processing).
+The parameter "HLL_precision" is the base-2 logarithm of the number of cells in HyperLogLog. You can omit the parameter (omit first parens). The default value is 17, that is effectively 96 KiB of space (2^17 cells of 6 bits each). The memory consumption is several times smaller than for the `uniq` function, and the accuracy is several times higher. Performance is slightly lower than for the `uniq` function, but sometimes it can be even higher than it, such as with distributed queries that transmit a large number of aggregation states over the network.
 
-The `uniqCombined` function is a good default choice for calculating the number of different values, but keep in mind that the estimation error will increase for high-cardinality data sets (200M+ elements), and the function will return very inaccurate results for data sets with extremely high cardinality (1B+ elements).
+The result is deterministic (it doesn't depend on the order of query processing).
+
+The `uniqCombined` function is a good default choice for calculating the number of different values, but keep in mind that the estimation error for large sets (200 million elements and more) will become larger than theoretical value due to poor choice of hash function.
 
 ## uniqHLL12(x)
 
@@ -300,7 +391,7 @@ Uses the [HyperLogLog](https://en.wikipedia.org/wiki/HyperLogLog) algorithm to a
 
 The result is determinate (it doesn't depend on the order of query processing).
 
-We don't recommend using this function. In most cases, use the  `uniq` or `uniqCombined` function.
+We don't recommend using this function. In most cases, use the `uniq` or `uniqCombined` function.
 
 ## uniqExact(x)
 
@@ -320,7 +411,6 @@ For example, `groupArray (1) (x)` is equivalent to `[any (x)]`.
 
 In some cases, you can still rely on the order of execution. This applies to cases when `SELECT` comes from a subquery that uses `ORDER BY`.
 
-<a name="agg_functions_groupArrayInsertAt"></a>
 
 ## groupArrayInsertAt(x)
 
@@ -333,20 +423,23 @@ Optional parameters:
 - The default value for substituting in empty positions.
 - The length of the resulting array. This allows you to receive arrays of the same size for all the aggregate keys. When using this parameter, the default value must be specified.
 
-## groupUniqArray(x)
+## groupUniqArray(x), groupUniqArray(max_size)(x)
 
 Creates an array from different argument values. Memory consumption is the same as for the `uniqExact` function.
 
+The second version (with the `max_size` parameter) limits the size of the resulting array to `max_size` elements.
+For example, `groupUniqArray (1) (x)` is equivalent to `[any (x)]`.
+
 ## quantile(level)(x)
 
-Approximates the 'level' quantile. 'level' is a constant, a floating-point number from 0 to 1.
-We recommend using a 'level' value in the range of 0.01..0.99
-Don't use a 'level' value equal to 0 or 1 – use the 'min' and 'max' functions for these cases.
+Approximates the `level` quantile. `level` is a constant, a floating-point number from 0 to 1.
+We recommend using a `level` value in the range of `[0.01, 0.99]`
+Don't use a `level` value equal to 0 or 1 – use the `min` and `max` functions for these cases.
 
-In this function, as well as in all functions for calculating quantiles, the 'level' parameter can be omitted. In this case, it is assumed to be equal to 0.5 (in other words, the function will calculate the median).
+In this function, as well as in all functions for calculating quantiles, the `level` parameter can be omitted. In this case, it is assumed to be equal to 0.5 (in other words, the function will calculate the median).
 
 Works for numbers, dates, and dates with times.
-Returns: for numbers – Float64; for dates – a date; for dates with times – a date with time.
+Returns: for numbers – `Float64`; for dates – a date; for dates with times – a date with time.
 
 Uses [reservoir sampling](https://en.wikipedia.org/wiki/Reservoir_sampling) with a reservoir size up to 8192.
 If necessary, the result is output with linear approximation from the two neighboring values.
@@ -388,8 +481,8 @@ For its purpose (calculating quantiles of page loading times), using this functi
 
 ## quantileTimingWeighted(level)(x, weight)
 
-Differs from the `quantileTiming`  function in that it has a second argument, "weights". Weight is a non-negative integer.
-The result is calculated as if the `x`  value were passed `weight` number of times to the `quantileTiming` function.
+Differs from the `quantileTiming` function in that it has a second argument, "weights". Weight is a non-negative integer.
+The result is calculated as if the `x` value were passed `weight` number of times to the `quantileTiming` function.
 
 ## quantileExact(level)(x)
 
@@ -427,7 +520,7 @@ Returns `Float64`. When `n <= 1`, returns `+∞`.
 
 ## varPop(x)
 
-Calculates the amount `Σ((x - x̅)^2) / (n - 1)`, where `n` is the sample size and `x̅`is the average value of `x`.
+Calculates the amount `Σ((x - x̅)^2) / n`, where `n` is the sample size and `x̅`is the average value of `x`.
 
 In other words, dispersion for a set of values. Returns `Float64`.
 
@@ -443,7 +536,7 @@ The result is equal to the square root of `varPop(x)`.
 
 Returns an array of the most frequent values in the specified column. The resulting array is sorted in descending order of frequency of values (not by the values themselves).
 
-Implements the [ Filtered Space-Saving](http://www.l2f.inesc-id.pt/~fmmb/wiki/uploads/Work/misnis.ref0a.pdf)  algorithm for analyzing TopK, based on the reduce-and-combine algorithm from [Parallel Space Saving](https://arxiv.org/pdf/1401.0702.pdf).
+Implements the [ Filtered Space-Saving](http://www.l2f.inesc-id.pt/~fmmb/wiki/uploads/Work/misnis.ref0a.pdf) algorithm for analyzing TopK, based on the reduce-and-combine algorithm from [Parallel Space Saving](https://arxiv.org/pdf/1401.0702.pdf).
 
 ```
 topK(N)(column)
@@ -460,7 +553,7 @@ We recommend using the `N < 10 ` value; performance is reduced with large `N` va
 
 **Example**
 
-Take the [OnTime](../../getting_started/example_datasets/ontime.md#example_datasets-ontime) data set and select the three most frequently occurring values in the `AirlineID` column.
+Take the [OnTime](../../getting_started/example_datasets/ontime.md) data set and select the three most frequently occurring values in the `AirlineID` column.
 
 ``` sql
 SELECT topK(3)(AirlineID) AS res

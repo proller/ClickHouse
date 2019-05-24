@@ -2,7 +2,6 @@
 #include <Interpreters/evaluateConstantExpression.h>
 #include <Interpreters/Context.h>
 #include <Interpreters/convertFieldToType.h>
-#include <DataTypes/DataTypeArray.h>
 #include <Parsers/TokenIterator.h>
 #include <Parsers/ExpressionListParsers.h>
 #include <Formats/ValuesRowInputStream.h>
@@ -30,20 +29,6 @@ namespace ErrorCodes
 }
 
 
-bool is_array_type_compatible(const DataTypeArray & type, const Field & value)
-{
-    if (type.getNestedType()->isNullable())
-        return true;
-
-    const Array & array = DB::get<const Array &>(value);
-    size_t size = array.size();
-    for (size_t i = 0; i < size; ++i)
-        if (array[i].isNull())
-            return false;
-
-    return true;
-}
-
 ValuesRowInputStream::ValuesRowInputStream(ReadBuffer & istr_, const Block & header_, const Context & context_, const FormatSettings & format_settings)
     : istr(istr_), header(header_), context(std::make_unique<Context>(context_)), format_settings(format_settings)
 {
@@ -52,7 +37,7 @@ ValuesRowInputStream::ValuesRowInputStream(ReadBuffer & istr_, const Block & hea
 }
 
 
-bool ValuesRowInputStream::read(MutableColumns & columns)
+bool ValuesRowInputStream::read(MutableColumns & columns, RowReadExtension &)
 {
     size_t num_columns = columns.size();
 
@@ -79,7 +64,7 @@ bool ValuesRowInputStream::read(MutableColumns & columns)
         bool rollback_on_exception = false;
         try
         {
-            header.getByPosition(i).type->deserializeTextQuoted(*columns[i], istr, format_settings);
+            header.getByPosition(i).type->deserializeAsTextQuoted(*columns[i], istr, format_settings);
             rollback_on_exception = true;
             skipWhitespaceIfAny(istr);
 
@@ -131,15 +116,14 @@ bool ValuesRowInputStream::read(MutableColumns & columns)
                 std::pair<Field, DataTypePtr> value_raw = evaluateConstantExpression(ast, *context);
                 Field value = convertFieldToType(value_raw.first, type, value_raw.second.get());
 
-                const auto * array_type = typeid_cast<const DataTypeArray *>(&type);
-
                 /// Check that we are indeed allowed to insert a NULL.
-                if ((value.isNull() && !type.isNullable()) || (array_type && !is_array_type_compatible(*array_type, value)))
+                if (value.isNull())
                 {
-                    throw Exception{"Expression returns value " + applyVisitor(FieldVisitorToString(), value)
-                        + ", that is out of range of type " + type.getName()
-                        + ", at: " + String(prev_istr_position, std::min(SHOW_CHARS_ON_SYNTAX_ERROR, istr.buffer().end() - prev_istr_position)),
-                        ErrorCodes::VALUE_IS_OUT_OF_RANGE_OF_DATA_TYPE};
+                    if (!type.isNullable())
+                        throw Exception{"Expression returns value " + applyVisitor(FieldVisitorToString(), value)
+                            + ", that is out of range of type " + type.getName()
+                            + ", at: " + String(prev_istr_position, std::min(SHOW_CHARS_ON_SYNTAX_ERROR, istr.buffer().end() - prev_istr_position)),
+                            ErrorCodes::VALUE_IS_OUT_OF_RANGE_OF_DATA_TYPE};
                 }
 
                 columns[i]->insert(value);
@@ -170,12 +154,13 @@ void registerInputFormatValues(FormatFactory & factory)
         ReadBuffer & buf,
         const Block & sample,
         const Context & context,
-        size_t max_block_size,
+        UInt64 max_block_size,
+        UInt64 rows_portion_size,
         const FormatSettings & settings)
     {
         return std::make_shared<BlockInputStreamFromRowInputStream>(
             std::make_shared<ValuesRowInputStream>(buf, sample, context, settings),
-            sample, max_block_size, settings);
+            sample, max_block_size, rows_portion_size, settings);
     });
 }
 

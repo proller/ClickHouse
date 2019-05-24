@@ -13,6 +13,8 @@
 
 #include <IO/WriteBuffer.h>
 #include <IO/ReadBuffer.h>
+#include <IO/WriteHelpers.h>
+#include <IO/ReadHelpers.h>
 #include <IO/VarInt.h>
 
 #include <AggregateFunctions/IAggregateFunction.h>
@@ -237,13 +239,13 @@ public:
 
         for (size_t i = 0; i < size; ++i)
         {
-            to_lower.insert((i == 0) ? lower_bound : (points[i].mean + points[i - 1].mean) / 2);
-            to_upper.insert((i + 1 == size) ? upper_bound : (points[i].mean + points[i + 1].mean) / 2);
+            to_lower.insertValue((i == 0) ? lower_bound : (points[i].mean + points[i - 1].mean) / 2);
+            to_upper.insertValue((i + 1 == size) ? upper_bound : (points[i].mean + points[i + 1].mean) / 2);
 
             // linear density approximation
             Weight lower_weight = (i == 0) ? points[i].weight : ((points[i - 1].weight) + points[i].weight * 3) / 4;
             Weight upper_weight = (i + 1 == size) ? points[i].weight : (points[i + 1].weight + points[i].weight * 3) / 4;
-            to_weights.insert((lower_weight + upper_weight) / 2);
+            to_weights.insertValue((lower_weight + upper_weight) / 2);
         }
     }
 
@@ -266,17 +268,15 @@ public:
     void merge(const AggregateFunctionHistogramData & other, UInt32 max_bins)
     {
         lower_bound = std::min(lower_bound, other.lower_bound);
-        upper_bound = std::max(lower_bound, other.upper_bound);
+        upper_bound = std::max(upper_bound, other.upper_bound);
         for (size_t i = 0; i < other.size; i++)
-        {
             add(other.points[i].mean, other.points[i].weight, max_bins);
-        }
     }
 
     void write(WriteBuffer & buf) const
     {
-        buf.write(reinterpret_cast<const char *>(&lower_bound), sizeof(lower_bound));
-        buf.write(reinterpret_cast<const char *>(&upper_bound), sizeof(upper_bound));
+        writeBinary(lower_bound, buf);
+        writeBinary(upper_bound, buf);
 
         writeVarUInt(size, buf);
         buf.write(reinterpret_cast<const char *>(points), size * sizeof(WeightedValue));
@@ -284,11 +284,10 @@ public:
 
     void read(ReadBuffer & buf, UInt32 max_bins)
     {
-        buf.read(reinterpret_cast<char *>(&lower_bound), sizeof(lower_bound));
-        buf.read(reinterpret_cast<char *>(&upper_bound), sizeof(upper_bound));
+        readBinary(lower_bound, buf);
+        readBinary(upper_bound, buf);
 
         readVarUInt(size, buf);
-
         if (size > max_bins * 2)
             throw Exception("Too many bins", ErrorCodes::TOO_LARGE_ARRAY_SIZE);
 
@@ -305,8 +304,9 @@ private:
     const UInt32 max_bins;
 
 public:
-    AggregateFunctionHistogram(UInt32 max_bins)
-        : max_bins(max_bins)
+    AggregateFunctionHistogram(UInt32 max_bins, const DataTypes & arguments, const Array & params)
+        : IAggregateFunctionDataHelper<AggregateFunctionHistogramData, AggregateFunctionHistogram<T>>(arguments, params)
+        , max_bins(max_bins)
     {
     }
 

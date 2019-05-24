@@ -2,7 +2,9 @@
 
 Restrictions on query complexity are part of the settings.
 They are used in order to provide safer execution from the user interface.
-Almost all the restrictions only apply to SELECTs.For distributed query processing, restrictions are applied on each server separately.
+Almost all the restrictions only apply to `SELECT`. For distributed query processing, restrictions are applied on each server separately.
+
+ClickHouse checks the restrictions for data parts, not for each row. It means that you can exceed the value of restriction with a size of the data part.
 
 Restrictions on the "maximum amount of something" can take the value 0, which means "unrestricted".
 Most restrictions also have an 'overflow_mode' setting, meaning what to do when the limit is exceeded.
@@ -14,21 +16,7 @@ It can take one of two values: `throw` or `break`. Restrictions on aggregation (
 
 `any (only for group_by_overflow_mode)` – Continuing aggregation for the keys that got into the set, but don't add new keys to the set.
 
-<a name="query_complexity_readonly"></a>
-
-## readonly
-
-With a value of 0, you can execute any queries.
-With a value of 1, you can only execute read requests (such as SELECT and SHOW). Requests for writing and changing settings (INSERT, SET) are prohibited.
-With a value of 2, you can process read queries (SELECT, SHOW) and change settings (SET).
-
-After enabling readonly mode, you can't disable it in the current session.
-
-When using the GET method in the HTTP interface, 'readonly = 1' is set automatically. In other words, for queries that modify data, you can only use the POST method. You can send the query itself either in the POST body, or in the URL parameter.
-
-<a name="settings_max_memory_usage"></a>
-
-## max_memory_usage
+## max_memory_usage {#settings_max_memory_usage}
 
 The maximum amount of RAM to use for running a query on a single server.
 
@@ -123,6 +111,18 @@ What to do if the query is run longer than 'max_execution_time': 'throw' or 'bre
 
 Minimal execution speed in rows per second. Checked on every data block when 'timeout_before_checking_execution_speed' expires. If the execution speed is lower, an exception is thrown.
 
+## min_execution_speed_bytes
+
+Minimum number of execution bytes per second. Checked on every data block when 'timeout_before_checking_execution_speed' expires. If the execution speed is lower, an exception is thrown.
+
+## max_execution_speed
+
+Maximum number of execution rows per second. Checked on every data block when 'timeout_before_checking_execution_speed' expires. If the execution speed is high, the execution speed will be reduced.
+
+## max_execution_speed_bytes
+
+Maximum number of execution bytes per second. Checked on every data block when 'timeout_before_checking_execution_speed' expires. If the execution speed is high, the execution speed will be reduced.
+
 ## timeout_before_checking_execution_speed
 
 Checks that execution speed is not too slow (no less than 'min_execution_speed'), after the specified time in seconds has expired.
@@ -156,7 +156,7 @@ At this time, it isn't checked during parsing, but only after parsing the query.
 ## max_ast_elements
 
 Maximum number of elements in a query syntactic tree. If exceeded, an exception is thrown.
-In the same way as the previous setting, it is checked only after parsing the query. By default, 10,000.
+In the same way as the previous setting, it is checked only after parsing the query. By default, 50,000.
 
 ## max_rows_in_set
 

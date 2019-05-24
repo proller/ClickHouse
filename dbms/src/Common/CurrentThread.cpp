@@ -2,12 +2,12 @@
 
 #include "CurrentThread.h"
 #include <common/logger_useful.h>
+#include <common/likely.h>
 #include <Common/ThreadStatus.h>
-#include <Common/ObjectPool.h>
 #include <Common/TaskStatsInfoGetter.h>
 #include <Interpreters/ProcessList.h>
 #include <Interpreters/Context.h>
-#include <Poco/Ext/ThreadNumber.h>
+#include <common/getThreadNumber.h>
 #include <Poco/Logger.h>
 
 
@@ -19,78 +19,72 @@ namespace ErrorCodes
     extern const int LOGICAL_ERROR;
 }
 
-SimpleObjectPool<TaskStatsInfoGetter> task_stats_info_getter_pool;
-
-/// Order of current_thread and current_thread_scope matters
-thread_local ThreadStatusPtr current_thread = ThreadStatus::create();
-thread_local CurrentThread::ThreadScopePtr current_thread_scope = std::make_shared<CurrentThread::ThreadScope>();
-
-
 void CurrentThread::updatePerformanceCounters()
 {
-    get()->updatePerformanceCounters();
+    if (unlikely(!current_thread))
+        return;
+    get().updatePerformanceCounters();
 }
 
-ThreadStatusPtr CurrentThread::get()
+ThreadStatus & CurrentThread::get()
 {
-#ifndef NDEBUG
-    if (!current_thread || current_thread.use_count() <= 0)
-        throw Exception("Thread #" + std::to_string(Poco::ThreadNumber::get()) + " status was not initialized", ErrorCodes::LOGICAL_ERROR);
+    if (unlikely(!current_thread))
+        throw Exception("Thread #" + std::to_string(getThreadNumber()) + " status was not initialized", ErrorCodes::LOGICAL_ERROR);
 
-    if (Poco::ThreadNumber::get() != current_thread->thread_number)
-        throw Exception("Current thread has different thread number", ErrorCodes::LOGICAL_ERROR);
-#endif
-
-    return current_thread;
-}
-
-CurrentThread::ThreadScopePtr CurrentThread::getScope()
-{
-    return current_thread_scope;
+    return *current_thread;
 }
 
 ProfileEvents::Counters & CurrentThread::getProfileEvents()
 {
-    return current_thread->performance_counters;
+    return current_thread ? get().performance_counters : ProfileEvents::global_counters;
 }
 
-MemoryTracker & CurrentThread::getMemoryTracker()
+MemoryTracker * CurrentThread::getMemoryTracker()
 {
-    return current_thread->memory_tracker;
+    if (unlikely(!current_thread))
+        return nullptr;
+    return &get().memory_tracker;
 }
 
 void CurrentThread::updateProgressIn(const Progress & value)
 {
-    current_thread->progress_in.incrementPiecewiseAtomically(value);
+    if (unlikely(!current_thread))
+        return;
+    get().progress_in.incrementPiecewiseAtomically(value);
 }
 
 void CurrentThread::updateProgressOut(const Progress & value)
 {
-    current_thread->progress_out.incrementPiecewiseAtomically(value);
+    if (unlikely(!current_thread))
+        return;
+    get().progress_out.incrementPiecewiseAtomically(value);
 }
 
 void CurrentThread::attachInternalTextLogsQueue(const std::shared_ptr<InternalTextLogsQueue> & logs_queue)
 {
-    get()->attachInternalTextLogsQueue(logs_queue);
+    if (unlikely(!current_thread))
+        return;
+    get().attachInternalTextLogsQueue(logs_queue);
 }
 
 std::shared_ptr<InternalTextLogsQueue> CurrentThread::getInternalTextLogsQueue()
 {
     /// NOTE: this method could be called at early server startup stage
-    /// NOTE: this method could be called in ThreadStatus destructor, therefore we make use_count() check just in case
-
-    if (!current_thread || current_thread.use_count() <= 0)
+    if (unlikely(!current_thread))
         return nullptr;
 
-    if (current_thread->getCurrentState() == ThreadStatus::ThreadState::Died)
+    if (get().getCurrentState() == ThreadStatus::ThreadState::Died)
         return nullptr;
 
-    return current_thread->getInternalTextLogsQueue();
+    return get().getInternalTextLogsQueue();
 }
 
 ThreadGroupStatusPtr CurrentThread::getGroup()
 {
-    return get()->getThreadGroup();
+    if (unlikely(!current_thread))
+        return nullptr;
+
+    return get().getThreadGroup();
 }
 
 }

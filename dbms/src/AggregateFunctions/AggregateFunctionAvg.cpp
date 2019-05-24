@@ -12,7 +12,7 @@ namespace
 template <typename T>
 struct Avg
 {
-    using FieldType = std::conditional_t<IsDecimalNumber<T>, Decimal128, typename NearestFieldType<T>::Type>;
+    using FieldType = std::conditional_t<IsDecimalNumber<T>, Decimal128, NearestFieldType<T>>;
     using Function = AggregateFunctionAvg<T, AggregateFunctionAvgData<FieldType>>;
 };
 
@@ -27,9 +27,9 @@ AggregateFunctionPtr createAggregateFunctionAvg(const std::string & name, const 
     AggregateFunctionPtr res;
     DataTypePtr data_type = argument_types[0];
     if (isDecimal(data_type))
-        res.reset(createWithDecimalType<AggregateFuncAvg>(*data_type, *data_type));
+        res.reset(createWithDecimalType<AggregateFuncAvg>(*data_type, *data_type, argument_types));
     else
-        res.reset(createWithNumericType<AggregateFuncAvg>(*data_type));
+        res.reset(createWithNumericType<AggregateFuncAvg>(*data_type, argument_types));
 
     if (!res)
         throw Exception("Illegal type " + argument_types[0]->getName() + " of argument for aggregate function " + name,

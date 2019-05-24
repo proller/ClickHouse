@@ -36,7 +36,7 @@ private:
     static constexpr size_t pad_right = 15;
 
     /// Contiguous chunk of memory and pointer to free space inside it. Member of single-linked list.
-    struct Chunk : private Allocator<false>    /// empty base optimization
+    struct alignas(16) Chunk : private Allocator<false>    /// empty base optimization
     {
         char * begin;
         char * pos;
@@ -49,7 +49,7 @@ private:
             ProfileEvents::increment(ProfileEvents::ArenaAllocChunks);
             ProfileEvents::increment(ProfileEvents::ArenaAllocBytes, size_);
 
-            begin = reinterpret_cast<char *>(Allocator::alloc(size_));
+            begin = reinterpret_cast<char *>(Allocator<false>::alloc(size_));
             pos = begin;
             end = begin + size_ - pad_right;
             prev = prev_;
@@ -57,7 +57,7 @@ private:
 
         ~Chunk()
         {
-            Allocator::free(begin, size());
+            Allocator<false>::free(begin, size());
 
             if (prev)
                 delete prev;
@@ -147,6 +147,12 @@ public:
 
             addChunk(size + alignment);
         } while (true);
+    }
+
+    template <typename T>
+    T * alloc()
+    {
+        return reinterpret_cast<T *>(alignedAlloc(sizeof(T), alignof(T)));
     }
 
     /** Rollback just performed allocation.
