@@ -1,9 +1,10 @@
 #pragma once
 
 #include <memory>
-#include <Common/COWPtr.h>
+#include <Common/COW.h>
 #include <boost/noncopyable.hpp>
 #include <Core/Field.h>
+#include <DataTypes/DataTypeCustom.h>
 
 
 namespace DB
@@ -16,23 +17,29 @@ class IDataType;
 struct FormatSettings;
 
 class IColumn;
-using ColumnPtr = COWPtr<IColumn>::Ptr;
-using MutableColumnPtr = COWPtr<IColumn>::MutablePtr;
+using ColumnPtr = COW<IColumn>::Ptr;
+using MutableColumnPtr = COW<IColumn>::MutablePtr;
 
 using DataTypePtr = std::shared_ptr<const IDataType>;
 using DataTypes = std::vector<DataTypePtr>;
+
+class ProtobufReader;
+class ProtobufWriter;
 
 
 /** Properties of data type.
   * Contains methods for serialization/deserialization.
   * Implementations of this interface represent a data type (example: UInt8)
-  *  or parapetric family of data types (example: Array(...)).
+  *  or parametric family of data types (example: Array(...)).
   *
   * DataType is totally immutable object. You can always share them.
   */
 class IDataType : private boost::noncopyable
 {
 public:
+    IDataType();
+    virtual ~IDataType();
+
     /// Compile time flag. If false, then if C++ types are the same, then SQL types are also the same.
     /// Example: DataTypeString is not parametric: thus all instances of DataTypeString are the same SQL type.
     /// Example: DataTypeFixedString is parametric: different instances of DataTypeFixedString may be different SQL types.
@@ -40,7 +47,7 @@ public:
     /// static constexpr bool is_parametric = false;
 
     /// Name of data type (examples: UInt64, Array(String)).
-    virtual String getName() const { return getFamilyName(); }
+    String getName() const;
 
     /// Name of data type family (example: FixedString, Array).
     virtual const char * getFamilyName() const = 0;
@@ -217,8 +224,48 @@ public:
 
     /** Text serialization with escaping but without quoting.
       */
+    virtual void serializeAsTextEscaped(const IColumn & column, size_t row_num, WriteBuffer & ostr, const FormatSettings &) const;
+
+    virtual void deserializeAsTextEscaped(IColumn & column, ReadBuffer & istr, const FormatSettings &) const;
+
+    /** Text serialization as a literal that may be inserted into a query.
+      */
+    virtual void serializeAsTextQuoted(const IColumn & column, size_t row_num, WriteBuffer & ostr, const FormatSettings &) const;
+
+    virtual void deserializeAsTextQuoted(IColumn & column, ReadBuffer & istr, const FormatSettings &) const;
+
+    /** Text serialization for the CSV format.
+      */
+    virtual void serializeAsTextCSV(const IColumn & column, size_t row_num, WriteBuffer & ostr, const FormatSettings &) const;
+    virtual void deserializeAsTextCSV(IColumn & column, ReadBuffer & istr, const FormatSettings &) const;
+
+    /** Text serialization for displaying on a terminal or saving into a text file, and the like.
+      * Without escaping or quoting.
+      */
+    virtual void serializeAsText(const IColumn & column, size_t row_num, WriteBuffer & ostr, const FormatSettings &) const;
+
+    /** Text serialization intended for using in JSON format.
+      */
+    virtual void serializeAsTextJSON(const IColumn & column, size_t row_num, WriteBuffer & ostr, const FormatSettings &) const;
+    virtual void deserializeAsTextJSON(IColumn & column, ReadBuffer & istr, const FormatSettings &) const;
+
+    /** Text serialization for putting into the XML format.
+      */
+    virtual void serializeAsTextXML(const IColumn & column, size_t row_num, WriteBuffer & ostr, const FormatSettings & settings) const;
+
+    /** Serialize to a protobuf. */
+    virtual void serializeProtobuf(const IColumn & column, size_t row_num, ProtobufWriter & protobuf, size_t & value_index) const = 0;
+    virtual void deserializeProtobuf(IColumn & column, ProtobufReader & protobuf, bool allow_add_row, bool & row_added) const = 0;
+
+protected:
+    virtual String doGetName() const;
+
+    /** Text serialization with escaping but without quoting.
+      */
+public: // used somewhere in arcadia
     virtual void serializeTextEscaped(const IColumn & column, size_t row_num, WriteBuffer & ostr, const FormatSettings &) const = 0;
 
+protected:
     virtual void deserializeTextEscaped(IColumn & column, ReadBuffer & istr, const FormatSettings &) const = 0;
 
     /** Text serialization as a literal that may be inserted into a query.
@@ -230,10 +277,6 @@ public:
     /** Text serialization for the CSV format.
       */
     virtual void serializeTextCSV(const IColumn & column, size_t row_num, WriteBuffer & ostr, const FormatSettings &) const = 0;
-
-    /** delimiter - the delimiter we expect when reading a string value that is not double-quoted
-      * (the delimiter is not consumed).
-      */
     virtual void deserializeTextCSV(IColumn & column, ReadBuffer & istr, const FormatSettings &) const = 0;
 
     /** Text serialization for displaying on a terminal or saving into a text file, and the like.
@@ -254,6 +297,7 @@ public:
         serializeText(column, row_num, ostr, settings);
     }
 
+public:
     /** Create empty column for corresponding type.
       */
     virtual MutableColumnPtr createColumn() const = 0;
@@ -268,6 +312,15 @@ public:
       */
     virtual Field getDefault() const = 0;
 
+    /** The data type can be promoted in order to try to avoid overflows.
+      * Data types which can be promoted are typically Number or Decimal data types.
+      */
+    virtual bool canBePromoted() const { return false; }
+
+    /** Return the promoted numeric data type of the current data type. Throw an exception if `canBePromoted() == false`.
+      */
+    virtual DataTypePtr promoteNumericType() const;
+
     /** Directly insert default value into a column. Default implementation use method IColumn::insertDefault.
       * This should be overriden if data type default value differs from column default value (example: Enum data types).
       */
@@ -275,8 +328,6 @@ public:
 
     /// Checks that two instances belong to the same type
     virtual bool equals(const IDataType & rhs) const = 0;
-
-    virtual ~IDataType() {}
 
 
     /// Various properties on behaviour of data type.
@@ -398,11 +449,29 @@ public:
 
     virtual bool lowCardinality() const { return false; }
 
+    /// Strings, Numbers, Date, DateTime, Nullable
+    virtual bool canBeInsideLowCardinality() const { return false; }
 
     /// Updates avg_value_size_hint for newly read column. Uses to optimize deserialization. Zero expected for first column.
     static void updateAvgValueSizeHint(const IColumn & column, double & avg_value_size_hint);
 
     static String getFileNameForStream(const String & column_name, const SubstreamPath & path);
+
+private:
+    friend class DataTypeFactory;
+    /** Customize this DataType
+      */
+    void setCustomization(DataTypeCustomDescPtr custom_desc_) const;
+
+private:
+    /** This is mutable to allow setting custom name and serialization on `const IDataType` post construction.
+     */
+    mutable DataTypeCustomNamePtr custom_name;
+    mutable DataTypeCustomTextSerializationPtr custom_text_serialization;
+
+public:
+    const IDataTypeCustomName * getCustomName() const { return custom_name.get(); }
+    const IDataTypeCustomTextSerialization * getCustomTextSerialization() const { return custom_text_serialization.get(); }
 };
 
 
@@ -506,10 +575,24 @@ inline bool isInteger(const T & data_type)
 }
 
 template <typename T>
+inline bool isFloat(const T & data_type)
+{
+    WhichDataType which(data_type);
+    return which.isFloat();
+}
+
+template <typename T>
 inline bool isNumber(const T & data_type)
 {
     WhichDataType which(data_type);
     return which.isInt() || which.isUInt() || which.isFloat();
+}
+
+template <typename T>
+inline bool isColumnedAsNumber(const T & data_type)
+{
+    WhichDataType which(data_type);
+    return which.isInt() || which.isUInt() || which.isFloat() || which.isDateOrDateTime() || which.isUUID();
 }
 
 template <typename T>

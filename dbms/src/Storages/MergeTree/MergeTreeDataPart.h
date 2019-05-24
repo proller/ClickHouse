@@ -4,9 +4,12 @@
 #include <Core/Block.h>
 #include <Core/Types.h>
 #include <Core/NamesAndTypes.h>
+#include <Storages/MergeTree/MergeTreeIndexGranularity.h>
+#include <Storages/MergeTree/MergeTreeIndices.h>
 #include <Storages/MergeTree/MergeTreePartInfo.h>
 #include <Storages/MergeTree/MergeTreePartition.h>
 #include <Storages/MergeTree/MergeTreeDataPartChecksum.h>
+#include <Storages/MergeTree/MergeTreeDataPartTTLInfo.h>
 #include <Storages/MergeTree/KeyCondition.h>
 #include <Columns/IColumn.h>
 
@@ -27,10 +30,7 @@ struct MergeTreeDataPart
     using Checksums = MergeTreeDataPartChecksums;
     using Checksum = MergeTreeDataPartChecksums::Checksum;
 
-    MergeTreeDataPart(const MergeTreeData & storage_, const String & name_, const MergeTreePartInfo & info_)
-        : storage(storage_), name(name_), info(info_)
-    {
-    }
+    MergeTreeDataPart(const MergeTreeData & storage_, const String & name_, const MergeTreePartInfo & info_);
 
     MergeTreeDataPart(MergeTreeData & storage_, const String & name_);
 
@@ -59,6 +59,8 @@ struct MergeTreeDataPart
 
     ColumnSize getTotalColumnsSize() const;
 
+    size_t getFileSizeOrZero(const String & file_name) const;
+
     /// Returns full path to part dir
     String getFullPath() const;
 
@@ -75,6 +77,10 @@ struct MergeTreeDataPart
     DayNum getMinDate() const;
     DayNum getMaxDate() const;
 
+    /// otherwise, if the partition key includes dateTime column (also a common case), these functions will return min and max values for this column.
+    time_t getMinTime() const;
+    time_t getMaxTime() const;
+
     bool isEmpty() const { return rows_count == 0; }
 
     const MergeTreeData & storage;
@@ -87,9 +93,9 @@ struct MergeTreeDataPart
     mutable String relative_path;
 
     size_t rows_count = 0;
-    size_t marks_count = 0;
     std::atomic<UInt64> bytes_on_disk {0};  /// 0 - if not counted;
                                             /// Is used from several threads without locks (it is changed with ALTER).
+                                            /// May not contain size of checksums.txt and columns.txt
     time_t modification_time = 0;
     /// When the part is removed from the working set. Changes once.
     mutable std::atomic<time_t> remove_time { std::numeric_limits<time_t>::max() };
@@ -120,6 +126,11 @@ struct MergeTreeDataPart
         Outdated,       /// not active data part, but could be used by only current SELECTs, could be deleted after SELECTs finishes
         Deleting        /// not active data part with identity refcounter, it is deleting right now by a cleaner
     };
+
+    using TTLInfo = MergeTreeDataPartTTLInfo;
+    using TTLInfos = MergeTreeDataPartTTLInfos;
+
+    TTLInfos ttl_infos;
 
     /// Current state of the part. If the part is in working set already, it should be accessed via data_parts mutex
     mutable State state{State::Temporary};
@@ -173,6 +184,10 @@ struct MergeTreeDataPart
 
     MergeTreePartition partition;
 
+    /// Amount of rows between marks
+    /// As index always loaded into memory
+    MergeTreeIndexGranularity index_granularity;
+
     /// Index that for each part stores min and max values of a set of columns. This allows quickly excluding
     /// parts based on conditions on these columns imposed by a query.
     /// Currently this index is built using only columns required by partition expression, but in principle it
@@ -195,6 +210,7 @@ struct MergeTreeDataPart
 
         void load(const MergeTreeData & storage, const String & part_path);
         void store(const MergeTreeData & storage, const String & part_path, Checksums & checksums) const;
+        void store(const Names & column_names, const DataTypes & data_types, const String & part_path, Checksums & checksums) const;
 
         void update(const Block & block, const Names & column_names);
         void merge(const MinMaxIndex & other);
@@ -206,6 +222,9 @@ struct MergeTreeDataPart
 
     /// Columns description.
     NamesAndTypesList columns;
+
+    /// Columns with values, that all have been zeroed by expired ttl
+    NameSet empty_columns;
 
     using ColumnToSize = std::map<std::string, UInt64>;
 
@@ -257,6 +276,7 @@ struct MergeTreeDataPart
     /// For data in RAM ('index')
     UInt64 getIndexSizeInBytes() const;
     UInt64 getIndexSizeInAllocatedBytes() const;
+    UInt64 getMarksCount() const;
 
 private:
     /// Reads columns names and types from columns.txt
@@ -265,12 +285,18 @@ private:
     /// If checksums.txt exists, reads files' checksums (and sizes) from it
     void loadChecksums(bool require);
 
-    /// Loads index file. Also calculates this->marks_count if marks_count = 0
+    /// Loads marks index granularity into memory
+    void loadIndexGranularity();
+
+    /// Loads index file.
     void loadIndex();
 
     /// Load rows count for this part from disk (for the newer storage format version).
     /// For the older format version calculates rows count from the size of a column with a fixed size.
     void loadRowsCount();
+
+    /// Loads ttl infos in json format from file ttl.txt. If file doesn`t exists assigns ttl infos with all zeros
+    void loadTTLInfos();
 
     void loadPartitionAndMinMaxIndex();
 

@@ -66,6 +66,10 @@ void registerFunctionsConversion(FunctionFactory & factory)
     factory.registerFunction<FunctionToDateOrZero>();
     factory.registerFunction<FunctionToDateTimeOrZero>();
 
+    factory.registerFunction<FunctionToDecimal32OrZero>();
+    factory.registerFunction<FunctionToDecimal64OrZero>();
+    factory.registerFunction<FunctionToDecimal128OrZero>();
+
     factory.registerFunction<FunctionToUInt8OrNull>();
     factory.registerFunction<FunctionToUInt16OrNull>();
     factory.registerFunction<FunctionToUInt32OrNull>();
@@ -79,6 +83,10 @@ void registerFunctionsConversion(FunctionFactory & factory)
     factory.registerFunction<FunctionToDateOrNull>();
     factory.registerFunction<FunctionToDateTimeOrNull>();
 
+    factory.registerFunction<FunctionToDecimal32OrNull>();
+    factory.registerFunction<FunctionToDecimal64OrNull>();
+    factory.registerFunction<FunctionToDecimal128OrNull>();
+
     factory.registerFunction<FunctionParseDateTimeBestEffort>();
     factory.registerFunction<FunctionParseDateTimeBestEffortOrZero>();
     factory.registerFunction<FunctionParseDateTimeBestEffortOrNull>();
@@ -89,6 +97,7 @@ void registerFunctionsConversion(FunctionFactory & factory)
     factory.registerFunction<FunctionConvert<DataTypeInterval, NameToIntervalDay, PositiveMonotonicity>>();
     factory.registerFunction<FunctionConvert<DataTypeInterval, NameToIntervalWeek, PositiveMonotonicity>>();
     factory.registerFunction<FunctionConvert<DataTypeInterval, NameToIntervalMonth, PositiveMonotonicity>>();
+    factory.registerFunction<FunctionConvert<DataTypeInterval, NameToIntervalQuarter, PositiveMonotonicity>>();
     factory.registerFunction<FunctionConvert<DataTypeInterval, NameToIntervalYear, PositiveMonotonicity>>();
 }
 

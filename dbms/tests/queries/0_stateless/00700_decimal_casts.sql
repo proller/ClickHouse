@@ -1,5 +1,3 @@
-SET send_logs_level = 'none';
-
 SELECT toDecimal32('1.1', 1), toDecimal32('1.1', 2), toDecimal32('1.1', 8);
 SELECT toDecimal32('1.1', 0); -- { serverError 69 }
 SELECT toDecimal32(1.1, 0), toDecimal32(1.1, 1), toDecimal32(1.1, 2), toDecimal32(1.1, 8);
@@ -243,4 +241,12 @@ SELECT toDecimal32(0, rowNumberInBlock()); -- { serverError 44 }
 SELECT toDecimal64(0, rowNumberInBlock()); -- { serverError 44 }
 SELECT toDecimal128(0, rowNumberInBlock()); -- { serverError 44 }
 
-DROP TABLE IF EXISTS test.decimal;
+SELECT toDecimal32(1/0, 0); -- { serverError 407 }
+SELECT toDecimal64(1/0, 1); -- { serverError 407 }
+SELECT toDecimal128(0/0, 2); -- { serverError 407 }
+SELECT CAST(1/0, 'Decimal(9, 0)'); -- { serverError 407 }
+SELECT CAST(1/0, 'Decimal(18, 1)'); -- { serverError 407 }
+SELECT CAST(1/0, 'Decimal(38, 2)'); -- { serverError 407 }
+SELECT CAST(0/0, 'Decimal(9, 3)'); -- { serverError 407 }
+SELECT CAST(0/0, 'Decimal(18, 4)'); -- { serverError 407 }
+SELECT CAST(0/0, 'Decimal(38, 5)'); -- { serverError 407 }

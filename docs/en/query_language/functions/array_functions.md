@@ -12,7 +12,7 @@ Returns 0 for an empty array, or 1 for a non-empty array.
 The result type is UInt8.
 The function also works for strings.
 
-## length
+## length {#array_functions-length}
 
 Returns the number of items in the array.
 The result type is UInt64.
@@ -55,8 +55,7 @@ arrayConcat(arrays)
 
 **Parameters**
 
-- `arrays` – arbitrary number of arguments of type Array.
-
+- `arrays` – Arbitrary number of arguments of [Array](../../data_types/array.md) type.
 **Example**
 
 ``` sql
@@ -199,7 +198,7 @@ SELECT countEqual([1, 2, NULL, NULL], NULL)
 └──────────────────────────────────────┘
 ```
 
-## arrayEnumerate(arr)
+## arrayEnumerate(arr) {#array_functions-arrayenumerate}
 
 Returns the array \[1, 2, 3, ..., length (arr) \]
 
@@ -244,7 +243,7 @@ This function can also be used in higher-order functions. For example, you can u
 ## arrayEnumerateUniq(arr, ...)
 
 Returns an array the same size as the source array, indicating for each element what its position is among elements with the same value.
-For example: arrayEnumerateUniq(\[10, 20, 10, 30\]) = \[1,  1,  2,  1\].
+For example: arrayEnumerateUniq(\[10, 20, 10, 30\]) = \[1, 1, 2, 1\].
 
 This function is useful when using ARRAY JOIN and aggregation of array elements.
 Example:
@@ -379,7 +378,7 @@ arrayPushFront(array, single_value)
 **Parameters**
 
 - `array` – Array.
-- `single_value` – A single value.  Only numbers can be added to an array with numbers, and only strings can be added to an array of strings. When adding numbers, ClickHouse automatically sets the `single_value` type for the data type of the array.  For more information about the types of data in ClickHouse, see "[Data types](../../data_types/index.md#data_types)".  Can be `NULL`. The function adds a `NULL` element to an array, and the type of array elements converts to `Nullable`.
+- `single_value` – A single value. Only numbers can be added to an array with numbers, and only strings can be added to an array of strings. When adding numbers, ClickHouse automatically sets the `single_value` type for the data type of the array. For more information about the types of data in ClickHouse, see "[Data types](../../data_types/index.md#data_types)". Can be `NULL`. The function adds a `NULL` element to an array, and the type of array elements converts to `Nullable`.
 
 **Example**
 
@@ -459,6 +458,193 @@ SELECT arraySlice([1, 2, NULL, 4, 5], 2, 3) AS res
 
 Array elements set to `NULL` are handled as normal values.
 
+## arraySort(\[func,\] arr, ...) {#array_functions-reverse-sort}
+
+Sorts the elements of the `arr` array in ascending order. If the `func` function is specified, sorting order is determined by the result of the `func` function applied to the elements of the array. If `func` accepts multiple arguments, the `arraySort` function is passed several arrays that the arguments of `func` will correspond to. Detailed examples are shown at the end of `arraySort` description.
+
+Example of integer values sorting:
+
+``` sql
+SELECT arraySort([1, 3, 3, 0]);
+```
+```
+┌─arraySort([1, 3, 3, 0])─┐
+│ [0,1,3,3]               │
+└─────────────────────────┘
+```
+
+Example of string values sorting:
+
+``` sql
+SELECT arraySort(['hello', 'world', '!']);
+```
+```
+┌─arraySort(['hello', 'world', '!'])─┐
+│ ['!','hello','world']              │
+└────────────────────────────────────┘
+```
+
+Consider the following sorting order for the `NULL`, `NaN` and `Inf` values:
+
+``` sql
+SELECT arraySort([1, nan, 2, NULL, 3, nan, -4, NULL, inf, -inf]);
+```
+```
+┌─arraySort([1, nan, 2, NULL, 3, nan, -4, NULL, inf, -inf])─┐
+│ [-inf,-4,1,2,3,inf,nan,nan,NULL,NULL]                     │
+└───────────────────────────────────────────────────────────┘
+```
+
+- `-Inf` values are first in the array.
+- `NULL` values are last in the array.
+- `NaN` values are right before `NULL`.
+- `Inf` values are right before `NaN`.
+
+Note that `arraySort` is a [higher-order function](higher_order_functions.md). You can pass a lambda function to it as the first argument. In this case, sorting order is determined by the result of the lambda function applied to the elements of the array.
+
+Let's consider the following example:
+
+``` sql
+SELECT arraySort((x) -> -x, [1, 2, 3]) as res;
+```
+```
+┌─res─────┐
+│ [3,2,1] │
+└─────────┘
+```
+
+For each element of the source array, the lambda function returns the sorting key, that is, [1 –> -1, 2 –> -2, 3 –> -3]. Since the `arraySort` function sorts the keys in ascending order, the result is [3, 2, 1]. Thus, the `(x) –> -x` lambda function sets the [descending order](#array_functions-reverse-sort) in a sorting. 
+
+The lambda function can accept multiple arguments. In this case, you need to pass the `arraySort` function several arrays of identical length that the arguments of lambda function will correspond to. The resulting array will consist of elements from the first input array; elements from the next input array(s) specify the sorting keys. For example:
+
+``` sql
+SELECT arraySort((x, y) -> y, ['hello', 'world'], [2, 1]) as res;
+```
+
+```
+┌─res────────────────┐
+│ ['world', 'hello'] │
+└────────────────────┘
+```
+
+Here, the elements that are passed in the second array ([2, 1]) define a sorting key for the corresponding element from the source array (['hello', 'world']), that is, ['hello' –> 2, 'world' –> 1]. Since the lambda function doesn't use `x`, actual values of the source array don't affect the order in the result. So, 'hello' will be the second element in the result, and 'world' will be the first.
+
+Other examples are shown below.
+
+``` sql
+SELECT arraySort((x, y) -> y, [0, 1, 2], ['c', 'b', 'a']) as res;
+```
+``` sql
+┌─res─────┐
+│ [2,1,0] │
+└─────────┘
+```
+
+``` sql
+SELECT arraySort((x, y) -> -y, [0, 1, 2], [1, 2, 3]) as res;
+```
+``` sql
+┌─res─────┐
+│ [2,1,0] │
+└─────────┘
+```
+
+!!! note
+    To improve sorting efficiency, the [Schwartzian transform](https://en.wikipedia.org/wiki/Schwartzian_transform) is used.
+
+## arrayReverseSort([func,] arr, ...) {#array_functions-reverse-sort}
+
+Sorts the elements of the `arr` array in descending order. If the `func` function is specified, `arr` is sorted according to the result of the `func` function applied to the elements of the array, and then the sorted array is reversed. If `func` accepts multiple arguments, the `arrayReverseSort` function is passed several arrays that the arguments of `func` will correspond to. Detailed examples are shown at the end of `arrayReverseSort` description.
+
+Example of integer values sorting:
+
+``` sql
+SELECT arrayReverseSort([1, 3, 3, 0]);
+```
+```
+┌─arrayReverseSort([1, 3, 3, 0])─┐
+│ [3,3,1,0]                      │
+└────────────────────────────────┘
+```
+
+Example of string values sorting:
+
+``` sql
+SELECT arrayReverseSort(['hello', 'world', '!']);
+```
+```
+┌─arrayReverseSort(['hello', 'world', '!'])─┐
+│ ['world','hello','!']                     │
+└───────────────────────────────────────────┘
+```
+
+Consider the following sorting order for the `NULL`, `NaN` and `Inf` values:
+ 
+``` sql
+SELECT arrayReverseSort([1, nan, 2, NULL, 3, nan, -4, NULL, inf, -inf]) as res;
+```
+``` sql
+┌─res───────────────────────────────────┐
+│ [inf,3,2,1,-4,-inf,nan,nan,NULL,NULL] │
+└───────────────────────────────────────┘
+```
+
+- `Inf` values are first in the array.
+- `NULL` values are last in the array.
+- `NaN` values are right before `NULL`.
+- `-Inf` values are right before `NaN`.
+
+Note that the `arrayReverseSort` is a [higher-order function](higher_order_functions.md). You can pass a lambda function to it as the first argument. Example is shown below.
+
+``` sql
+SELECT arrayReverseSort((x) -> -x, [1, 2, 3]) as res;
+```
+```
+┌─res─────┐
+│ [1,2,3] │
+└─────────┘
+```
+
+The array is sorted in the following way:
+
+1. At first, the source array ([1, 2, 3]) is sorted according to the result of the lambda function applied to the elements of the array. The result is an array [3, 2, 1].
+2. Array that is obtained on the previous step, is reversed. So, the final result is [1, 2, 3].
+  
+The lambda function can accept multiple arguments. In this case, you need to pass the `arrayReverseSort` function several arrays of identical length that the arguments of lambda function will correspond to. The resulting array will consist of elements from the first input array; elements from the next input array(s) specify the sorting keys. For example:
+
+``` sql
+SELECT arrayReverseSort((x, y) -> y, ['hello', 'world'], [2, 1]) as res;
+```
+``` sql
+┌─res───────────────┐
+│ ['hello','world'] │
+└───────────────────┘
+```
+
+In this example, the array is sorted in the following way:
+
+1. At first, the source array (['hello', 'world']) is sorted according to the result of the lambda function applied to the elements of the arrays. The elements that are passed in the second array ([2, 1]), define the sorting keys for corresponding elements from the source array. The result is an array ['world', 'hello'].
+2. Array that was sorted on the previous step, is reversed. So, the final result is ['hello', 'world'].
+                      
+Other examples are shown below. 
+
+``` sql
+SELECT arrayReverseSort((x, y) -> y, [4, 3, 5], ['a', 'b', 'c']) AS res;
+```
+``` sql
+┌─res─────┐
+│ [5,3,4] │
+└─────────┘
+```
+``` sql
+SELECT arrayReverseSort((x, y) -> -y, [4, 3, 5], [1, 2, 3]) AS res;
+```
+``` sql
+┌─res─────┐
+│ [4,3,5] │
+└─────────┘
+```
+
 ## arrayUniq(arr, ...)
 
 If one argument is passed, it counts the number of different elements in the array.
@@ -466,8 +652,68 @@ If multiple arguments are passed, it counts the number of different tuples of el
 
 If you want to get a list of unique items in an array, you can use arrayReduce('groupUniqArray', arr).
 
-## arrayJoin(arr)
+## arrayJoin(arr) {#array_functions-join}
 
 A special function. See the section ["ArrayJoin function"](array_join.md#functions_arrayjoin).
+
+## arrayDifference(arr)
+
+Takes an array, returns an array with the difference between all pairs of neighboring elements. For example:
+
+```sql
+SELECT arrayDifference([1, 2, 3, 4])
+```
+
+```
+┌─arrayDifference([1, 2, 3, 4])─┐
+│ [0,1,1,1]                     │
+└───────────────────────────────┘
+```
+
+## arrayDistinct(arr)
+
+Takes an array, returns an array containing the different elements in all the arrays. For example:
+
+```sql
+SELECT arrayDistinct([1, 2, 2, 3, 1])
+```
+
+```
+┌─arrayDistinct([1, 2, 2, 3, 1])─┐
+│ [1,2,3]                        │
+└────────────────────────────────┘
+```
+
+## arrayEnumerateDense(arr)
+
+Returns an array of the same size as the source array, indicating where each element first appears in the source array. For example: arrayEnumerateDense([10,20,10,30]) = [1,2,1,3].
+
+## arrayIntersect(arr)
+
+Takes an array, returns the intersection of all array elements. For example:
+
+```sql
+SELECT
+    arrayIntersect([1, 2], [1, 3], [2, 3]) AS no_intersect,
+    arrayIntersect([1, 2], [1, 3], [1, 4]) AS intersect
+```
+
+```
+┌─no_intersect─┬─intersect─┐
+│ []           │ [1]       │
+└──────────────┴───────────┘
+```
+
+## arrayReduce(agg_func, arr1, ...)
+
+Applies an aggregate function to array and returns its result.If aggregate function has multiple arguments, then this function can be applied to multiple arrays of the same size.
+
+arrayReduce('agg_func', arr1, ...) - apply the aggregate function `agg_func` to arrays `arr1...`. If multiple arrays passed, then elements on corresponding positions are passed as multiple arguments to the aggregate function. For example: SELECT arrayReduce('max', [1,2,3]) = 3
+
+## arrayReverse(arr)
+
+Returns an array of the same size as the source array, containing the result of inverting all elements of the source array.
+
+
 
 [Original article](https://clickhouse.yandex/docs/en/query_language/functions/array_functions/) <!--hide-->

@@ -7,7 +7,7 @@ SELECT [DISTINCT] expr_list
     [FROM [db.]table | (subquery) | table_function] [FINAL]
     [SAMPLE sample_coeff]
     [ARRAY JOIN ...]
-    [GLOBAL] ANY|ALL INNER|LEFT JOIN (subquery)|table USING columns_list
+    [GLOBAL] [ANY|ALL] [INNER|LEFT|RIGHT|FULL|CROSS] [OUTER] JOIN (subquery)|table USING columns_list
     [PREWHERE expr]
     [WHERE expr]
     [GROUP BY expr_list] [WITH TOTALS]
@@ -17,7 +17,7 @@ SELECT [DISTINCT] expr_list
     [UNION ALL ...]
     [INTO OUTFILE filename]
     [FORMAT format]
-    [LIMIT n BY columns]
+    [LIMIT [offset_value, ]n BY columns]
 ```
 
 All the clauses are optional, except for the required list of expressions immediately after SELECT.
@@ -44,16 +44,41 @@ If a query does not list any columns (for example, SELECT count() FROM t), some 
 
 The FINAL modifier can be used only for a SELECT from a CollapsingMergeTree table. When you specify FINAL, data is selected fully "collapsed". Keep in mind that using FINAL leads to a selection that includes columns related to the primary key, in addition to the columns specified in the SELECT. Additionally, the query will be executed in a single stream, and data will be merged during query execution. This means that when using FINAL, the query is processed more slowly. In most cases, you should avoid using FINAL. For more information, see the section "CollapsingMergeTree engine".
 
-### SAMPLE Clause
+### SAMPLE Clause {#select-sample-clause}
 
-The SAMPLE clause allows for approximated query processing. Approximated query processing is only supported by MergeTree\* type tables, and only if the sampling expression was specified during table creation (see the section "MergeTree engine").
+The `SAMPLE` clause allows for approximated query processing.
 
-`SAMPLE` has the `format SAMPLE k`, where `k` is a decimal number from 0 to 1, or `SAMPLE n`, where 'n' is a sufficiently large integer.
+When data sampling is enabled, the query is not performed on all the data, but only on a certain fraction of data (sample). For example, if you need to calculate statistics for all the visits, it is enough to execute the query on the 1/10 fraction of all the visits and then multiply the result by 10.
 
-In the first case, the query will be executed on 'k' percent of data. For example, `SAMPLE 0.1` runs the query on 10% of data.
-In the second case, the query will be executed on a sample of no more than 'n' rows. For example, `SAMPLE 10000000` runs the query on a maximum of 10,000,000 rows.
+Approximated query processing can be useful in the following cases:
 
-Example:
+- When you have strict timing requirements (like <100ms) but you can't justify the cost of additional hardware resources to meet them.
+- When your raw data is not accurate, so approximation doesn't noticeably degrade the quality.
+- Business requirements target approximate results (for cost-effectiveness, or in order to market exact results to premium users).
+
+!!! note
+    You can only use sampling with the tables in the [MergeTree](../operations/table_engines/mergetree.md) family, and only if the sampling expression was specified during table creation (see [MergeTree engine](../operations/table_engines/mergetree.md#table_engine-mergetree-creating-a-table)).
+
+The features of data sampling are listed below:
+
+- Data sampling is a deterministic mechanism. The result of the same `SELECT .. SAMPLE` query is always the same.
+- Sampling works consistently for different tables. For tables with a single sampling key, a sample with the same coefficient always selects the same subset of possible data. For example, a sample of user IDs takes rows with the same subset of all the possible user IDs from different tables. This means that you can use the sample in subqueries in the [IN](#select-in-operators) clause. Also, you can join samples using the [JOIN](#select-join) clause.
+- Sampling allows reading less data from a disk. Note that you must specify the sampling key correctly. For more information, see [Creating a MergeTree Table](../operations/table_engines/mergetree.md#table_engine-mergetree-creating-a-table).
+
+For the `SAMPLE` clause the following syntax is supported:
+
+| SAMPLE&#160;Clause&#160;Syntax | Description |
+| ---------------- | --------- |
+| `SAMPLE k` | Here `k` is the number from 0 to 1.</br>The query is executed on `k` fraction of data. For example, `SAMPLE 0.1` runs the query on 10% of data. [Read more](#select-sample-k)|
+| `SAMPLE n` | Here `n` is a sufficiently large integer.</br>The query is executed on a sample of at least `n` rows (but not significantly more than this). For example, `SAMPLE 10000000` runs the query on a minimum of 10,000,000 rows. [Read more](#select-sample-n) |
+| `SAMPLE k OFFSET m` | Here `k` and `m` are the numbers from 0 to 1.</br>The query is executed on a sample of `k` fraction of the data. The data used for the sample is offset by `m` fraction. [Read more](#select-sample-offset) |
+
+
+#### SAMPLE k {#select-sample-k}
+
+Here `k` is the number from 0 to 1 (both fractional and decimal notations are supported). For example, `SAMPLE 1/2` or `SAMPLE 0.5`.
+
+In a `SAMPLE k` clause, the sample is taken from the `k` fraction of data. The example is shown below:
 
 ``` sql
 SELECT
@@ -63,69 +88,121 @@ FROM hits_distributed
 SAMPLE 0.1
 WHERE
     CounterID = 34
-    AND toDate(EventDate) >= toDate('2013-01-29')
-    AND toDate(EventDate) <= toDate('2013-02-04')
-    AND NOT DontCountHits
-    AND NOT Refresh
-    AND Title != ''
 GROUP BY Title
 ORDER BY PageViews DESC LIMIT 1000
 ```
 
-In this example, the query is executed on a sample from 0.1 (10%) of data. Values of aggregate functions are not corrected automatically, so to get an approximate result, the value 'count()' is manually multiplied by 10.
+In this example, the query is executed on a sample from 0.1 (10%) of data. Values of aggregate functions are not corrected automatically, so to get an approximate result, the value `count()` is manually multiplied by 10.
 
-When using something like `SAMPLE 10000000`, there isn't any information about which relative percent of data was processed or what the aggregate functions should be multiplied by, so this method of writing is not always appropriate to the situation.
+#### SAMPLE n {#select-sample-n}
 
-A sample with a relative coefficient is "consistent": if we look at all possible data that could be in the table, a sample (when using a single sampling expression specified during table creation) with the same coefficient always selects the same subset of possible data. In other words, a sample from different tables on different servers at different times is made the same way.
+Here `n` is a sufficiently large integer. For example, `SAMPLE 10000000`.
 
-For example, a sample of user IDs takes rows with the same subset of all the possible user IDs from different tables. This allows using the sample in subqueries in the IN clause, as well as for manually correlating results of different queries with samples.
+In this case, the query is executed on a sample of at least `n` rows (but not significantly more than this). For example, `SAMPLE 10000000` runs the query on a minimum of 10,000,000 rows.
 
-### ARRAY JOIN Clause
+Since the minimum unit for data reading is one granule (its size is set by the `index_granularity` setting), it makes sense to set a sample that is much larger than the size of the granule.
 
-Allows executing JOIN with an array or nested data structure. The intent is similar to the 'arrayJoin' function, but its functionality is broader.
+When using the `SAMPLE n` clause, you don't know which relative percent of data was processed. So you don't know the coefficient the aggregate functions should be multiplied by. Use the `_sample_factor` virtual column to get the approximate result.
 
-`ARRAY JOIN` is essentially `INNER JOIN` with an array. Example:
+The `_sample_factor` column contains relative coefficients that are calculated dynamically. This column is created automatically when you [create](../operations/table_engines/mergetree.md#table_engine-mergetree-creating-a-table) a table with the specified sampling key. The usage examples of the `_sample_factor` column are shown below.
 
+Let's consider the table `visits`, which contains the statistics about site visits. The first example shows how to calculate the number of page views:
+
+``` sql
+SELECT sum(PageViews * _sample_factor)
+FROM visits
+SAMPLE 10000000
+```   
+
+The next example shows how to calculate the total number of visits:
+
+``` sql
+SELECT sum(_sample_factor)
+FROM visits
+SAMPLE 10000000
+```  
+
+The example below shows how to calculate the average session duration. Note that you don't need to use the relative coefficient to calculate the average values.
+
+``` sql
+SELECT avg(Duration)
+FROM visits
+SAMPLE 10000000
+```  
+
+#### SAMPLE k OFFSET m {#select-sample-offset}
+
+Here `k` and `m` are numbers from 0 to 1. Examples are shown below.
+
+**Example 1**
+
+``` sql
+SAMPLE 1/10
 ```
-:) CREATE TABLE arrays_test (s String, arr Array(UInt8)) ENGINE = Memory
 
+In this example, the sample is 1/10th of all data:
+
+`[++------------------]`
+
+**Example 2**
+
+``` sql
+SAMPLE 1/10 OFFSET 1/2
+```
+
+Here, a sample of 10% is taken from the second half of the data.
+
+`[----------++--------]`
+
+### ARRAY JOIN Clause {#select-array-join-clause}
+
+Allows executing `JOIN` with an array or nested data structure. The intent is similar to the [arrayJoin](functions/array_join.md#functions_arrayjoin) function, but its functionality is broader.
+
+``` sql
+SELECT <expr_list>
+FROM <left_subquery>
+[LEFT] ARRAY JOIN <array>
+[WHERE|PREWHERE <expr>]
+...
+```
+
+You can specify only a single `ARRAY JOIN` clause in a query.
+
+The query execution order is optimized when running `ARRAY JOIN`. Although `ARRAY JOIN` must always be specified before the `WHERE/PREWHERE` clause, it can be performed either before `WHERE/PREWHERE` (if the result is needed in this clause), or after completing it (to reduce the volume of calculations). The processing order is controlled by the query optimizer.
+
+Supported types of `ARRAY JOIN` are listed below:
+
+- `ARRAY JOIN` - In this case, empty arrays are not included in the result of `JOIN`.
+- `LEFT ARRAY JOIN` - The result of `JOIN` contains rows with empty arrays. The value for an empty array is set to the default value for the array element type (usually 0, empty string or NULL).
+
+The examples below demonstrate the usage of the `ARRAY JOIN` and `LEFT ARRAY JOIN` clauses. Let's create a table with an [Array](../data_types/array.md) type column and insert values into it:
+
+``` sql
 CREATE TABLE arrays_test
 (
     s String,
     arr Array(UInt8)
-) ENGINE = Memory
+) ENGINE = Memory;
 
-Ok.
+INSERT INTO arrays_test
+VALUES ('Hello', [1,2]), ('World', [3,4,5]), ('Goodbye', []);
+```
+```
+┌─s───────────┬─arr─────┐
+│ Hello       │ [1,2]   │
+│ World       │ [3,4,5] │
+│ Goodbye     │ []      │
+└─────────────┴─────────┘
+```
 
-0 rows in set. Elapsed: 0.001 sec.
+The example below uses the `ARRAY JOIN` clause:
 
-:) INSERT INTO arrays_test VALUES ('Hello', [1,2]), ('World', [3,4,5]), ('Goodbye', [])
-
-INSERT INTO arrays_test VALUES
-
-Ok.
-
-3 rows in set. Elapsed: 0.001 sec.
-
-:) SELECT * FROM arrays_test
-
-SELECT *
-FROM arrays_test
-
-┌─s───────┬─arr─────┐
-│ Hello   │ [1,2]   │
-│ World   │ [3,4,5] │
-│ Goodbye │ []      │
-└─────────┴─────────┘
-
-3 rows in set. Elapsed: 0.001 sec.
-
-:) SELECT s, arr FROM arrays_test ARRAY JOIN arr
-
+``` sql
 SELECT s, arr
 FROM arrays_test
-ARRAY JOIN arr
-
+ARRAY JOIN arr;
+```
+```
 ┌─s─────┬─arr─┐
 │ Hello │   1 │
 │ Hello │   2 │
@@ -133,19 +210,37 @@ ARRAY JOIN arr
 │ World │   4 │
 │ World │   5 │
 └───────┴─────┘
-
-5 rows in set. Elapsed: 0.001 sec.
 ```
 
-An alias can be specified for an array in the ARRAY JOIN clause. In this case, an array item can be accessed by this alias, but the array itself by the original name. Example:
+The next example uses the `LEFT ARRAY JOIN` clause:
 
+``` sql
+SELECT s, arr
+FROM arrays_test
+LEFT ARRAY JOIN arr;
 ```
-:) SELECT s, arr, a FROM arrays_test ARRAY JOIN arr AS a
+```
+┌─s───────────┬─arr─┐
+│ Hello       │   1 │
+│ Hello       │   2 │
+│ World       │   3 │
+│ World       │   4 │
+│ World       │   5 │
+│ Goodbye     │   0 │
+└─────────────┴─────┘
+```
 
+#### Using Aliases
+
+An alias can be specified for an array in the `ARRAY JOIN` clause. In this case, an array item can be accessed by this alias, but the array itself is accessed by the original name. Example:
+
+``` sql
 SELECT s, arr, a
 FROM arrays_test
-ARRAY JOIN arr AS a
+ARRAY JOIN arr AS a;
+```
 
+```
 ┌─s─────┬─arr─────┬─a─┐
 │ Hello │ [1,2]   │ 1 │
 │ Hello │ [1,2]   │ 2 │
@@ -153,19 +248,39 @@ ARRAY JOIN arr AS a
 │ World │ [3,4,5] │ 4 │
 │ World │ [3,4,5] │ 5 │
 └───────┴─────────┴───┘
-
-5 rows in set. Elapsed: 0.001 sec.
 ```
 
-Multiple arrays of the same size can be comma-separated in the ARRAY JOIN clause. In this case, JOIN is performed with them simultaneously (the direct sum, not the direct product). Example:
+Using aliases, you can perform `ARRAY JOIN` with an external array. For example:
+
+``` sql
+SELECT s, arr_external
+FROM arrays_test
+ARRAY JOIN [1, 2, 3] AS arr_external;
+```
 
 ```
-:) SELECT s, arr, a, num, mapped FROM arrays_test ARRAY JOIN arr AS a, arrayEnumerate(arr) AS num, arrayMap(x -> x + 1, arr) AS mapped
+┌─s───────────┬─arr_external─┐
+│ Hello       │            1 │
+│ Hello       │            2 │
+│ Hello       │            3 │
+│ World       │            1 │
+│ World       │            2 │
+│ World       │            3 │
+│ Goodbye     │            1 │
+│ Goodbye     │            2 │
+│ Goodbye     │            3 │
+└─────────────┴──────────────┘
+```
 
+Multiple arrays can be comma-separated in the `ARRAY JOIN` clause. In this case, `JOIN` is performed with them simultaneously (the direct sum, not the cartesian product). Note that all the arrays must have the same size. Example:
+
+``` sql
 SELECT s, arr, a, num, mapped
 FROM arrays_test
-ARRAY JOIN arr AS a, arrayEnumerate(arr) AS num, arrayMap(lambda(tuple(x), plus(x, 1)), arr) AS mapped
+ARRAY JOIN arr AS a, arrayEnumerate(arr) AS num, arrayMap(x -> x + 1, arr) AS mapped;
+```
 
+```
 ┌─s─────┬─arr─────┬─a─┬─num─┬─mapped─┐
 │ Hello │ [1,2]   │ 1 │   1 │      2 │
 │ Hello │ [1,2]   │ 2 │   2 │      3 │
@@ -173,15 +288,17 @@ ARRAY JOIN arr AS a, arrayEnumerate(arr) AS num, arrayMap(lambda(tuple(x), plus(
 │ World │ [3,4,5] │ 4 │   2 │      5 │
 │ World │ [3,4,5] │ 5 │   3 │      6 │
 └───────┴─────────┴───┴─────┴────────┘
+```
 
-5 rows in set. Elapsed: 0.002 sec.
+The example below uses the [arrayEnumerate](functions/array_functions.md#array_functions-arrayenumerate) function:
 
-:) SELECT s, arr, a, num, arrayEnumerate(arr) FROM arrays_test ARRAY JOIN arr AS a, arrayEnumerate(arr) AS num
-
+``` sql
 SELECT s, arr, a, num, arrayEnumerate(arr)
 FROM arrays_test
-ARRAY JOIN arr AS a, arrayEnumerate(arr) AS num
+ARRAY JOIN arr AS a, arrayEnumerate(arr) AS num;
+```
 
+```
 ┌─s─────┬─arr─────┬─a─┬─num─┬─arrayEnumerate(arr)─┐
 │ Hello │ [1,2]   │ 1 │   1 │ [1,2]               │
 │ Hello │ [1,2]   │ 2 │   2 │ [1,2]               │
@@ -189,54 +306,40 @@ ARRAY JOIN arr AS a, arrayEnumerate(arr) AS num
 │ World │ [3,4,5] │ 4 │   2 │ [1,2,3]             │
 │ World │ [3,4,5] │ 5 │   3 │ [1,2,3]             │
 └───────┴─────────┴───┴─────┴─────────────────────┘
-
-5 rows in set. Elapsed: 0.002 sec.
 ```
 
-ARRAY JOIN also works with nested data structures. Example:
+#### ARRAY JOIN With Nested Data Structure
 
-```
-:) CREATE TABLE nested_test (s String, nest Nested(x UInt8, y UInt32)) ENGINE = Memory
+`ARRAY `JOIN`` also works with [nested data structures](../data_types/nested_data_structures/nested.md). Example:
 
+``` sql
 CREATE TABLE nested_test
 (
     s String,
     nest Nested(
     x UInt8,
     y UInt32)
-) ENGINE = Memory
+) ENGINE = Memory;
 
-Ok.
+INSERT INTO nested_test
+VALUES ('Hello', [1,2], [10,20]), ('World', [3,4,5], [30,40,50]), ('Goodbye', [], []);
+```
 
-0 rows in set. Elapsed: 0.006 sec.
-
-:) INSERT INTO nested_test VALUES ('Hello', [1,2], [10,20]), ('World', [3,4,5], [30,40,50]), ('Goodbye', [], [])
-
-INSERT INTO nested_test VALUES
-
-Ok.
-
-3 rows in set. Elapsed: 0.001 sec.
-
-:) SELECT * FROM nested_test
-
-SELECT *
-FROM nested_test
-
+```
 ┌─s───────┬─nest.x──┬─nest.y─────┐
 │ Hello   │ [1,2]   │ [10,20]    │
 │ World   │ [3,4,5] │ [30,40,50] │
 │ Goodbye │ []      │ []         │
 └─────────┴─────────┴────────────┘
+```
 
-3 rows in set. Elapsed: 0.001 sec.
-
-:) SELECT s, nest.x, nest.y FROM nested_test ARRAY JOIN nest
-
+``` sql
 SELECT s, `nest.x`, `nest.y`
 FROM nested_test
-ARRAY JOIN nest
+ARRAY JOIN nest;
+```
 
+```
 ┌─s─────┬─nest.x─┬─nest.y─┐
 │ Hello │      1 │     10 │
 │ Hello │      2 │     20 │
@@ -244,19 +347,17 @@ ARRAY JOIN nest
 │ World │      4 │     40 │
 │ World │      5 │     50 │
 └───────┴────────┴────────┘
-
-5 rows in set. Elapsed: 0.001 sec.
 ```
 
-When specifying names of nested data structures in ARRAY JOIN, the meaning is the same as ARRAY JOIN with all the array elements that it consists of. Example:
+When specifying names of nested data structures in `ARRAY JOIN`, the meaning is the same as `ARRAY JOIN` with all the array elements that it consists of. Examples are listed below:
 
-```
-:) SELECT s, nest.x, nest.y FROM nested_test ARRAY JOIN nest.x, nest.y
-
+``` sql
 SELECT s, `nest.x`, `nest.y`
 FROM nested_test
-ARRAY JOIN `nest.x`, `nest.y`
+ARRAY JOIN `nest.x`, `nest.y`;
+```
 
+```
 ┌─s─────┬─nest.x─┬─nest.y─┐
 │ Hello │      1 │     10 │
 │ Hello │      2 │     20 │
@@ -264,19 +365,17 @@ ARRAY JOIN `nest.x`, `nest.y`
 │ World │      4 │     40 │
 │ World │      5 │     50 │
 └───────┴────────┴────────┘
-
-5 rows in set. Elapsed: 0.001 sec.
 ```
 
 This variation also makes sense:
 
-```
-:) SELECT s, nest.x, nest.y FROM nested_test ARRAY JOIN nest.x
-
+``` sql
 SELECT s, `nest.x`, `nest.y`
 FROM nested_test
-ARRAY JOIN `nest.x`
+ARRAY JOIN `nest.x`;
+```
 
+```
 ┌─s─────┬─nest.x─┬─nest.y─────┐
 │ Hello │      1 │ [10,20]    │
 │ Hello │      2 │ [10,20]    │
@@ -284,19 +383,17 @@ ARRAY JOIN `nest.x`
 │ World │      4 │ [30,40,50] │
 │ World │      5 │ [30,40,50] │
 └───────┴────────┴────────────┘
-
-5 rows in set. Elapsed: 0.001 sec.
 ```
 
-An alias may be used for a nested data structure, in order to select either the JOIN result or the source array. Example:
+An alias may be used for a nested data structure, in order to select either the `JOIN` result or the source array. Example:
 
-```
-:) SELECT s, n.x, n.y, nest.x, nest.y FROM nested_test ARRAY JOIN nest AS n
-
+``` sql
 SELECT s, `n.x`, `n.y`, `nest.x`, `nest.y`
 FROM nested_test
-ARRAY JOIN nest AS n
+ARRAY JOIN nest AS n;
+```
 
+```
 ┌─s─────┬─n.x─┬─n.y─┬─nest.x──┬─nest.y─────┐
 │ Hello │   1 │  10 │ [1,2]   │ [10,20]    │
 │ Hello │   2 │  20 │ [1,2]   │ [10,20]    │
@@ -304,19 +401,17 @@ ARRAY JOIN nest AS n
 │ World │   4 │  40 │ [3,4,5] │ [30,40,50] │
 │ World │   5 │  50 │ [3,4,5] │ [30,40,50] │
 └───────┴─────┴─────┴─────────┴────────────┘
-
-5 rows in set. Elapsed: 0.001 sec.
 ```
 
-Example of using the arrayEnumerate function:
+Example of using the [arrayEnumerate](functions/array_functions.md#array_functions-arrayenumerate) function:
 
-```
-:) SELECT s, n.x, n.y, nest.x, nest.y, num FROM nested_test ARRAY JOIN nest AS n, arrayEnumerate(nest.x) AS num
-
+``` sql
 SELECT s, `n.x`, `n.y`, `nest.x`, `nest.y`, num
 FROM nested_test
-ARRAY JOIN nest AS n, arrayEnumerate(`nest.x`) AS num
+ARRAY JOIN nest AS n, arrayEnumerate(`nest.x`) AS num;
+```
 
+```
 ┌─s─────┬─n.x─┬─n.y─┬─nest.x──┬─nest.y─────┬─num─┐
 │ Hello │   1 │  10 │ [1,2]   │ [10,20]    │   1 │
 │ Hello │   2 │  20 │ [1,2]   │ [10,20]    │   2 │
@@ -324,50 +419,75 @@ ARRAY JOIN nest AS n, arrayEnumerate(`nest.x`) AS num
 │ World │   4 │  40 │ [3,4,5] │ [30,40,50] │   2 │
 │ World │   5 │  50 │ [3,4,5] │ [30,40,50] │   3 │
 └───────┴─────┴─────┴─────────┴────────────┴─────┘
-
-5 rows in set. Elapsed: 0.002 sec.
 ```
 
-The query can only specify a single ARRAY JOIN clause.
+### JOIN Clause {#select-join}
 
-The corresponding conversion can be performed before the WHERE/PREWHERE clause (if its result is needed in this clause), or after completing WHERE/PREWHERE (to reduce the volume of calculations).
+Joins the data in the normal [SQL JOIN](https://en.wikipedia.org/wiki/Join_(SQL)) sense.
 
-### JOIN Clause
+!!! info "Note"
+    Not related to [ARRAY JOIN](#select-array-join-clause).
 
-The normal JOIN, which is not related to ARRAY JOIN described above.
 
 ``` sql
-[GLOBAL] ANY|ALL INNER|LEFT [OUTER] JOIN (subquery)|table USING columns_list
+SELECT <expr_list>
+FROM <left_subquery>
+[GLOBAL] [ANY|ALL] [INNER|LEFT|RIGHT|FULL|CROSS] [OUTER] JOIN <right_subquery>
+(ON <expr_list>)|(USING <column_list>) ...
 ```
 
-Performs joins with data from the subquery. At the beginning of query processing, the subquery specified after JOIN is run, and its result is saved in memory. Then it is read from the "left" table specified in the FROM clause, and while it is being read, for each of the read rows from the "left" table, rows are selected from the subquery results table (the "right" table) that meet the condition for matching the values of the columns specified in USING.
+The table names can be specified instead of `<left_subquery>` and `<right_subquery>`. This is equivalent to the `SELECT * FROM table` subquery, except in a special case when the table has the [Join](../operations/table_engines/join.md) engine – an array prepared for joining.
 
-The table name can be specified instead of a subquery. This is equivalent to the `SELECT * FROM table` subquery, except in a special case when the table has the Join engine – an array prepared for joining.
+#### Supported Types of `JOIN`
 
-All columns that are not needed for the JOIN are deleted from the subquery.
+- `INNER JOIN` (or `JOIN`)
+- `LEFT JOIN` (or `LEFT OUTER JOIN`)
+- `RIGHT JOIN` (or `RIGHT OUTER JOIN`)
+- `FULL JOIN` (or `FULL OUTER JOIN`)
+- `CROSS JOIN` (or `,` )
 
-There are several types of JOINs:
+See the standard [SQL JOIN](https://en.wikipedia.org/wiki/Join_(SQL)) description.
 
-`INNER` or `LEFT` type:If INNER is specified, the result will contain only those rows that have a matching row in the right table.
-If LEFT is specified, any rows in the left table that don't have matching rows in the right table will be assigned the default value - zeros or empty rows. LEFT OUTER may be written instead of LEFT; the word OUTER does not affect anything.
+#### Multiple JOIN
 
-`ANY` or `ALL` stringency:If `ANY` is specified and the right table has several matching rows, only the first one found is joined.
-If `ALL` is specified and the right table has several matching rows, the data will be multiplied by the number of these rows.
+Performing queries, ClickHouse rewrites multiple joins into the combination of two-table joins and processes them sequentially. If there are four tables for join ClickHouse joins the first and the second, then joins the result with the third table, and at the last step, it joins the fourth one.
 
-Using ALL corresponds to the normal JOIN semantic from standard SQL.
-Using ANY is optimal. If the right table has only one matching row, the results of ANY and ALL are the same. You must specify either ANY or ALL (neither of them is selected by default).
+If a query contains `WHERE` clause, ClickHouse tries to push down filters from this clause into the intermediate join. If it cannot apply the filter to each intermediate join, ClickHouse applies the filters after all joins are completed.
 
-`GLOBAL` distribution:
+We recommend the `JOIN ON` or `JOIN USING` syntax for creating a query. For example:
 
-When using a normal JOIN, the query is sent to remote servers. Subqueries are run on each of them in order to make the right table, and the join is performed with this table. In other words, the right table is formed on each server separately.
+```
+SELECT * FROM t1 JOIN t2 ON t1.a = t2.a JOIN t3 ON t1.a = t3.a
+```
+
+Also, you can use comma separated list of tables for join. Works only with the [allow_experimental_cross_to_join_conversion = 1](../operations/settings/settings.md#settings-allow_experimental_cross_to_join_conversion) setting.
+
+    For example, `SELECT * FROM t1, t2, t3 WHERE t1.a = t2.a AND t1.a = t3.a`
+
+Don't mix these syntaxes.
+
+ClickHouse doesn't support the syntax with commas directly, so we don't recommend to use it. The algorithm tries to rewrite the query in terms of `CROSS` and `INNER` `JOIN` clauses and then proceeds the query processing. When rewriting the query, ClickHouse tries to optimize performance and memory consumption. By default, ClickHouse treats comma as an `INNER JOIN` clause and converts it to `CROSS JOIN` when the algorithm cannot guaranty that `INNER JOIN` returns required data.
+
+#### ANY or ALL Strictness
+
+If `ALL` is specified and the right table has several matching rows, the data will be multiplied by the number of these rows. This is the normal `JOIN` behavior for standard SQL.
+If `ANY` is specified and the right table has several matching rows, only the first one found is joined. If the right table has only one matching row, the results of `ANY` and `ALL` are the same.
+
+To set the default strictness value, use the session configuration parameter [join_default_strictness](../operations/settings/settings.md#settings-join_default_strictness).
+
+#### GLOBAL JOIN
+
+When using a normal `JOIN`, the query is sent to remote servers. Subqueries are run on each of them in order to make the right table, and the join is performed with this table. In other words, the right table is formed on each server separately.
 
 When using `GLOBAL ... JOIN`, first the requestor server runs a subquery to calculate the right table. This temporary table is passed to each remote server, and queries are run on them using the temporary data that was transmitted.
 
-Be careful when using GLOBAL JOINs. For more information, see the section "Distributed subqueries".
+Be careful when using `GLOBAL`. For more information, see the section [Distributed subqueries](#select-distributed-subqueries).
 
-Any combination of JOINs is possible. For example, `GLOBAL ANY LEFT OUTER JOIN`.
+#### Usage Recommendations
 
-When running a JOIN, there is no optimization of the order of execution in relation to other stages of the query. The join (a search in the right table) is run before filtering in WHERE and before aggregation. In order to explicitly set the processing order, we recommend running a JOIN subquery with a subquery.
+All columns that are not needed for the `JOIN` are deleted from the subquery.
+
+When running a `JOIN`, there is no optimization of the order of execution in relation to other stages of the query. The join (a search in the right table) is run before filtering in `WHERE` and before aggregation. In order to explicitly set the processing order, we recommend running a `JOIN` subquery with a subquery.
 
 Example:
 
@@ -411,42 +531,40 @@ LIMIT 10
 ```
 
 Subqueries don't allow you to set names or use them for referencing a column from a specific subquery.
-The columns specified in USING must have the same names in both subqueries, and the other columns must be named differently. You can use aliases to change the names of columns in subqueries (the example uses the aliases 'hits' and 'visits').
+The columns specified in `USING` must have the same names in both subqueries, and the other columns must be named differently. You can use aliases to change the names of columns in subqueries (the example uses the aliases 'hits' and 'visits').
 
-The USING clause specifies one or more columns to join, which establishes the equality of these columns. The list of columns is set without brackets. More complex join conditions are not supported.
+The `USING` clause specifies one or more columns to join, which establishes the equality of these columns. The list of columns is set without brackets. More complex join conditions are not supported.
 
-The right table (the subquery result) resides in RAM. If there isn't enough memory, you can't run a JOIN.
+The right table (the subquery result) resides in RAM. If there isn't enough memory, you can't run a `JOIN`.
 
-Only one JOIN can be specified in a query (on a single level). To run multiple JOINs, you can put them in subqueries.
+Each time a query is run with the same `JOIN`, the subquery is run again because the result is not cached. To avoid this, use the special [Join](../operations/table_engines/join.md) table engine, which is a prepared array for joining that is always in RAM.
 
-Each time a query is run with the same JOIN, the subquery is run again – the result is not cached. To avoid this, use the special 'Join' table engine, which is a prepared array for joining that is always in RAM. For more information, see the section "Table engines, Join".
+In some cases, it is more efficient to use `IN` instead of `JOIN`.
+Among the various types of `JOIN`, the most efficient is `ANY LEFT JOIN`, then `ANY INNER JOIN`. The least efficient are `ALL LEFT JOIN` and `ALL INNER JOIN`.
 
-In some cases, it is more efficient to use IN instead of JOIN.
-Among the various types of JOINs, the most efficient is ANY LEFT JOIN, then ANY INNER JOIN. The least efficient are ALL LEFT JOIN and ALL INNER JOIN.
+If you need a `JOIN` for joining with dimension tables (these are relatively small tables that contain dimension properties, such as names for advertising campaigns), a `JOIN` might not be very convenient due to the bulky syntax and the fact that the right table is re-accessed for every query. For such cases, there is an "external dictionaries" feature that you should use instead of `JOIN`. For more information, see the section [External dictionaries](dicts/external_dicts.md).
 
-If you need a JOIN for joining with dimension tables (these are relatively small tables that contain dimension properties, such as names for advertising campaigns), a JOIN might not be very convenient due to the bulky syntax and the fact that the right table is re-accessed for every query. For such cases, there is an "external dictionaries" feature that you should use instead of JOIN. For more information, see the section "External dictionaries".
+#### Processing of Empty or NULL Cells
 
-<a name="query_language-queries-where"></a>
+While joining tables, the empty cells may appear. The setting [join_use_nulls](../operations/settings/settings.md#settings-join_use_nulls) define how ClickHouse fills these cells.
+
+If the `JOIN` keys are [Nullable](../data_types/nullable.md) fields, the rows where at least one of the keys has the value [NULL](syntax.md#null-literal) are not joined.
+
 
 ### WHERE Clause
-
-The JOIN behavior is affected by the [join_use_nulls](../operations/settings/settings.md#settings-join_use_nulls) setting. With `join_use_nulls=1,`  `JOIN` works like in standard SQL.
-
-If the JOIN keys are [Nullable](../data_types/nullable.md#data_types-nullable) fields, the rows where at least one of the keys has the value [NULL](syntax.md#null-literal) are not joined.
 
 If there is a WHERE clause, it must contain an expression with the UInt8 type. This is usually an expression with comparison and logical operators.
 This expression will be used for filtering data before all other transformations.
 
 If indexes are supported by the database table engine, the expression is evaluated on the ability to use indexes.
 
-<a name="query_language-queries-prewhere"></a>
 
 ### PREWHERE Clause
 
 This clause has the same meaning as the WHERE clause. The difference is in which data is read from the table.
 When using PREWHERE, first only the columns necessary for executing PREWHERE are read. Then the other columns are read that are needed for running the query, but only those blocks where the PREWHERE expression is true.
 
-It makes sense to use PREWHERE if there are filtration conditions that are not suitable for indexes that are used by a minority of the columns in the query, but that provide strong data filtration. This reduces the volume of data to read.
+It makes sense to use PREWHERE if there are filtration conditions that are used by a minority of the columns in the query, but that provide strong data filtration. This reduces the volume of data to read.
 
 For example, it is useful to write PREWHERE for queries that extract a large number of columns, but that only have filtration for a few columns.
 
@@ -454,11 +572,9 @@ PREWHERE is only supported by tables from the `*MergeTree` family.
 
 A query may simultaneously specify PREWHERE and WHERE. In this case, PREWHERE precedes WHERE.
 
-Keep in mind that it does not make much sense for PREWHERE to only specify those columns that have an index, because when using an index, only the data blocks that match the index are read.
-
 If the 'optimize_move_to_prewhere' setting is set to 1 and PREWHERE is omitted, the system uses heuristics to automatically move parts of expressions from WHERE to PREWHERE.
 
-### GROUP BY Clause
+### GROUP BY Clause {#select-group-by-clause}
 
 This is one of the most important parts of a column-oriented DBMS.
 
@@ -500,35 +616,35 @@ A constant can't be specified as arguments for aggregate functions. Example: sum
 
 #### NULL processing
 
- For grouping, ClickHouse interprets [NULL](syntax.md#null-literal) as a value, and `NULL=NULL`.
+For grouping, ClickHouse interprets [NULL](syntax.md) as a value, and `NULL=NULL`.
 
- Here's an example to show what this means.
+Here's an example to show what this means.
 
- Assume you have this table:
+Assume you have this table:
 
- ```
- ┌─x─┬────y─┐
- │ 1 │    2 │
- │ 2 │ ᴺᵁᴸᴸ │
- │ 3 │    2 │
- │ 3 │    3 │
- │ 3 │ ᴺᵁᴸᴸ │
- └───┴──────┘
- ```
+```
+┌─x─┬────y─┐
+│ 1 │    2 │
+│ 2 │ ᴺᵁᴸᴸ │
+│ 3 │    2 │
+│ 3 │    3 │
+│ 3 │ ᴺᵁᴸᴸ │
+└───┴──────┘
+```
 
- The query `SELECT sum(x), y FROM t_null_big GROUP BY y` results in:
+The query `SELECT sum(x), y FROM t_null_big GROUP BY y` results in:
 
- ```
- ┌─sum(x)─┬────y─┐
- │      4 │    2 │
- │      3 │    3 │
- │      5 │ ᴺᵁᴸᴸ │
- └────────┴──────┘
- ```
+```
+┌─sum(x)─┬────y─┐
+│      4 │    2 │
+│      3 │    3 │
+│      5 │ ᴺᵁᴸᴸ │
+└────────┴──────┘
+```
 
- You can see that `GROUP BY` for `У = NULL` summed up `x`, as if `NULL` is this value.
+You can see that `GROUP BY` for `У = NULL` summed up `x`, as if `NULL` is this value.
 
- If you pass several keys to `GROUP BY`, the result will give you all the combinations of the selection, as if `NULL` were a specific value.
+If you pass several keys to `GROUP BY`, the result will give you all the combinations of the selection, as if `NULL` were a specific value.
 
 #### WITH TOTALS Modifier
 
@@ -555,7 +671,7 @@ If `max_rows_to_group_by` and `group_by_overflow_mode = 'any'` are not used, all
 
 You can use WITH TOTALS in subqueries, including subqueries in the JOIN clause (in this case, the respective total values are combined).
 
-#### GROUP BY in External Memory
+#### GROUP BY in External Memory {#select-group-by-in-external-memory}
 
 You can enable dumping temporary data to the disk to restrict memory usage during GROUP BY.
 The `max_bytes_before_external_group_by` setting determines the threshold RAM consumption for dumping GROUP BY temporary data to the file system. If set to 0 (the default), it is disabled.
@@ -564,20 +680,64 @@ When using `max_bytes_before_external_group_by`, we recommend that you set max_m
 
 For example, if `max_memory_usage` was set to 10000000000 and you want to use external aggregation, it makes sense to set `max_bytes_before_external_group_by` to 10000000000, and max_memory_usage to 20000000000. When external aggregation is triggered (if there was at least one dump of temporary data), maximum consumption of RAM is only slightly more than ` max_bytes_before_external_group_by`.
 
-With distributed query processing, external aggregation is performed on remote servers. In order for the requestor server to use only a small amount of RAM, set ` distributed_aggregation_memory_efficient`  to 1.
+With distributed query processing, external aggregation is performed on remote servers. In order for the requestor server to use only a small amount of RAM, set ` distributed_aggregation_memory_efficient` to 1.
 
 When merging data flushed to the disk, as well as when merging results from remote servers when the ` distributed_aggregation_memory_efficient` setting is enabled, consumes up to 1/256 \* the number of threads from the total amount of RAM.
 
-When external aggregation is enabled, if there was less than ` max_bytes_before_external_group_by`  of data (i.e. data was not flushed), the query runs just as fast as without external aggregation. If any temporary data was flushed, the run time will be several times longer (approximately three times).
+When external aggregation is enabled, if there was less than ` max_bytes_before_external_group_by` of data (i.e. data was not flushed), the query runs just as fast as without external aggregation. If any temporary data was flushed, the run time will be several times longer (approximately three times).
 
 If you have an ORDER BY with a small LIMIT after GROUP BY, then the ORDER BY CLAUSE will not use significant amounts of RAM.
 But if the ORDER BY doesn't have LIMIT, don't forget to enable external sorting (`max_bytes_before_external_sort`).
 
-### LIMIT N BY Clause
+### LIMIT BY Clause
 
-LIMIT N BY COLUMNS selects the top N rows for each group of COLUMNS. LIMIT N BY is not related to LIMIT; they can both be used in the same query. The key for LIMIT N BY can contain any number of columns or expressions.
+The query with the `LIMIT n BY expressions` clause selects the first `n` rows for each distinct value of `expressions`. The key for `LIMIT BY` can contain any number of [expressions](syntax.md#syntax-expressions).
 
-Example:
+ClickHouse supports the following syntax:
+
+- `LIMIT [offset_value, ]n BY expressions`
+- `LIMIT n OFFSET offset_value BY expressions`
+
+During the query processing, ClickHouse selects data ordered by sorting key. Sorting key is set explicitly by [ORDER BY](#select-order-by) clause or implicitly as a property of table engine. Then ClickHouse applies `LIMIT n BY expressions` and returns the first `n` rows for each distinct combination of `expressions`. If `OFFSET` is specified, then for each data block, belonging to a distinct combination of `expressions`, ClickHouse skips `offset_value` rows from the beginning of the block, and returns not more than `n` rows as a result. If `offset_value` is bigger than the number of rows in the data block, then ClickHouse returns no rows from the block.
+
+`LIMIT BY` is not related to `LIMIT`, they can both be used in the same query.
+
+**Examples**
+
+Sample table:
+
+```sql
+CREATE TABLE limit_by(id Int, val Int) ENGINE = Memory;
+INSERT INTO limit_by values(1, 10), (1, 11), (1, 12), (2, 20), (2, 21);
+```
+
+Queries:
+
+```sql
+SELECT * FROM limit_by ORDER BY id, val LIMIT 2 BY id
+```
+```text
+┌─id─┬─val─┐
+│  1 │  10 │
+│  1 │  11 │
+│  2 │  20 │
+│  2 │  21 │
+└────┴─────┘
+```
+```sql
+SELECT * FROM limit_by ORDER BY id, val LIMIT 1, 2 BY id
+```
+```text
+┌─id─┬─val─┐
+│  1 │  11 │
+│  1 │  12 │
+│  2 │  21 │
+└────┴─────┘
+```
+
+The `SELECT * FROM limit_by ORDER BY id, val LIMIT 2 OFFSET 1 BY id` query returns the same result.
+
+The following query returns the top 5 referrers for each `domain, device_type` pair, but not more than 100 rows (`LIMIT n BY + LIMIT`).
 
 ``` sql
 SELECT
@@ -592,17 +752,14 @@ LIMIT 5 BY domain, device_type
 LIMIT 100
 ```
 
-The query will select the top 5 referrers for each `domain, device_type` pair, but not more than 100 rows (`LIMIT n BY + LIMIT`).
-
 ### HAVING Clause
 
 Allows filtering the result received after GROUP BY, similar to the WHERE clause.
 WHERE and HAVING differ in that WHERE is performed before aggregation (GROUP BY), while HAVING is performed after it.
 If aggregation is not performed, HAVING can't be used.
 
-<a name="query_language-queries-order_by"></a>
 
-### ORDER BY Clause
+### ORDER BY Clause {#select-order-by}
 
 The ORDER BY clause contains a list of expressions, which can each be assigned DESC or ASC (the sorting direction). If the direction is not specified, ASC is assumed. ASC is sorted in ascending order, and DESC in descending order. The sorting direction applies to a single expression, not to the entire list. Example: `ORDER BY Visits DESC, SearchPhrase`
 
@@ -615,45 +772,45 @@ If the ORDER BY clause is omitted, the order of the rows is also undefined, and 
 
 `NaN` and `NULL` sorting order:
 
- - With the modifier `NULLS FIRST` — First `NULL`, then `NaN`, then other values.
- - With the modifier `NULLS LAST` — First the values, then `NaN`, then `NULL`.
- - Default — The same as with the `NULLS LAST` modifier.
+- With the modifier `NULLS FIRST` — First `NULL`, then `NaN`, then other values.
+- With the modifier `NULLS LAST` — First the values, then `NaN`, then `NULL`.
+- Default — The same as with the `NULLS LAST` modifier.
 
- Example:
+Example:
 
- For the table
+For the table
 
- ```
- ┌─x─┬────y─┐
- │ 1 │ ᴺᵁᴸᴸ │
- │ 2 │    2 │
- │ 1 │  nan │
- │ 2 │    2 │
- │ 3 │    4 │
- │ 5 │    6 │
- │ 6 │  nan │
- │ 7 │ ᴺᵁᴸᴸ │
- │ 6 │    7 │
- │ 8 │    9 │
- └───┴──────┘
- ```
+```
+┌─x─┬────y─┐
+│ 1 │ ᴺᵁᴸᴸ │
+│ 2 │    2 │
+│ 1 │  nan │
+│ 2 │    2 │
+│ 3 │    4 │
+│ 5 │    6 │
+│ 6 │  nan │
+│ 7 │ ᴺᵁᴸᴸ │
+│ 6 │    7 │
+│ 8 │    9 │
+└───┴──────┘
+```
 
- Run the query `SELECT * FROM t_null_nan ORDER BY y NULLS FIRST` to get:
+Run the query `SELECT * FROM t_null_nan ORDER BY y NULLS FIRST` to get:
 
- ```
- ┌─x─┬────y─┐
- │ 1 │ ᴺᵁᴸᴸ │
- │ 7 │ ᴺᵁᴸᴸ │
- │ 1 │  nan │
- │ 6 │  nan │
- │ 2 │    2 │
- │ 2 │    2 │
- │ 3 │    4 │
- │ 5 │    6 │
- │ 6 │    7 │
- │ 8 │    9 │
- └───┴──────┘
- ```
+```
+┌─x─┬────y─┐
+│ 1 │ ᴺᵁᴸᴸ │
+│ 7 │ ᴺᵁᴸᴸ │
+│ 1 │  nan │
+│ 6 │  nan │
+│ 2 │    2 │
+│ 2 │    2 │
+│ 3 │    4 │
+│ 5 │    6 │
+│ 6 │    7 │
+│ 8 │    9 │
+└───┴──────┘
+```
 
 When floating point numbers are sorted, NaNs are separate from the other values. Regardless of the sorting order, NaNs come at the end. In other words, for ascending sorting they are placed as if they are larger than all the other numbers, while for descending sorting they are placed as if they are smaller than the rest.
 
@@ -672,7 +829,7 @@ More specifically, expressions are analyzed that are above the aggregate functio
 The aggregate functions and everything below them are calculated during aggregation (GROUP BY).
 These expressions work as if they are applied to separate rows in the result.
 
-### DISTINCT Clause
+### DISTINCT Clause {#select-distinct}
 
 If DISTINCT is specified, only a single row will remain out of all the sets of fully matching rows in the result.
 The result will be the same as if GROUP BY were specified across all the fields specified in SELECT without aggregate functions. But there are several differences from GROUP BY:
@@ -683,16 +840,17 @@ The result will be the same as if GROUP BY were specified across all the fields 
 
 DISTINCT is not supported if SELECT has at least one array column.
 
+`DISTINCT` works with [NULL](syntax.md) as if `NULL` were a specific value, and `NULL=NULL`. In other words, in the `DISTINCT` results, different combinations with `NULL` only occur once.
+
 ### LIMIT Clause
 
-LIMIT m allows you to select the first 'm' rows from the result.
-LIMIT n, m allows you to select the first 'm' rows from the result after skipping the first 'n' rows.
+`LIMIT m` allows you to select the first `m` rows from the result.
 
-'n' and 'm' must be non-negative integers.
+`LIMIT n, m` allows you to select the first `m` rows from the result after skipping the first `n` rows. The `LIMIT m OFFSET n` syntax is also supported.
 
-If there isn't an ORDER BY clause that explicitly sorts results, the result may be arbitrary and nondeterministic.
+`n` and `m` must be non-negative integers.
 
-`DISTINCT` works with [NULL](syntax.md#null-literal) as if `NULL` were a specific value, and `NULL=NULL`. In other words, in the  `DISTINCT` results, different combinations with `NULL` only occur once.
+If there isn't an `ORDER BY` clause that explicitly sorts results, the result may be arbitrary and nondeterministic.
 
 ### UNION ALL Clause
 
@@ -736,9 +894,8 @@ If the FORMAT clause is omitted, the default format is used, which depends on bo
 
 When using the command-line client, data is passed to the client in an internal efficient format. The client independently interprets the FORMAT clause of the query and formats the data itself (thus relieving the network and the server from the load).
 
-<a name="query_language-in_operators"></a>
 
-### IN Operators
+### IN Operators {#select-in-operators}
 
 The `IN`, `NOT IN`, `GLOBAL IN`, and `GLOBAL NOT IN` operators are covered separately, since their functionality is quite rich.
 
@@ -804,53 +961,52 @@ A subquery in the IN clause is always run just one time on a single server. Ther
 
 #### NULL processing
 
- During request processing, the IN operator assumes that the result of an operation with [NULL](syntax.md#null-literal) is always equal to `0`, regardless of whether `NULL` is on the right or left side of the operator.  `NULL` values are not included in any dataset, do not correspond to each other and cannot be compared.
+During request processing, the IN operator assumes that the result of an operation with [NULL](syntax.md) is always equal to `0`, regardless of whether `NULL` is on the right or left side of the operator. `NULL` values are not included in any dataset, do not correspond to each other and cannot be compared.
 
- Here is an example with the `t_null` table:
+Here is an example with the `t_null` table:
 
- ```
- ┌─x─┬────y─┐
- │ 1 │ ᴺᵁᴸᴸ │
- │ 2 │    3 │
- └───┴──────┘
- ```
+```
+┌─x─┬────y─┐
+│ 1 │ ᴺᵁᴸᴸ │
+│ 2 │    3 │
+└───┴──────┘
+```
 
- Running the query `SELECT x FROM t_null WHERE y IN (NULL,3)` gives you the following result:
+Running the query `SELECT x FROM t_null WHERE y IN (NULL,3)` gives you the following result:
 
- ```
- ┌─x─┐
- │ 2 │
- └───┘
- ```
+```
+┌─x─┐
+│ 2 │
+└───┘
+```
 
- You can see that the row in which `y = NULL` is thrown out of the query results. This is because ClickHouse can't decide whether `NULL` is included in the `(NULL,3)` set, returns `0` as the result of the operation, and `SELECT` excludes this row from the final output.
+You can see that the row in which `y = NULL` is thrown out of the query results. This is because ClickHouse can't decide whether `NULL` is included in the `(NULL,3)` set, returns `0` as the result of the operation, and `SELECT` excludes this row from the final output.
 
- ```
- SELECT y IN (NULL, 3)
- FROM t_null
+```
+SELECT y IN (NULL, 3)
+FROM t_null
 
- ┌─in(y, tuple(NULL, 3))─┐
- │                     0 │
- │                     1 │
- └───────────────────────┘
- ```
+┌─in(y, tuple(NULL, 3))─┐
+│                     0 │
+│                     1 │
+└───────────────────────┘
+```
 
-<a name="queries-distributed-subrequests"></a>
 
-#### Distributed Subqueries
+#### Distributed Subqueries {#select-distributed-subqueries}
 
-There are two options for IN-s with subqueries (similar to JOINs): normal `IN`  / ` OIN`  and `IN GLOBAL`  / `GLOBAL JOIN`. They differ in how they are run for distributed query processing.
+There are two options for IN-s with subqueries (similar to JOINs): normal `IN` / `JOIN` and `GLOBAL IN` / `GLOBAL JOIN`. They differ in how they are run for distributed query processing.
 
 !!! attention
-    Remember that the algorithms described below may work differently depending on the [settings](../operations/settings/settings.md#settings-distributed_product_mode) `distributed_product_mode` setting.
+    Remember that the algorithms described below may work differently depending on the [settings](../operations/settings/settings.md) `distributed_product_mode` setting.
 
 When using the regular IN, the query is sent to remote servers, and each of them runs the subqueries in the `IN` or `JOIN` clause.
 
-When using `GLOBAL IN`  / `GLOBAL JOINs`, first all the subqueries are run for `GLOBAL IN`  / `GLOBAL JOINs`, and the results are collected in temporary tables. Then the temporary tables are sent to each remote server, where the queries are run using this temporary data.
+When using `GLOBAL IN` / `GLOBAL JOINs`, first all the subqueries are run for `GLOBAL IN` / `GLOBAL JOINs`, and the results are collected in temporary tables. Then the temporary tables are sent to each remote server, where the queries are run using this temporary data.
 
 For a non-distributed query, use the regular `IN` / `JOIN`.
 
-Be careful when using subqueries in the  `IN` / `JOIN` clauses for distributed query processing.
+Be careful when using subqueries in the `IN` / `JOIN` clauses for distributed query processing.
 
 Let's look at some examples. Assume that each server in the cluster has a normal **local_table**. Each server also has a **distributed_table** table with the **Distributed** type, which looks at all the servers in the cluster.
 

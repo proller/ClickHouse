@@ -1,23 +1,26 @@
 #pragma once
 
+#include <Core/Block.h>
+#include <Core/NamesAndTypes.h>
+#include <Core/Settings.h>
+#include <Core/Types.h>
+#include <DataStreams/IBlockStream_fwd.h>
+#include <Interpreters/ClientInfo.h>
+#include <Parsers/IAST_fwd.h>
+#include <Common/LRUCache.h>
+#include <Common/MultiVersion.h>
+#include <Common/ThreadPool.h>
+#include <Common/config.h>
+#include <Storages/IStorage_fwd.h>
+
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <functional>
 #include <memory>
 #include <mutex>
-#include <thread>
-#include <atomic>
 #include <optional>
-
-#include <Common/config.h>
-#include <common/MultiVersion.h>
-#include <Common/LRUCache.h>
-#include <Core/Types.h>
-#include <Core/NamesAndTypes.h>
-#include <Core/Block.h>
-#include <Interpreters/Settings.h>
-#include <Interpreters/ClientInfo.h>
-#include <IO/CompressionSettings.h>
+#include <thread>
 
 
 namespace Poco
@@ -64,21 +67,14 @@ struct MergeTreeSettings;
 class IDatabase;
 class DDLGuard;
 class DDLWorker;
-class IStorage;
 class ITableFunction;
-using StoragePtr = std::shared_ptr<IStorage>;
-using Tables = std::map<String, StoragePtr>;
-class IAST;
-using ASTPtr = std::shared_ptr<IAST>;
-class IBlockInputStream;
-class IBlockOutputStream;
-using BlockInputStreamPtr = std::shared_ptr<IBlockInputStream>;
-using BlockOutputStreamPtr = std::shared_ptr<IBlockOutputStream>;
 class Block;
-struct SystemLogs;
-using SystemLogsPtr = std::shared_ptr<SystemLogs>;
 class ActionLocksManager;
 using ActionLocksManagerPtr = std::shared_ptr<ActionLocksManager>;
+class ShellCommand;
+class ICompressionCodec;
+class SettingsConstraints;
+
 
 #if USE_EMBEDDED_COMPILER
 
@@ -99,6 +95,15 @@ using TableAndCreateASTs = std::map<String, TableAndCreateAST>;
 /// Callback for external tables initializer
 using ExternalTablesInitializer = std::function<void(Context &)>;
 
+/// An empty interface for an arbitrary object that may be attached by a shared pointer
+/// to query context, when using ClickHouse as a library.
+struct IHostContext
+{
+    virtual ~IHostContext() = default;
+};
+
+using IHostContextPtr = std::shared_ptr<IHostContext>;
+
 /** A set of known objects that can be used in the query.
   * Consists of a shared part (always common to all sessions and queries)
   *  and copied part (which can be its own for each session or query).
@@ -111,17 +116,17 @@ private:
     using Shared = std::shared_ptr<ContextShared>;
     Shared shared;
 
-    std::shared_ptr<IRuntimeComponentsFactory> runtime_components_factory;
-
     ClientInfo client_info;
     ExternalTablesInitializer external_tables_initializer_callback;
 
     std::shared_ptr<QuotaForIntervals> quota;           /// Current quota. By default - empty quota, that have no limits.
     String current_database;
     Settings settings;                                  /// Setting for query execution.
+    std::shared_ptr<const SettingsConstraints> settings_constraints;
     using ProgressCallback = std::function<void(const Progress & progress)>;
     ProgressCallback progress_callback;                 /// Callback for tracking progress of query execution.
     QueryStatus * process_list_elem = nullptr;   /// For tracking total resource usage for query.
+    std::pair<String, String> insertion_table;  /// Saved insertion table in query context
 
     String default_format;  /// Format, used when server formats data by itself and if query does not have FORMAT specification.
                             /// Thus, used in HTTP interface. If not specified - then some globally default format is used.
@@ -130,7 +135,6 @@ private:
     Context * query_context = nullptr;
     Context * session_context = nullptr;    /// Session context or nullptr. Could be equal to this.
     Context * global_context = nullptr;     /// Global context or nullptr. Could be equal to this.
-    SystemLogsPtr system_logs;              /// Used to log queries and operations on parts
 
     UInt64 session_close_cycle = 0;
     bool session_is_used = false;
@@ -141,15 +145,22 @@ private:
     using DatabasePtr = std::shared_ptr<IDatabase>;
     using Databases = std::map<String, std::shared_ptr<IDatabase>>;
 
+    IHostContextPtr host_context;  /// Arbitrary object that may used to attach some host specific information to query context,
+                                   /// when using ClickHouse as a library in some project. For example, it may contain host
+                                   /// logger, some query identification information, profiling guards, etc. This field is
+                                   /// to be customized in HTTP and TCP servers by overloading the customizeContext(DB::Context&)
+                                   /// methods.
+
     /// Use copy constructor or createGlobal() instead
     Context();
 
 public:
     /// Create initial Context with ContextShared and etc.
-    static Context createGlobal(std::shared_ptr<IRuntimeComponentsFactory> runtime_components_factory);
+    static Context createGlobal(std::unique_ptr<IRuntimeComponentsFactory> runtime_components_factory);
     static Context createGlobal();
 
-    Context(const Context &) = default;
+    Context(const Context &);
+    Context & operator=(const Context &);
     ~Context();
 
     String getPath() const;
@@ -166,7 +177,7 @@ public:
 
     /// Global application configuration settings.
     void setConfig(const ConfigurationPtr & config);
-    Poco::Util::AbstractConfiguration & getConfigRef() const;
+    const Poco::Util::AbstractConfiguration & getConfigRef() const;
 
     /** Take the list of users, quotas and configuration profiles from this config.
       * The list of users is completely replaced.
@@ -174,6 +185,10 @@ public:
       */
     void setUsersConfig(const ConfigurationPtr & config);
     ConfigurationPtr getUsersConfig();
+
+    // User property is a key-value pair from the configuration entry: users.<username>.databases.<db_name>.<table_name>.<key_name>
+    bool hasUserProperty(const String & database, const String & table, const String & name) const;
+    const String & getUserProperty(const String & database, const String & table, const String & name) const;
 
     /// Must be called before getClientInfo.
     void setUser(const String & name, const String & password, const Poco::Net::SocketAddress & address, const String & quota_key);
@@ -194,6 +209,10 @@ public:
     void addDependency(const DatabaseAndTableName & from, const DatabaseAndTableName & where);
     void removeDependency(const DatabaseAndTableName & from, const DatabaseAndTableName & where);
     Dependencies getDependencies(const String & database_name, const String & table_name) const;
+
+    /// Functions where we can lock the context manually
+    void addDependencyUnsafe(const DatabaseAndTableName & from, const DatabaseAndTableName & where);
+    void removeDependencyUnsafe(const DatabaseAndTableName & from, const DatabaseAndTableName & where);
 
     /// Checking the existence of the table/database. Database can be empty - in this case the current database is used.
     bool isTableExist(const String & database_name, const String & table_name) const;
@@ -232,6 +251,11 @@ public:
     void setCurrentDatabase(const String & name);
     void setCurrentQueryId(const String & query_id);
 
+    void killCurrentQuery();
+
+    void setInsertionTable(std::pair<String, String> && db_and_table) { insertion_table = db_and_table; }
+    const std::pair<String, String> & getInsertionTable() const { return insertion_table; }
+
     String getDefaultFormat() const;    /// If default_format is not specified, some global default format is returned.
     void setDefaultFormat(const String & name);
 
@@ -241,11 +265,15 @@ public:
     Settings getSettings() const;
     void setSettings(const Settings & settings_);
 
-    /// Set a setting by name.
+    /// Set settings by name.
+    void setSetting(const String & name, const String & value);
     void setSetting(const String & name, const Field & value);
+    void applySettingChange(const SettingChange & change);
+    void applySettingsChanges(const SettingsChanges & changes);
 
-    /// Set a setting by name. Read the value in text form from a string (for example, from a config, or from a URL parameter).
-    void setSetting(const String & name, const std::string & value);
+    /// Checks the constraints.
+    void checkSettingsConstraints(const SettingChange & change);
+    void checkSettingsConstraints(const SettingsChanges & changes);
 
     const EmbeddedDictionaries & getEmbeddedDictionaries() const;
     const ExternalDictionaries & getExternalDictionaries() const;
@@ -258,7 +286,7 @@ public:
     void tryCreateExternalModels() const;
 
     /// I/O formats.
-    BlockInputStreamPtr getInputFormat(const String & name, ReadBuffer & buf, const Block & sample, size_t max_block_size) const;
+    BlockInputStreamPtr getInputFormat(const String & name, ReadBuffer & buf, const Block & sample, UInt64 max_block_size) const;
     BlockOutputStreamPtr getOutputFormat(const String & name, WriteBuffer & buf, const Block & sample) const;
 
     InterserverIOHandler & getInterserverIOHandler();
@@ -323,10 +351,10 @@ public:
 
 
     void setProgressCallback(ProgressCallback callback);
-    /// Used in InterpreterSelectQuery to pass it to the IProfilingBlockInputStream.
+    /// Used in InterpreterSelectQuery to pass it to the IBlockInputStream.
     ProgressCallback getProgressCallback() const;
 
-    /** Set in executeQuery and InterpreterSelectQuery. Then it is used in IProfilingBlockInputStream,
+    /** Set in executeQuery and InterpreterSelectQuery. Then it is used in IBlockInputStream,
       *  to update and monitor information about the total number of resources spent for the query.
       */
     void setProcessListElement(QueryStatus * elem);
@@ -367,7 +395,7 @@ public:
     BackgroundProcessingPool & getBackgroundPool();
     BackgroundSchedulePool & getSchedulePool();
 
-    void setDDLWorker(std::shared_ptr<DDLWorker> ddl_worker);
+    void setDDLWorker(std::unique_ptr<DDLWorker> ddl_worker);
     DDLWorker & getDDLWorker() const;
 
     Clusters & getClusters() const;
@@ -384,25 +412,25 @@ public:
     void initializeSystemLogs();
 
     /// Nullptr if the query log is not ready for this moment.
-    QueryLog * getQueryLog(bool create_if_not_exists = true);
-    QueryThreadLog * getQueryThreadLog(bool create_if_not_exists = true);
+    std::shared_ptr<QueryLog> getQueryLog();
+    std::shared_ptr<QueryThreadLog> getQueryThreadLog();
 
     /// Returns an object used to log opertaions with parts if it possible.
     /// Provide table name to make required cheks.
-    PartLog * getPartLog(const String & part_database, bool create_if_not_exists = true);
+    std::shared_ptr<PartLog> getPartLog(const String & part_database);
 
     const MergeTreeSettings & getMergeTreeSettings() const;
 
     /// Prevents DROP TABLE if its size is greater than max_size (50GB by default, max_size=0 turn off this check)
     void setMaxTableSizeToDrop(size_t max_size);
-    void checkTableCanBeDropped(const String & database, const String & table, const size_t & table_size);
+    void checkTableCanBeDropped(const String & database, const String & table, const size_t & table_size) const;
 
     /// Prevents DROP PARTITION if its size is greater than max_size (50GB by default, max_size=0 turn off this check)
     void setMaxPartitionSizeToDrop(size_t max_size);
-    void checkPartitionCanBeDropped(const String & database, const String & table, const size_t & partition_size);
+    void checkPartitionCanBeDropped(const String & database, const String & table, const size_t & partition_size) const;
 
-    /// Lets you select the compression settings according to the conditions described in the configuration file.
-    CompressionSettings chooseCompressionSettings(size_t part_size, double part_size_ratio) const;
+    /// Lets you select the compression codec according to the conditions described in the configuration file.
+    std::shared_ptr<ICompressionCodec> chooseCompressionCodec(size_t part_size, double part_size_ratio) const;
 
     /// Get the server uptime in seconds.
     time_t getUptimeSeconds() const;
@@ -445,12 +473,20 @@ public:
     void dropCompiledExpressionCache() const;
 #endif
 
+    /// Add started bridge command. It will be killed after context destruction
+    void addXDBCBridgeCommand(std::unique_ptr<ShellCommand> cmd);
+
+    IHostContextPtr & getHostContext();
+    const IHostContextPtr & getHostContext() const;
+
 private:
     /** Check if the current client has access to the specified database.
       * If access is denied, throw an exception.
       * NOTE: This method should always be called when the `shared->mutex` mutex is acquired.
       */
     void checkDatabaseAccessRightsImpl(const std::string & database_name) const;
+
+    void setProfile(const String & profile);
 
     EmbeddedDictionaries & getEmbeddedDictionariesImpl(bool throw_on_error) const;
     ExternalDictionaries & getExternalDictionariesImpl(bool throw_on_error) const;
@@ -463,7 +499,7 @@ private:
     /// Session will be closed after specified timeout.
     void scheduleCloseSession(const SessionKey & key, std::chrono::steady_clock::duration timeout);
 
-    void checkCanBeDropped(const String & database, const String & table, const size_t & size, const size_t & max_size_to_drop);
+    void checkCanBeDropped(const String & database, const String & table, const size_t & size, const size_t & max_size_to_drop) const;
 };
 
 
@@ -512,7 +548,7 @@ private:
     std::mutex mutex;
     std::condition_variable cond;
     std::atomic<bool> quit{false};
-    std::thread thread{&SessionCleaner::run, this};
+    ThreadFromGlobalPool thread{&SessionCleaner::run, this};
 };
 
 }

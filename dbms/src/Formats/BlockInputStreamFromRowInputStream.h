@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Core/Defines.h>
-#include <DataStreams/IProfilingBlockInputStream.h>
+#include <DataStreams/IBlockInputStream.h>
 #include <Formats/FormatSettings.h>
 #include <Formats/IRowInputStream.h>
 
@@ -14,14 +14,16 @@ namespace DB
   *
   * Also controls over parsing errors and prints diagnostic information about them.
   */
-class BlockInputStreamFromRowInputStream : public IProfilingBlockInputStream
+class BlockInputStreamFromRowInputStream : public IBlockInputStream
 {
 public:
-    /** sample_ - block with zero rows, that structure describes how to interpret values */
+    /// |sample| is a block with zero rows, that structure describes how to interpret values
+    /// |rows_portion_size| is a number of rows to read before break and check limits
     BlockInputStreamFromRowInputStream(
         const RowInputStreamPtr & row_input_,
         const Block & sample_,
-        size_t max_block_size_,
+        UInt64 max_block_size_,
+        UInt64 rows_portion_size_,
         const FormatSettings & settings);
 
     void readPrefix() override { row_input->readPrefix(); }
@@ -33,19 +35,22 @@ public:
 
     Block getHeader() const override { return sample; }
 
+    const BlockMissingValues & getMissingValues() const override { return block_missing_values; }
+
 protected:
     Block readImpl() override;
 
 private:
     RowInputStreamPtr row_input;
     Block sample;
-    size_t max_block_size;
+    UInt64 max_block_size;
+    UInt64 rows_portion_size;
+    BlockMissingValues block_missing_values;
 
     UInt64 allow_errors_num;
-    Float64 allow_errors_ratio;
+    Float32 allow_errors_ratio;
 
     size_t total_rows = 0;
     size_t num_errors = 0;
 };
-
 }

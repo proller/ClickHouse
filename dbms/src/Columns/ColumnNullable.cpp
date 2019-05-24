@@ -22,8 +22,7 @@ ColumnNullable::ColumnNullable(MutableColumnPtr && nested_column_, MutableColumn
     : nested_column(std::move(nested_column_)), null_map(std::move(null_map_))
 {
     /// ColumnNullable cannot have constant nested column. But constant argument could be passed. Materialize it.
-    if (ColumnPtr nested_column_materialized = getNestedColumn().convertToFullColumnIfConst())
-        nested_column = nested_column_materialized;
+    nested_column = getNestedColumn().convertToFullColumnIfConst();
 
     if (!getNestedColumn().canBeInsideNullable())
         throw Exception{getNestedColumn().getName() + " cannot be inside Nullable column", ErrorCodes::ILLEGAL_COLUMN};
@@ -82,9 +81,18 @@ StringRef ColumnNullable::getDataAt(size_t /*n*/) const
     throw Exception{"Method getDataAt is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED};
 }
 
-void ColumnNullable::insertData(const char * /*pos*/, size_t /*length*/)
+void ColumnNullable::insertData(const char * pos, size_t length)
 {
-    throw Exception{"Method insertData is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED};
+    if (pos == nullptr)
+    {
+        getNestedColumn().insertDefault();
+        getNullMapData().push_back(1);
+    }
+    else
+    {
+        getNestedColumn().insertData(pos, length);
+        getNullMapData().push_back(0);
+    }
 }
 
 StringRef ColumnNullable::serializeValueIntoArena(size_t n, Arena & arena, char const *& begin) const
@@ -290,6 +298,12 @@ size_t ColumnNullable::byteSize() const
 size_t ColumnNullable::allocatedBytes() const
 {
     return getNestedColumn().allocatedBytes() + getNullMapColumn().allocatedBytes();
+}
+
+void ColumnNullable::protect()
+{
+    getNestedColumn().protect();
+    getNullMapColumn().protect();
 }
 
 

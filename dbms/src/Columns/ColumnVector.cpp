@@ -7,18 +7,17 @@
 #include <Common/Arena.h>
 #include <Common/SipHash.h>
 #include <Common/NaNUtils.h>
+#include <Common/RadixSort.h>
 #include <IO/WriteBuffer.h>
 #include <IO/WriteHelpers.h>
 #include <Columns/ColumnsCommon.h>
 #include <DataStreams/ColumnGathererStream.h>
 #include <ext/bit_cast.h>
+#include <pdqsort.h>
 
-#if __SSE2__
+#ifdef __SSE2__
     #include <emmintrin.h>
-#include <Columns/ColumnsCommon.h>
-
 #endif
-
 
 namespace DB
 {
@@ -69,19 +68,41 @@ struct ColumnVector<T>::greater
     bool operator()(size_t lhs, size_t rhs) const { return CompareHelper<T>::greater(parent.data[lhs], parent.data[rhs], nan_direction_hint); }
 };
 
+
+namespace
+{
+    template <typename T>
+    struct ValueWithIndex
+    {
+        T value;
+        UInt32 index;
+    };
+
+    template <typename T>
+    struct RadixSortTraits : RadixSortNumTraits<T>
+    {
+        using Element = ValueWithIndex<T>;
+        static T & extractKey(Element & elem) { return elem.value; }
+    };
+}
+
 template <typename T>
 void ColumnVector<T>::getPermutation(bool reverse, size_t limit, int nan_direction_hint, IColumn::Permutation & res) const
 {
     size_t s = data.size();
     res.resize(s);
-    for (size_t i = 0; i < s; ++i)
-        res[i] = i;
+
+    if (s == 0)
+        return;
 
     if (limit >= s)
         limit = 0;
 
     if (limit)
     {
+        for (size_t i = 0; i < s; ++i)
+            res[i] = i;
+
         if (reverse)
             std::partial_sort(res.begin(), res.begin() + limit, res.end(), greater(*this, nan_direction_hint));
         else
@@ -89,12 +110,78 @@ void ColumnVector<T>::getPermutation(bool reverse, size_t limit, int nan_directi
     }
     else
     {
+        /// A case for radix sort
+        if constexpr (std::is_arithmetic_v<T> && !std::is_same_v<T, UInt128>)
+        {
+            /// Thresholds on size. Lower threshold is arbitrary. Upper threshold is chosen by the type for histogram counters.
+            if (s >= 256 && s <= std::numeric_limits<UInt32>::max())
+            {
+                PaddedPODArray<ValueWithIndex<T>> pairs(s);
+                for (UInt32 i = 0; i < s; ++i)
+                    pairs[i] = {data[i], i};
+
+                RadixSort<RadixSortTraits<T>>::executeLSD(pairs.data(), s);
+
+                /// Radix sort treats all NaNs to be greater than all numbers.
+                /// If the user needs the opposite, we must move them accordingly.
+                size_t nans_to_move = 0;
+                if (std::is_floating_point_v<T> && nan_direction_hint < 0)
+                {
+                    for (ssize_t i = s - 1; i >= 0; --i)
+                    {
+                        if (isNaN(pairs[i].value))
+                            ++nans_to_move;
+                        else
+                            break;
+                    }
+                }
+
+                if (reverse)
+                {
+                    if (nans_to_move)
+                    {
+                        for (size_t i = 0; i < s - nans_to_move; ++i)
+                            res[i] = pairs[s - nans_to_move - 1 - i].index;
+                        for (size_t i = s - nans_to_move; i < s; ++i)
+                            res[i] = pairs[s - 1 - (i - (s - nans_to_move))].index;
+                    }
+                    else
+                    {
+                        for (size_t i = 0; i < s; ++i)
+                            res[s - 1 - i] = pairs[i].index;
+                    }
+                }
+                else
+                {
+                    if (nans_to_move)
+                    {
+                        for (size_t i = 0; i < nans_to_move; ++i)
+                            res[i] = pairs[i + s - nans_to_move].index;
+                        for (size_t i = nans_to_move; i < s; ++i)
+                            res[i] = pairs[i - nans_to_move].index;
+                    }
+                    else
+                    {
+                        for (size_t i = 0; i < s; ++i)
+                            res[i] = pairs[i].index;
+                    }
+                }
+
+                return;
+            }
+        }
+
+        /// Default sorting algorithm.
+        for (size_t i = 0; i < s; ++i)
+            res[i] = i;
+
         if (reverse)
-            std::sort(res.begin(), res.end(), greater(*this, nan_direction_hint));
+            pdqsort(res.begin(), res.end(), greater(*this, nan_direction_hint));
         else
-            std::sort(res.begin(), res.end(), less(*this, nan_direction_hint));
+            pdqsort(res.begin(), res.end(), less(*this, nan_direction_hint));
     }
 }
+
 
 template <typename T>
 const char * ColumnVector<T>::getFamilyName() const
@@ -142,7 +229,7 @@ void ColumnVector<T>::insertRangeFrom(const IColumn & src, size_t start, size_t 
 
     size_t old_size = data.size();
     data.resize(old_size + length);
-    memcpy(&data[old_size], &src_vec.data[start], length * sizeof(data[0]));
+    memcpy(data.data() + old_size, &src_vec.data[start], length * sizeof(data[0]));
 }
 
 template <typename T>
@@ -162,7 +249,7 @@ ColumnPtr ColumnVector<T>::filter(const IColumn::Filter & filt, ssize_t result_s
     const UInt8 * filt_end = filt_pos + size;
     const T * data_pos = data.data();
 
-#if __SSE2__
+#ifdef __SSE2__
     /** A slightly more optimized version.
         * Based on the assumption that often pieces of consecutive values
         *  completely pass or do not pass the filter.
@@ -311,8 +398,8 @@ void ColumnVector<T>::getExtremes(Field & min, Field & max) const
             cur_max = x;
     }
 
-    min = typename NearestFieldType<T>::Type(cur_min);
-    max = typename NearestFieldType<T>::Type(cur_max);
+    min = NearestFieldType<T>(cur_min);
+    max = NearestFieldType<T>(cur_max);
 }
 
 /// Explicit template instantiations - to avoid code bloat in headers.

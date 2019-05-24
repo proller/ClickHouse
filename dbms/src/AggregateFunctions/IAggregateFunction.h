@@ -7,6 +7,8 @@
 
 #include <Core/Types.h>
 #include <Core/Field.h>
+#include <Core/ColumnNumbers.h>
+#include <Core/Block.h>
 #include <Common/Exception.h>
 
 
@@ -37,6 +39,9 @@ using ConstAggregateDataPtr = const char *;
 class IAggregateFunction
 {
 public:
+    IAggregateFunction(const DataTypes & argument_types_, const Array & parameters_)
+        : argument_types(argument_types_), parameters(parameters_) {}
+
     /// Get main function name.
     virtual String getName() const = 0;
 
@@ -89,6 +94,13 @@ public:
     /// Inserts results into a column.
     virtual void insertResultInto(ConstAggregateDataPtr place, IColumn & to) const = 0;
 
+    /// This function is used for machine learning methods
+    virtual void predictValues(ConstAggregateDataPtr /* place */, IColumn & /*to*/,
+                               Block & /*block*/, const ColumnNumbers & /*arguments*/, const Context & /*context*/) const
+    {
+        throw Exception("Method predictValues is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+    }
+
     /** Returns true for aggregate functions of type -State.
       * They are executed as other aggregate functions, but not finalized (return an aggregation state that can be combined with another).
       */
@@ -108,6 +120,13 @@ public:
       * const char * getHeaderFilePath() const override { return __FILE__; }
       */
     virtual const char * getHeaderFilePath() const = 0;
+
+    const DataTypes & getArgumentTypes() const { return argument_types; }
+    const Array & getParameters() const { return parameters; }
+
+protected:
+    DataTypes argument_types;
+    Array parameters;
 };
 
 
@@ -122,6 +141,8 @@ private:
     }
 
 public:
+    IAggregateFunctionHelper(const DataTypes & argument_types_, const Array & parameters_)
+        : IAggregateFunction(argument_types_, parameters_) {}
     AddFunc getAddressOfAddFunction() const override { return &addFree; }
 };
 
@@ -137,6 +158,9 @@ protected:
     static const Data & data(ConstAggregateDataPtr place) { return *reinterpret_cast<const Data*>(place); }
 
 public:
+    IAggregateFunctionDataHelper(const DataTypes & argument_types_, const Array & parameters_)
+            : IAggregateFunctionHelper<Derived>(argument_types_, parameters_) {}
+
     void create(AggregateDataPtr place) const override
     {
         new (place) Data;

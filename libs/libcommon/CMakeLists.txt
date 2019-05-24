@@ -1,7 +1,7 @@
 set (CONFIG_COMMON ${CMAKE_CURRENT_BINARY_DIR}/include/common/config_common.h)
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/include/common/config_common.h.in ${CONFIG_COMMON})
 
-add_library (apple_rt
+add_library(apple_rt
     src/apple_rt.cpp
     include/port/clock.h
 )
@@ -10,7 +10,7 @@ if (DEFINED APPLE_HAVE_CLOCK_GETTIME)
     target_compile_definitions(apple_rt PUBLIC -DAPPLE_HAVE_CLOCK_GETTIME=${APPLE_HAVE_CLOCK_GETTIME})
 endif ()
 
-add_library (common ${LINK_MODE}
+add_library(common
     src/DateLUT.cpp
     src/DateLUTImpl.cpp
     src/preciseExp10.c
@@ -18,9 +18,9 @@ add_library (common ${LINK_MODE}
     src/mremap.cpp
     src/JSON.cpp
     src/getMemoryAmount.cpp
-    src/ThreadPool.cpp
     src/demangle.cpp
-    src/SetTerminalEcho.cpp
+    src/setTerminalEcho.cpp
+    src/getThreadNumber.cpp
 
     include/common/Types.h
     include/common/DayNum.h
@@ -31,17 +31,17 @@ add_library (common ${LINK_MODE}
     include/common/ErrorHandlers.h
     include/common/preciseExp10.h
     include/common/shift10.h
-    include/common/intExp.h
     include/common/mremap.h
     include/common/likely.h
     include/common/logger_useful.h
-    include/common/MultiVersion.h
     include/common/strong_typedef.h
     include/common/JSON.h
     include/common/getMemoryAmount.h
-    include/common/ThreadPool.h
     include/common/demangle.h
-    include/common/SetTerminalEcho.h
+    include/common/setTerminalEcho.h
+    include/common/find_symbols.h
+    include/common/constexpr_helpers.h
+    include/common/getThreadNumber.h
 
     include/ext/bit_cast.h
     include/ext/collection_cast.h
@@ -63,7 +63,6 @@ add_library (common ${LINK_MODE}
 if (USE_JEMALLOC)
     message (STATUS "Link jemalloc: ${JEMALLOC_LIBRARIES}")
     set (MALLOC_LIBRARIES ${JEMALLOC_LIBRARIES})
-
 elseif (USE_TCMALLOC)
     if (DEBUG_TCMALLOC AND NOT GPERFTOOLS_TCMALLOC_MINIMAL_DEBUG)
         message (FATAL_ERROR "Requested DEBUG_TCMALLOC but debug library is not found. You should install Google Perftools. Example: sudo apt-get install libgoogle-perftools-dev")
@@ -82,38 +81,45 @@ else ()
     message (WARNING "Non default allocator is disabled. This is not recommended for production Linux builds.")
 endif ()
 
-if (GLIBC_COMPATIBILITY)
-    set (GLIBC_COMPATIBILITY_LIBRARIES glibc-compatibility)
-endif ()
-
 if (USE_INTERNAL_MEMCPY)
     set (MEMCPY_LIBRARIES memcpy)
 endif ()
 
 find_package (Threads)
 
-target_include_directories (common BEFORE PRIVATE ${CCTZ_INCLUDE_DIR})
-target_include_directories (common BEFORE PUBLIC ${CITYHASH_INCLUDE_DIR})
+if(CCTZ_INCLUDE_DIR)
+    target_include_directories(common BEFORE PRIVATE ${CCTZ_INCLUDE_DIR})
+endif()
+
 target_include_directories (common PUBLIC ${COMMON_INCLUDE_DIR})
 
 if (NOT USE_INTERNAL_BOOST_LIBRARY)
-    target_include_directories (common BEFORE PUBLIC ${Boost_INCLUDE_DIRS})
+    target_include_directories (common SYSTEM BEFORE PUBLIC ${Boost_INCLUDE_DIRS})
 endif ()
 
-target_link_libraries (
-    common
-    pocoext
+if(NOT USE_INTERNAL_POCO_LIBRARY)
+    target_include_directories (common SYSTEM BEFORE PUBLIC ${Poco_Foundation_INCLUDE_DIR})
+endif()
+
+if(CCTZ_LIBRARY)
+    target_link_libraries(common PRIVATE ${CCTZ_LIBRARY})
+endif()
+
+target_link_libraries (common
+        PUBLIC
+    ${Poco_Foundation_LIBRARY}
     ${CITYHASH_LIBRARIES}
-    ${CCTZ_LIBRARY}
+        PRIVATE
     ${Boost_FILESYSTEM_LIBRARY}
+        PUBLIC
     ${Boost_SYSTEM_LIBRARY}
+        PRIVATE
     ${MALLOC_LIBRARIES}
-    ${CMAKE_THREAD_LIBS_INIT}
-    ${GLIBC_COMPATIBILITY_LIBRARIES}
+    Threads::Threads
     ${MEMCPY_LIBRARIES})
 
 if (RT_LIBRARY)
-    target_link_libraries (common ${RT_LIBRARY})
+    target_link_libraries (common PRIVATE ${RT_LIBRARY})
 endif ()
 
 if (ENABLE_TESTS)

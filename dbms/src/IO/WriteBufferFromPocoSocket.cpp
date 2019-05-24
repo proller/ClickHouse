@@ -1,8 +1,8 @@
 #include <Poco/Net/NetException.h>
 
-#include <Common/Exception.h>
-
 #include <IO/WriteBufferFromPocoSocket.h>
+
+#include <Common/Exception.h>
 #include <Common/NetException.h>
 #include <Common/Stopwatch.h>
 #include <Common/ProfileEvents.h>
@@ -44,7 +44,7 @@ void WriteBufferFromPocoSocket::nextImpl()
         }
         catch (const Poco::Net::NetException & e)
         {
-            throw NetException(e.displayText() + " while writing to socket (" + peer_address.toString() + ")", ErrorCodes::NETWORK_ERROR);
+            throw NetException(e.displayText() + ", while writing to socket (" + peer_address.toString() + ")", ErrorCodes::NETWORK_ERROR);
         }
         catch (const Poco::TimeoutException &)
         {
@@ -52,7 +52,7 @@ void WriteBufferFromPocoSocket::nextImpl()
         }
         catch (const Poco::IOException & e)
         {
-            throw NetException(e.displayText(), " while reading from socket (" + peer_address.toString() + ")", ErrorCodes::NETWORK_ERROR);
+            throw NetException(e.displayText() + ", while writing to socket (" + peer_address.toString() + ")", ErrorCodes::NETWORK_ERROR);
         }
 
         if (res < 0)

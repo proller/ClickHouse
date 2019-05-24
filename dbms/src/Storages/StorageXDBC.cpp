@@ -64,7 +64,7 @@ std::function<void(std::ostream &)> StorageXDBC::getReadPOSTDataCallback(const N
     size_t /*max_block_size*/) const
 {
     String query = transformQueryForExternalDatabase(*query_info.query,
-        getColumns().ordinary,
+        getColumns().getOrdinary(),
         bridge_helper->getIdentifierQuotingStyle(),
         remote_database_name,
         remote_table_name,
@@ -113,12 +113,12 @@ namespace
             for (size_t i = 0; i < 3; ++i)
                 engine_args[i] = evaluateConstantExpressionOrIdentifierAsLiteral(engine_args[i], args.local_context);
 
-            BridgeHelperPtr bridge_helper = std::make_shared<XDBCBridgeHelper<BridgeHelperMixin>>(args.context.getConfigRef(),
+            BridgeHelperPtr bridge_helper = std::make_shared<XDBCBridgeHelper<BridgeHelperMixin>>(args.context,
                 args.context.getSettingsRef().http_receive_timeout.value,
-                static_cast<const ASTLiteral &>(*engine_args[0]).value.safeGet<String>());
+                engine_args[0]->as<ASTLiteral &>().value.safeGet<String>());
             return std::make_shared<StorageXDBC>(args.table_name,
-                static_cast<const ASTLiteral &>(*engine_args[1]).value.safeGet<String>(),
-                static_cast<const ASTLiteral &>(*engine_args[2]).value.safeGet<String>(),
+                engine_args[1]->as<ASTLiteral &>().value.safeGet<String>(),
+                engine_args[2]->as<ASTLiteral &>().value.safeGet<String>(),
                 args.columns,
                 args.context,
                 bridge_helper);

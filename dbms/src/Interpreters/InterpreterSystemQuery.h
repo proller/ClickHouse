@@ -1,17 +1,17 @@
 #pragma once
-#include <Interpreters/IInterpreter.h>
 
+#include <Interpreters/IInterpreter.h>
+#include <Parsers/IAST_fwd.h>
+#include <Storages/IStorage_fwd.h>
+
+
+namespace Poco { class Logger; }
 
 namespace DB
 {
 
 class Context;
-class IAST;
 class ASTSystemQuery;
-class IStorage;
-using ASTPtr = std::shared_ptr<IAST>;
-using StoragePtr = std::shared_ptr<IStorage>;
-
 
 class InterpreterSystemQuery : public IInterpreter
 {

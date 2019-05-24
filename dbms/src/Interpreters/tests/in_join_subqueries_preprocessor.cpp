@@ -6,7 +6,7 @@
 #include <Parsers/queryToString.h>
 #include <Interpreters/InJoinSubqueriesPreprocessor.h>
 #include <Interpreters/Context.h>
-#include <Interpreters/Settings.h>
+#include <Core/Settings.h>
 #include <Storages/IStorage.h>
 #include <Databases/IDatabase.h>
 #include <Databases/DatabaseOrdinary.h>
@@ -52,11 +52,9 @@ private:
 };
 
 
-class InJoinSubqueriesPreprocessorMock : public DB::InJoinSubqueriesPreprocessor
+class CheckShardsAndTablesMock : public DB::InJoinSubqueriesPreprocessor::CheckShardsAndTables
 {
 public:
-    using DB::InJoinSubqueriesPreprocessor::InJoinSubqueriesPreprocessor;
-
     bool hasAtLeastTwoShards(const DB::IStorage & table) const override
     {
         if (!table.isRemote())
@@ -1131,7 +1129,7 @@ TestEntries entries =
 };
 
 
-bool performTests(const TestEntries & entries)
+bool run()
 {
     unsigned int count = 0;
     unsigned int i = 1;
@@ -1154,11 +1152,6 @@ bool performTests(const TestEntries & entries)
     std::cout << count << " out of " << entries.size() << " test(s) passed.\n";
 
     return count == entries.size();
-}
-
-bool run()
-{
-    return performTests(entries);
 }
 
 
@@ -1186,13 +1179,11 @@ TestResult check(const TestEntry & entry)
         if (!parse(ast_input, entry.input))
             return TestResult(false, "parse error");
 
-        auto select_query = typeid_cast<DB::ASTSelectQuery *>(&*ast_input);
-
         bool success = true;
 
         try
         {
-            InJoinSubqueriesPreprocessorMock(context).process(select_query);
+            DB::InJoinSubqueriesPreprocessor(context, std::make_unique<CheckShardsAndTablesMock>()).visit(ast_input);
         }
         catch (const DB::Exception & ex)
         {

@@ -1,11 +1,13 @@
 #pragma once
 
 #include <Storages/StorageDistributed.h>
+#include <Common/ThreadPool.h>
 
 #include <atomic>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <IO/ReadBufferFromFile.h>
 
 
 namespace DB
@@ -55,7 +57,10 @@ private:
     std::mutex mutex;
     std::condition_variable cond;
     Logger * log;
-    std::thread thread {&StorageDistributedDirectoryMonitor::run, this};
+    ThreadFromGlobalPool thread{&StorageDistributedDirectoryMonitor::run, this};
+
+    /// Read insert query and insert settings for backward compatible.
+    void readQueryAndSettings(ReadBuffer & in, Settings & insert_settings, std::string & insert_query) const;
 };
 
 }
