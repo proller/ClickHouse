@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Core/Field.h>
-#include <Common/COWPtr.h>
+#include <Common/COW.h>
 #include <Common/PODArray.h>
 #include <Common/Exception.h>
 #include <common/StringRef.h>
@@ -24,13 +24,13 @@ class Arena;
 class ColumnGathererStream;
 
 /// Declares interface to store columns in memory.
-class IColumn : public COWPtr<IColumn>
+class IColumn : public COW<IColumn>
 {
 private:
-    friend class COWPtr<IColumn>;
+    friend class COW<IColumn>;
 
     /// Creates the same column with the same data.
-    /// This is internal method to use from COWPtr.
+    /// This is internal method to use from COW.
     /// It performs shallow copy with copy-ctor and not useful from outside.
     /// If you want to copy column for modification, look at 'mutate' method.
     virtual MutablePtr clone() const = 0;
@@ -141,6 +141,7 @@ public:
     /// Appends data located in specified memory chunk if it is possible (throws an exception if it cannot be implemented).
     /// Is used to optimize some computations (in aggregation, for example).
     /// Parameter length could be ignored if column values have fixed size.
+    /// All data will be inserted as single element
     virtual void insertData(const char * pos, size_t length) = 0;
 
     /// Appends "default value".
@@ -184,11 +185,11 @@ public:
     /// Permutes elements using specified permutation. Is used in sortings.
     /// limit - if it isn't 0, puts only first limit elements in the result.
     using Permutation = PaddedPODArray<size_t>;
-    virtual Ptr permute(const Permutation & perm, UInt64 limit) const = 0;
+    virtual Ptr permute(const Permutation & perm, size_t limit) const = 0;
 
     /// Creates new column with values column[indexes[:limit]]. If limit is 0, all indexes are used.
     /// Indexes must be one of the ColumnUInt. For default implementation, see selectIndexImpl from ColumnsCommon.h
-    virtual Ptr index(const IColumn & indexes, UInt64 limit) const = 0;
+    virtual Ptr index(const IColumn & indexes, size_t limit) const = 0;
 
     /** Compares (*this)[n] and rhs[m]. Column rhs should have the same type.
       * Returns negative number, 0, or positive number (*this)[n] is less, equal, greater than rhs[m] respectively.
@@ -209,7 +210,7 @@ public:
       * limit - if isn't 0, then only first limit elements of the result column could be sorted.
       * nan_direction_hint - see above.
       */
-    virtual void getPermutation(bool reverse, UInt64 limit, int nan_direction_hint, Permutation & res) const = 0;
+    virtual void getPermutation(bool reverse, size_t limit, int nan_direction_hint, Permutation & res) const = 0;
 
     /** Copies each element according offsets parameter.
       * (i-th element should be copied offsets[i] - offsets[i - 1] times.)
@@ -250,19 +251,30 @@ public:
 
     /// Size of memory, allocated for column.
     /// This is greater or equals to byteSize due to memory reservation in containers.
-    /// Zero, if could be determined.
+    /// Zero, if could not be determined.
     virtual size_t allocatedBytes() const = 0;
+
+    /// Make memory region readonly with mprotect if it is large enough.
+    /// The operation is slow and performed only for debug builds.
+    virtual void protect() {}
 
     /// If the column contains subcolumns (such as Array, Nullable, etc), do callback on them.
     /// Shallow: doesn't do recursive calls; don't do call for itself.
-    using ColumnCallback = std::function<void(Ptr&)>;
+    using ColumnCallback = std::function<void(WrappedPtr&)>;
     virtual void forEachSubcolumn(ColumnCallback) {}
+
+    /// Columns have equal structure.
+    /// If true - you can use "compareAt", "insertFrom", etc. methods.
+    virtual bool structureEquals(const IColumn &) const
+    {
+        throw Exception("Method structureEquals is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+    }
 
 
     MutablePtr mutate() const &&
     {
-        MutablePtr res = COWPtr<IColumn>::mutate();
-        res->forEachSubcolumn([](Ptr & subcolumn) { subcolumn = (*std::move(subcolumn)).mutate(); });
+        MutablePtr res = shallowMutate();
+        res->forEachSubcolumn([](WrappedPtr & subcolumn) { subcolumn = std::move(*subcolumn).mutate(); });
         return res;
     }
 

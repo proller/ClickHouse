@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <Interpreters/Settings.h>
+#include <Core/Settings.h>
 #include <Poco/Util/XMLConfiguration.h>
 #include <Poco/AutoPtr.h>
 
@@ -26,7 +26,7 @@ using StringToVector = std::map<std::string, Strings>;
 class PerformanceTestInfo
 {
 public:
-    PerformanceTestInfo(XMLConfigurationPtr config, const std::string & profiles_file_);
+    PerformanceTestInfo(XMLConfigurationPtr config, const std::string & profiles_file_, const Settings & global_settings_);
 
     std::string test_name;
     std::string path;
@@ -34,16 +34,15 @@ public:
 
     Strings queries;
 
+    std::string profiles_file;
     Settings settings;
     ExecutionType exec_type;
     StringToVector substitutions;
     size_t times_to_run;
 
-    std::string profiles_file;
     std::vector<TestStopConditions> stop_conditions_by_run;
 
-    Strings create_queries;
-    Strings fill_queries;
+    Strings create_and_fill_queries;
     Strings drop_queries;
 
 private:
@@ -52,7 +51,6 @@ private:
     void processSubstitutions(XMLConfigurationPtr config);
     void getExecutionType(XMLConfigurationPtr config);
     void getStopConditions(XMLConfigurationPtr config);
-    void getMetrics(XMLConfigurationPtr config);
     void extractAuxiliaryQueries(XMLConfigurationPtr config);
 };
 

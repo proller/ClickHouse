@@ -15,7 +15,7 @@ bool ColumnNamesContext::addTableAliasIfAny(const IAST & ast)
     return true;
 }
 
-bool ColumnNamesContext::addColumnAliasIfAny(const IAST & ast, bool is_public)
+bool ColumnNamesContext::addColumnAliasIfAny(const IAST & ast)
 {
     String alias = ast.tryGetAlias();
     if (alias.empty())
@@ -24,21 +24,18 @@ bool ColumnNamesContext::addColumnAliasIfAny(const IAST & ast, bool is_public)
     if (required_names.count(alias))
         masked_columns.insert(alias);
 
-    if (is_public)
-        public_columns.insert(alias);
-    column_aliases.insert(alias);
+    complex_aliases.insert(alias);
     return true;
 }
 
-void ColumnNamesContext::addColumnIdentifier(const ASTIdentifier & node, bool is_public)
+void ColumnNamesContext::addColumnIdentifier(const ASTIdentifier & node)
 {
     if (!IdentifierSemantic::getColumnName(node))
         return;
 
-    required_names.insert(node.name);
-
-    if (!addColumnAliasIfAny(node, is_public) && is_public)
-        public_columns.insert(node.name);
+    /// There should be no complex cases after query normalization. Names to aliases: one-to-many.
+    String alias = node.tryGetAlias();
+    required_names[node.name].addInclusion(alias);
 }
 
 bool ColumnNamesContext::addArrayJoinAliasIfAny(const IAST & ast)
@@ -56,18 +53,27 @@ void ColumnNamesContext::addArrayJoinIdentifier(const ASTIdentifier & node)
     array_join_columns.insert(node.name);
 }
 
+size_t ColumnNamesContext::nameInclusion(const String & name) const
+{
+    auto it = required_names.find(name);
+    if (it != required_names.end())
+        return it->second.appears;
+    return 0;
+}
+
 NameSet ColumnNamesContext::requiredColumns() const
 {
     NameSet required;
-    for (const auto & name : required_names)
+    for (const auto & pr : required_names)
     {
+        const auto & name = pr.first;
         String table_name = Nested::extractTableName(name);
 
         /// Tech debt. There's its own logic for ARRAY JOIN columns.
         if (array_join_columns.count(name) || array_join_columns.count(table_name))
             continue;
 
-        if (!column_aliases.count(name) || masked_columns.count(name))
+        if (!complex_aliases.count(name) || masked_columns.count(name))
             required.insert(name);
     }
     return required;
@@ -76,9 +82,13 @@ NameSet ColumnNamesContext::requiredColumns() const
 std::ostream & operator << (std::ostream & os, const ColumnNamesContext & cols)
 {
     os << "required_names: ";
-    for (const auto & x : cols.required_names)
-        os << "'" << x << "' ";
-    os << "source_tables: ";
+    for (const auto & pr : cols.required_names)
+    {
+        os << "'" << pr.first << "'";
+        for (auto & alias : pr.second.aliases)
+            os << "/'" << alias << "'";
+    }
+    os << " source_tables: ";
     for (const auto & x : cols.tables)
     {
         auto alias = x.alias();
@@ -93,14 +103,8 @@ std::ostream & operator << (std::ostream & os, const ColumnNamesContext & cols)
     os << "table_aliases: ";
     for (const auto & x : cols.table_aliases)
         os << "'" << x << "' ";
-    os << "private_aliases: ";
-    for (const auto & x : cols.private_aliases)
-        os << "'" << x << "' ";
-    os << "column_aliases: ";
-    for (const auto & x : cols.column_aliases)
-        os << "'" << x << "' ";
-    os << "public_columns: ";
-    for (const auto & x : cols.public_columns)
+    os << "complex_aliases: ";
+    for (const auto & x : cols.complex_aliases)
         os << "'" << x << "' ";
     os << "masked_columns: ";
     for (const auto & x : cols.masked_columns)

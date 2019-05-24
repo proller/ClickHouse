@@ -11,11 +11,11 @@ This dataset can be obtained in two ways:
 Downloading data:
 
 ```bash
-for s in `seq 1987 2017`
+for s in `seq 1987 2018`
 do
 for m in `seq 1 12`
 do
-wget http://transtats.bts.gov/PREZIP/On_Time_On_Time_Performance_${s}_${m}.zip
+wget https://transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_${s}_${m}.zip
 done
 done
 ```
@@ -193,7 +193,7 @@ SELECT Carrier, count(*) FROM ontime WHERE DepDelay>10 AND Year = 2007 GROUP BY 
 Q5. The percentage of delays by carrier for 2007
 
 ``` sql
-SELECT Carrier, c, c2, c*1000/c2 as c3
+SELECT Carrier, c, c2, c*100/c2 as c3
 FROM
 (
     SELECT
@@ -219,13 +219,13 @@ ORDER BY c3 DESC;
 Better version of the same query:
 
 ``` sql
-SELECT Carrier, avg(DepDelay > 10) * 1000 AS c3 FROM ontime WHERE Year = 2007 GROUP BY Carrier ORDER BY Carrier
+SELECT Carrier, avg(DepDelay > 10) * 100 AS c3 FROM ontime WHERE Year = 2007 GROUP BY Carrier ORDER BY Carrier
 ```
 
 Q6. The previous request for a broader range of years, 2000-2008
 
 ``` sql
-SELECT Carrier, c, c2, c*1000/c2 as c3
+SELECT Carrier, c, c2, c*100/c2 as c3
 FROM
 (
     SELECT
@@ -251,7 +251,7 @@ ORDER BY c3 DESC;
 Better version of the same query:
 
 ``` sql
-SELECT Carrier, avg(DepDelay > 10) * 1000 AS c3 FROM ontime WHERE Year >= 2000 AND Year <= 2008 GROUP BY Carrier ORDER BY Carrier
+SELECT Carrier, avg(DepDelay > 10) * 100 AS c3 FROM ontime WHERE Year >= 2000 AND Year <= 2008 GROUP BY Carrier ORDER BY Carrier
 ```
 
 Q7. Percentage of flights delayed for more than 10 minutes, by year
@@ -262,7 +262,7 @@ FROM
 (
     select
         Year,
-        count(*)*1000 as c1
+        count(*)*100 as c1
     from ontime
     WHERE DepDelay>10
     GROUP BY Year

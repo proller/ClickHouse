@@ -13,7 +13,7 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
     name1 [type1] [DEFAULT|MATERIALIZED|ALIAS expr1],
     name2 [type2] [DEFAULT|MATERIALIZED|ALIAS expr2],
     ...
-) ENGINE = SummingMergeTree()
+) ENGINE = SummingMergeTree([columns])
 [PARTITION BY expr]
 [ORDER BY expr]
 [SAMPLE BY expr]
@@ -86,7 +86,7 @@ SELECT key, sum(value) FROM summtt GROUP BY key
 ```
 
 
-## Data Processing
+## Data Processing {#data-processing}
 
 When data are inserted into a table, they are saved as-is. Clickhouse merges the inserted parts of data periodically and this is when rows with the same primary key are summed and replaced with one for each resulting part of data.
 

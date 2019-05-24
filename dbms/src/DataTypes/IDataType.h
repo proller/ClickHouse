@@ -1,9 +1,10 @@
 #pragma once
 
 #include <memory>
-#include <Common/COWPtr.h>
+#include <Common/COW.h>
 #include <boost/noncopyable.hpp>
 #include <Core/Field.h>
+#include <DataTypes/DataTypeCustom.h>
 
 
 namespace DB
@@ -12,17 +13,17 @@ namespace DB
 class ReadBuffer;
 class WriteBuffer;
 
-class IDataTypeDomain;
 class IDataType;
 struct FormatSettings;
 
 class IColumn;
-using ColumnPtr = COWPtr<IColumn>::Ptr;
-using MutableColumnPtr = COWPtr<IColumn>::MutablePtr;
+using ColumnPtr = COW<IColumn>::Ptr;
+using MutableColumnPtr = COW<IColumn>::MutablePtr;
 
 using DataTypePtr = std::shared_ptr<const IDataType>;
 using DataTypes = std::vector<DataTypePtr>;
 
+class ProtobufReader;
 class ProtobufWriter;
 
 
@@ -173,7 +174,7 @@ public:
     virtual void serializeBinaryBulkWithMultipleStreams(
         const IColumn & column,
         size_t offset,
-        UInt64 limit,
+        size_t limit,
         SerializeBinaryBulkSettings & settings,
         SerializeBinaryBulkStatePtr & /*state*/) const
     {
@@ -184,7 +185,7 @@ public:
     /// Read no more than limit values and append them into column.
     virtual void deserializeBinaryBulkWithMultipleStreams(
         IColumn & column,
-        UInt64 limit,
+        size_t limit,
         DeserializeBinaryBulkSettings & settings,
         DeserializeBinaryBulkStatePtr & /*state*/) const
     {
@@ -194,8 +195,8 @@ public:
 
     /** Override these methods for data types that require just single stream (most of data types).
       */
-    virtual void serializeBinaryBulk(const IColumn & column, WriteBuffer & ostr, UInt64 offset, UInt64 limit) const;
-    virtual void deserializeBinaryBulk(IColumn & column, ReadBuffer & istr, UInt64 limit, double avg_value_size_hint) const;
+    virtual void serializeBinaryBulk(const IColumn & column, WriteBuffer & ostr, size_t offset, size_t limit) const;
+    virtual void deserializeBinaryBulk(IColumn & column, ReadBuffer & istr, size_t limit, double avg_value_size_hint) const;
 
     /** Serialization/deserialization of individual values.
       *
@@ -253,15 +254,18 @@ public:
     virtual void serializeAsTextXML(const IColumn & column, size_t row_num, WriteBuffer & ostr, const FormatSettings & settings) const;
 
     /** Serialize to a protobuf. */
-    virtual void serializeProtobuf(const IColumn & column, size_t row_num, ProtobufWriter & protobuf) const = 0;
+    virtual void serializeProtobuf(const IColumn & column, size_t row_num, ProtobufWriter & protobuf, size_t & value_index) const = 0;
+    virtual void deserializeProtobuf(IColumn & column, ProtobufReader & protobuf, bool allow_add_row, bool & row_added) const = 0;
 
 protected:
     virtual String doGetName() const;
 
     /** Text serialization with escaping but without quoting.
       */
+public: // used somewhere in arcadia
     virtual void serializeTextEscaped(const IColumn & column, size_t row_num, WriteBuffer & ostr, const FormatSettings &) const = 0;
 
+protected:
     virtual void deserializeTextEscaped(IColumn & column, ReadBuffer & istr, const FormatSettings &) const = 0;
 
     /** Text serialization as a literal that may be inserted into a query.
@@ -455,18 +459,19 @@ public:
 
 private:
     friend class DataTypeFactory;
-    /** Sets domain on existing DataType, can be considered as second phase
-      * of construction explicitly done by DataTypeFactory.
-      * Will throw an exception if domain is already set.
+    /** Customize this DataType
       */
-    void setDomain(const IDataTypeDomain* newDomain) const;
+    void setCustomization(DataTypeCustomDescPtr custom_desc_) const;
 
 private:
-    /** This is mutable to allow setting domain on `const IDataType` post construction,
-     * simplifying creation of domains for all types, without them even knowing
-     * of domain existence.
+    /** This is mutable to allow setting custom name and serialization on `const IDataType` post construction.
      */
-    mutable IDataTypeDomain const* domain;
+    mutable DataTypeCustomNamePtr custom_name;
+    mutable DataTypeCustomTextSerializationPtr custom_text_serialization;
+
+public:
+    const IDataTypeCustomName * getCustomName() const { return custom_name.get(); }
+    const IDataTypeCustomTextSerialization * getCustomTextSerialization() const { return custom_text_serialization.get(); }
 };
 
 
@@ -567,6 +572,13 @@ inline bool isInteger(const T & data_type)
 {
     WhichDataType which(data_type);
     return which.isInt() || which.isUInt();
+}
+
+template <typename T>
+inline bool isFloat(const T & data_type)
+{
+    WhichDataType which(data_type);
+    return which.isFloat();
 }
 
 template <typename T>

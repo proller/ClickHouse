@@ -10,6 +10,7 @@
 #include <IO/WriteBuffer.h>
 #include <IO/WriteHelpers.h>
 
+#include <Functions/FunctionHelpers.h>
 
 namespace DB
 {
@@ -43,13 +44,13 @@ using Arenas = std::vector<ArenaPtr>;
   *  specifying which individual values should be destroyed and which ones should not.
   * Clearly, this method would have a substantially non-zero price.
   */
-class ColumnAggregateFunction final : public COWPtrHelper<IColumn, ColumnAggregateFunction>
+class ColumnAggregateFunction final : public COWHelper<IColumn, ColumnAggregateFunction>
 {
 public:
     using Container = PaddedPODArray<AggregateDataPtr>;
 
 private:
-    friend class COWPtrHelper<IColumn, ColumnAggregateFunction>;
+    friend class COWHelper<IColumn, ColumnAggregateFunction>;
 
     /// Memory pools. Aggregate states are allocated from them.
     Arenas arenas;
@@ -117,6 +118,9 @@ public:
     std::string getName() const override { return "AggregateFunction(" + func->getName() + ")"; }
     const char * getFamilyName() const override { return "AggregateFunction"; }
 
+    bool tryFinalizeAggregateFunction(MutableColumnPtr* res_) const;
+    MutableColumnPtr predictValues(Block & block, const ColumnNumbers & arguments, const Context & context) const;
+
     size_t size() const override
     {
         return getData().size();
@@ -157,18 +161,20 @@ public:
 
     size_t allocatedBytes() const override;
 
+    void protect() override;
+
     void insertRangeFrom(const IColumn & from, size_t start, size_t length) override;
 
     void popBack(size_t n) override;
 
     ColumnPtr filter(const Filter & filter, ssize_t result_size_hint) const override;
 
-    ColumnPtr permute(const Permutation & perm, UInt64 limit) const override;
+    ColumnPtr permute(const Permutation & perm, size_t limit) const override;
 
-    ColumnPtr index(const IColumn & indexes, UInt64 limit) const override;
+    ColumnPtr index(const IColumn & indexes, size_t limit) const override;
 
     template <typename Type>
-    ColumnPtr indexImpl(const PaddedPODArray<Type> & indexes, UInt64 limit) const;
+    ColumnPtr indexImpl(const PaddedPODArray<Type> & indexes, size_t limit) const;
 
     ColumnPtr replicate(const Offsets & offsets) const override;
 
@@ -181,7 +187,7 @@ public:
         return 0;
     }
 
-    void getPermutation(bool reverse, UInt64 limit, int nan_direction_hint, Permutation & res) const override;
+    void getPermutation(bool reverse, size_t limit, int nan_direction_hint, Permutation & res) const override;
 
     /** More efficient manipulation methods */
     Container & getData()

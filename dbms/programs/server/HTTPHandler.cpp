@@ -1,21 +1,21 @@
+#include "HTTPHandler.h"
+
 #include <chrono>
 #include <iomanip>
-
 #include <Poco/File.h>
 #include <Poco/Net/HTTPBasicCredentials.h>
 #include <Poco/Net/HTTPServerRequest.h>
 #include <Poco/Net/HTTPServerRequestImpl.h>
 #include <Poco/Net/HTTPServerResponse.h>
 #include <Poco/Net/NetException.h>
-
 #include <ext/scope_guard.h>
-
 #include <Core/ExternalTable.h>
 #include <Common/StringUtils/StringUtils.h>
 #include <Common/escapeForFileName.h>
 #include <Common/getFQDNOrHostName.h>
 #include <Common/CurrentThread.h>
 #include <Common/setThreadName.h>
+#include <Common/config.h>
 #include <Compression/CompressedReadBuffer.h>
 #include <Compression/CompressedWriteBuffer.h>
 #include <IO/ReadBufferFromIStream.h>
@@ -31,16 +31,11 @@
 #include <IO/CascadeWriteBuffer.h>
 #include <IO/MemoryReadWriteBuffer.h>
 #include <IO/WriteBufferFromTemporaryFile.h>
-
 #include <DataStreams/IBlockInputStream.h>
-
 #include <Interpreters/executeQuery.h>
 #include <Interpreters/Quota.h>
 #include <Common/typeid_cast.h>
-
 #include <Poco/Net/HTTPStream.h>
-
-#include "HTTPHandler.h"
 
 namespace DB
 {
@@ -301,7 +296,7 @@ void HTTPHandler::processQuery(
     /// The client can pass a HTTP header indicating supported compression method (gzip or deflate).
     String http_response_compression_methods = request.get("Accept-Encoding", "");
     bool client_supports_http_compression = false;
-    ZlibCompressionMethod http_response_compression_method {};
+    CompressionMethod http_response_compression_method {};
 
     if (!http_response_compression_methods.empty())
     {
@@ -310,12 +305,17 @@ void HTTPHandler::processQuery(
         if (std::string::npos != http_response_compression_methods.find("gzip"))
         {
             client_supports_http_compression = true;
-            http_response_compression_method = ZlibCompressionMethod::Gzip;
+            http_response_compression_method = CompressionMethod::Gzip;
         }
         else if (std::string::npos != http_response_compression_methods.find("deflate"))
         {
             client_supports_http_compression = true;
-            http_response_compression_method = ZlibCompressionMethod::Zlib;
+            http_response_compression_method = CompressionMethod::Zlib;
+        }
+        else if (http_response_compression_methods == "br")
+        {
+            client_supports_http_compression = true;
+            http_response_compression_method = CompressionMethod::Brotli;
         }
     }
 
@@ -399,16 +399,18 @@ void HTTPHandler::processQuery(
     {
         if (http_request_compression_method_str == "gzip")
         {
-            in_post = std::make_unique<ZlibInflatingReadBuffer>(*in_post_raw, ZlibCompressionMethod::Gzip);
+            in_post = std::make_unique<ZlibInflatingReadBuffer>(*in_post_raw, CompressionMethod::Gzip);
         }
         else if (http_request_compression_method_str == "deflate")
         {
-            in_post = std::make_unique<ZlibInflatingReadBuffer>(*in_post_raw, ZlibCompressionMethod::Zlib);
+            in_post = std::make_unique<ZlibInflatingReadBuffer>(*in_post_raw, CompressionMethod::Zlib);
         }
+#if USE_BROTLI
         else if (http_request_compression_method_str == "br")
         {
             in_post = std::make_unique<BrotliReadBuffer>(*in_post_raw);
         }
+#endif
         else
         {
             throw Exception("Unknown Content-Encoding of HTTP request: " + http_request_compression_method_str,
@@ -495,8 +497,7 @@ void HTTPHandler::processQuery(
             settings.readonly = 2;
     }
 
-    auto readonly_before_query = settings.readonly;
-
+    SettingsChanges settings_changes;
     for (auto it = params.begin(); it != params.end(); ++it)
     {
         if (it->first == "database")
@@ -513,20 +514,12 @@ void HTTPHandler::processQuery(
         else
         {
             /// All other query parameters are treated as settings.
-            String value;
-            /// Setting is skipped if value wasn't changed.
-            if (!settings.tryGet(it->first, value) || it->second != value)
-            {
-                if (readonly_before_query == 1)
-                    throw Exception("Cannot override setting (" + it->first + ") in readonly mode", ErrorCodes::READONLY);
-
-                if (readonly_before_query && it->first == "readonly")
-                    throw Exception("Setting 'readonly' cannot be overrided in readonly mode", ErrorCodes::READONLY);
-
-                context.setSetting(it->first, it->second);
-            }
+            settings_changes.push_back({it->first, it->second});
         }
     }
+
+    context.checkSettingsConstraints(settings_changes);
+    context.applySettingsChanges(settings_changes);
 
     /// HTTP response compression is turned on only if the client signalled that they support it
     /// (using Accept-Encoding header) and 'enable_http_compression' setting is turned on.
@@ -605,9 +598,11 @@ void HTTPHandler::processQuery(
         });
     }
 
+    customizeContext(context);
+
     executeQuery(*in, *used_output.out_maybe_delayed_and_compressed, /* allow_into_outfile = */ false, context,
         [&response] (const String & content_type) { response.setContentType(content_type); },
-        [&response] (const String & current_query_id) { response.add("Query-Id", current_query_id); });
+        [&response] (const String & current_query_id) { response.add("X-ClickHouse-Query-Id", current_query_id); });
 
     if (used_output.hasDelayed())
     {

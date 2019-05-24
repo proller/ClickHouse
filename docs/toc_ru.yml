@@ -6,6 +6,7 @@ nav:
   - 'Особенности ClickHouse, которые могут считаться недостатками': 'introduction/features_considered_disadvantages.md'
   - 'Производительность': 'introduction/performance.md'
   - 'Постановка задачи в Яндекс.Метрике': 'introduction/ya_metrika_task.md'
+  - 'Информационная поддержка': 'introduction/info.md'
 
 - 'Начало работы':
   - 'Установка и запуск': 'getting_started/index.md'
@@ -56,6 +57,10 @@ nav:
     - 'Expression': 'data_types/special_data_types/expression.md'
     - 'Set': 'data_types/special_data_types/set.md'
     - 'Nothing': 'data_types/special_data_types/nothing.md'
+  - 'Domains':
+    - 'Overview': 'data_types/domains/overview.md'
+    - 'IPv4': 'data_types/domains/ipv4.md'
+    - 'IPv6': 'data_types/domains/ipv6.md'
 
 - 'Движки таблиц':
   - 'Введение': 'operations/table_engines/index.md'
@@ -192,6 +197,7 @@ nav:
   - 'Как собрать ClickHouse на Mac OS X': 'development/build_osx.md'
   - 'Как писать код на C++': 'development/style.md'
   - 'Как запустить тесты': 'development/tests.md'
+  - 'Сторонние библиотеки': 'development/contrib.md'
 
 - 'Что нового':
   - 'Changelog': 'changelog.md'
