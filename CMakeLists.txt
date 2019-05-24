@@ -1,8 +1,20 @@
-project (ClickHouse)
-cmake_minimum_required (VERSION 3.3)
-cmake_policy(SET CMP0023 NEW)
+project(ClickHouse)
+cmake_minimum_required(VERSION 3.3)
+
+foreach(policy
+    CMP0023
+    CMP0074 # CMake 3.12
+    )
+  if(POLICY ${policy})
+    cmake_policy(SET ${policy} NEW)
+  endif()
+endforeach()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1) # Write compile_commands.json
+set(CMAKE_LINK_DEPENDS_NO_SHARED 1) # Do not relink all depended targets on .so
+set(CMAKE_CONFIGURATION_TYPES "RelWithDebInfo;Debug;Release;MinSizeRel" CACHE STRING "" FORCE)
+set(CMAKE_DEBUG_POSTFIX "d" CACHE STRING "Generate debug library name with a postfix.")    # To be consistent with CMakeLists from contrib libs.
 
 option(ENABLE_IPO "Enable inter-procedural optimization (aka LTO)" OFF) # need cmake 3.9+
 if(ENABLE_IPO)
@@ -38,9 +50,6 @@ if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git" AND NOT EXISTS "${ClickHouse_SOURC
     message (FATAL_ERROR "Submodules are not initialized. Run\n\tgit submodule update --init --recursive")
 endif ()
 
-# Write compile_commands.json
-set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
-
 include (cmake/find_ccache.cmake)
 
 if (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "None")
@@ -50,8 +59,6 @@ endif ()
 string(TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE_UC)
 message (STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 
-set (CMAKE_CONFIGURATION_TYPES "RelWithDebInfo;Debug;Release;MinSizeRel" CACHE STRING "" FORCE)
-set (CMAKE_DEBUG_POSTFIX "d" CACHE STRING "Generate debug library name with a postfix.")    # To be consistent with CMakeLists from contrib libs.
 
 option (USE_STATIC_LIBRARIES "Set to FALSE to use shared libraries" ON)
 option (MAKE_STATIC_LIBRARIES "Set to FALSE to make shared libraries" ${USE_STATIC_LIBRARIES})
@@ -61,7 +68,7 @@ if (NOT MAKE_STATIC_LIBRARIES)
 endif ()
 
 if (SPLIT_SHARED_LIBRARIES)
-    set (LINK_MODE SHARED)
+    set(BUILD_SHARED_LIBS 1 CACHE INTERNAL "")
 endif ()
 
 if (USE_STATIC_LIBRARIES)
@@ -180,7 +187,7 @@ include (cmake/use_libcxx.cmake)
 # This is intended for more control of what we are linking.
 
 set (DEFAULT_LIBS "")
-if (OS_LINUX AND NOT UNBUNDLED)
+if (OS_LINUX AND NOT UNBUNDLED AND (GLIBC_COMPATIBILITY OR USE_LIBCXX))
     # Note: this probably has no effect, but I'm not an expert in CMake.
     set (CMAKE_C_IMPLICIT_LINK_LIBRARIES "")
     set (CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "")
@@ -219,7 +226,7 @@ if (OS_LINUX AND NOT UNBUNDLED)
         set (CMAKE_POSTFIX_VARIABLE "CMAKE_${CMAKE_BUILD_TYPE_UC}_POSTFIX")
 
         # FIXME: glibc-compatibility may be non-static in some builds!
-        set (DEFAULT_LIBS "${DEFAULT_LIBS} libs/libglibc-compatibility/libglibc-compatibility${${CMAKE_POSTFIX_VARIABLE}}.a")
+        set (DEFAULT_LIBS "${DEFAULT_LIBS} ${ClickHouse_BINARY_DIR}/libs/libglibc-compatibility/libglibc-compatibility${${CMAKE_POSTFIX_VARIABLE}}.a")
     endif ()
 
     # Add Libc. GLIBC is actually a collection of interdependent libraries.
@@ -303,6 +310,7 @@ include (cmake/find_rt.cmake)
 include (cmake/find_execinfo.cmake)
 include (cmake/find_readline_edit.cmake)
 include (cmake/find_re2.cmake)
+include (cmake/find_libgsasl.cmake)
 include (cmake/find_rdkafka.cmake)
 include (cmake/find_capnp.cmake)
 include (cmake/find_llvm.cmake)
@@ -310,7 +318,6 @@ include (cmake/find_cpuid.cmake) # Freebsd, bundled
 if (NOT USE_CPUID)
     include (cmake/find_cpuinfo.cmake) # Debian
 endif()
-include (cmake/find_libgsasl.cmake)
 include (cmake/find_libxml2.cmake)
 include (cmake/find_brotli.cmake)
 include (cmake/find_protobuf.cmake)
@@ -318,6 +325,10 @@ include (cmake/find_pdqsort.cmake)
 include (cmake/find_hdfs3.cmake) # uses protobuf
 include (cmake/find_consistent-hashing.cmake)
 include (cmake/find_base64.cmake)
+include (cmake/find_hyperscan.cmake)
+include (cmake/find_lfalloc.cmake)
+include (cmake/find_simdjson.cmake)
+include (cmake/find_rapidjson.cmake)
 find_contrib_lib(cityhash)
 find_contrib_lib(farmhash)
 find_contrib_lib(metrohash)
