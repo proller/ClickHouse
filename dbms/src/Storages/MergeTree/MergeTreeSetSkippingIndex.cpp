@@ -229,15 +229,15 @@ SetIndexCondition::SetIndexCondition(
 
     /// Replace logical functions with bit functions.
     /// Working with UInt8: last bit = can be true, previous = can be false.
-    if (select.where_expression && select.prewhere_expression)
+    if (select.where() && select.prewhere())
         expression_ast = makeASTFunction(
                 "and",
-                select.where_expression->clone(),
-                select.prewhere_expression->clone());
-    else if (select.where_expression)
-        expression_ast = select.where_expression->clone();
-    else if (select.prewhere_expression)
-        expression_ast = select.prewhere_expression->clone();
+                select.where()->clone(),
+                select.prewhere()->clone());
+    else if (select.where())
+        expression_ast = select.where()->clone();
+    else if (select.prewhere())
+        expression_ast = select.prewhere()->clone();
     else
         expression_ast = std::make_shared<ASTLiteral>(UNKNOWN_FIELD);
 
@@ -462,11 +462,16 @@ IndexConditionPtr MergeTreeSetSkippingIndex::createIndexCondition(
     return std::make_shared<SetIndexCondition>(query, context, *this);
 };
 
+bool MergeTreeSetSkippingIndex::mayBenefitFromIndexForIn(const ASTPtr &) const
+{
+    return false;
+}
+
 
 std::unique_ptr<IMergeTreeIndex> setIndexCreator(
-        const NamesAndTypesList & new_columns,
-        std::shared_ptr<ASTIndexDeclaration> node,
-        const Context & context)
+    const NamesAndTypesList & new_columns,
+    std::shared_ptr<ASTIndexDeclaration> node,
+    const Context & context)
 {
     if (node->name.empty())
         throw Exception("Index must have unique name", ErrorCodes::INCORRECT_QUERY);

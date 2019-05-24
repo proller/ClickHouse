@@ -22,7 +22,7 @@
 #include <Columns/ColumnString.h>
 #include <Common/typeid_cast.h>
 #include <Databases/IDatabase.h>
-#include <Interpreters/SettingsCommon.h>
+#include <Core/SettingsCommon.h>
 #include <DataStreams/MaterializingBlockInputStream.h>
 #include <DataStreams/FilterBlockInputStream.h>
 #include <ext/range.h>
@@ -57,17 +57,25 @@ StorageMerge::StorageMerge(
 }
 
 
-/// NOTE Structure of underlying tables as well as their set are not constant,
-///  so the results of these methods may become obsolete after the call.
+/// NOTE: structure of underlying tables as well as their set are not constant,
+///       so the results of these methods may become obsolete after the call.
+
+bool StorageMerge::isVirtualColumn(const String & column_name) const
+{
+    if (column_name != "_table")
+        return false;
+
+    return !IStorage::hasColumn(column_name);
+}
 
 NameAndTypePair StorageMerge::getColumn(const String & column_name) const
 {
+    if (IStorage::hasColumn(column_name))
+        return IStorage::getColumn(column_name);
+
     /// virtual column of the Merge table itself
     if (column_name == "_table")
         return { column_name, std::make_shared<DataTypeString>() };
-
-    if (IStorage::hasColumn(column_name))
-        return IStorage::getColumn(column_name);
 
     /// virtual (and real) columns of the underlying tables
     auto first_table = getFirstTable([](auto &&) { return true; });
@@ -188,7 +196,7 @@ BlockInputStreams StorageMerge::read(
 
     for (const auto & column_name : column_names)
     {
-        if (column_name == "_table")
+        if (isVirtualColumn(column_name))
             has_table_virtual_column = true;
         else
             real_column_names.push_back(column_name);
@@ -274,7 +282,7 @@ BlockInputStreams StorageMerge::createSourceStreams(const SelectQueryInfo & quer
     if (!storage)
         return BlockInputStreams{
             InterpreterSelectQuery(modified_query_info.query, modified_context, std::make_shared<OneBlockInputStream>(header),
-                                   processed_stage, true).execute().in};
+                                   SelectQueryOptions(processed_stage).analyze()).execute().in};
 
     BlockInputStreams source_streams;
 
@@ -295,7 +303,7 @@ BlockInputStreams StorageMerge::createSourceStreams(const SelectQueryInfo & quer
         modified_context.getSettingsRef().max_threads = UInt64(streams_num);
         modified_context.getSettingsRef().max_streams_to_max_threads_ratio = 1;
 
-        InterpreterSelectQuery interpreter{modified_query_info.query, modified_context, Names{}, processed_stage};
+        InterpreterSelectQuery interpreter{modified_query_info.query, modified_context, SelectQueryOptions(processed_stage)};
         BlockInputStreamPtr interpreter_stream = interpreter.execute().in;
 
         /** Materialization is needed, since from distributed storage the constants come materialized.
@@ -369,7 +377,7 @@ StorageMerge::StorageListWithLocks StorageMerge::getSelectedTables(const ASTPtr 
         {
             StoragePtr storage = iterator->table();
 
-            if (query && query->as<ASTSelectQuery>()->prewhere_expression && !storage->supportsPrewhere())
+            if (query && query->as<ASTSelectQuery>()->prewhere() && !storage->supportsPrewhere())
                 throw Exception("Storage " + storage->getName() + " doesn't support PREWHERE.", ErrorCodes::ILLEGAL_PREWHERE);
 
             if (storage.get() != this)
@@ -402,7 +410,7 @@ void StorageMerge::alter(
     lockStructureExclusively(table_lock_holder, context.getCurrentQueryId());
 
     auto new_columns = getColumns();
-    auto new_indices = getIndicesDescription();
+    auto new_indices = getIndices();
     params.apply(new_columns);
     context.getDatabase(database_name)->alterTable(context, table_name, new_columns, new_indices, {});
     setColumns(new_columns);
@@ -429,7 +437,7 @@ Block StorageMerge::getQueryHeader(
         case QueryProcessingStage::Complete:
             return materializeBlock(InterpreterSelectQuery(
                 query_info.query, context, std::make_shared<OneBlockInputStream>(getSampleBlockForColumns(column_names)),
-                                       processed_stage, true).getSampleBlock());
+                SelectQueryOptions(processed_stage).analyze()).getSampleBlock());
     }
     throw Exception("Logical Error: unknown processed stage.", ErrorCodes::LOGICAL_ERROR);
 }
@@ -440,7 +448,7 @@ void StorageMerge::convertingSourceStream(const Block & header, const Context & 
     Block before_block_header = source_stream->getHeader();
     source_stream = std::make_shared<ConvertingBlockInputStream>(context, source_stream, header, ConvertingBlockInputStream::MatchColumnsMode::Name);
 
-    auto where_expression = query->as<ASTSelectQuery>()->where_expression;
+    auto where_expression = query->as<ASTSelectQuery>()->where();
 
     if (!where_expression)
         return;
