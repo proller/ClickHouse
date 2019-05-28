@@ -16,7 +16,7 @@ CREATE TABLE minmax_idx1
       idx_all (i32, i32 + f64, d, s, e, dt) TYPE minmax GRANULARITY 1,
     INDEX
       idx_2 (u64 + toYear(dt), substring(s, 2, 4)) TYPE minmax GRANULARITY 3
-) ENGINE = ReplicatedMergeTree('/clickhouse/tables/test/minmax', 'r1')
+) ENGINE = ReplicatedMergeTree('/clickhouse_test/tables/test/minmax', 'r1')
 ORDER BY u64
 SETTINGS index_granularity = 2;
 
@@ -33,7 +33,7 @@ CREATE TABLE minmax_idx2
       idx_all (i32, i32 + f64, d, s, e, dt) TYPE minmax GRANULARITY 1,
     INDEX
       idx_2 (u64 + toYear(dt), substring(s, 2, 4)) TYPE minmax GRANULARITY 3
-) ENGINE = ReplicatedMergeTree('/clickhouse/tables/test/minmax', 'r2')
+) ENGINE = ReplicatedMergeTree('/clickhouse_test/tables/test/minmax', 'r2')
 ORDER BY u64
 SETTINGS index_granularity = 2;
 
@@ -70,5 +70,5 @@ SELECT * FROM minmax_idx2 WHERE i32 = 5 AND i32 + f64 < 12 AND 3 < d AND d < 7 A
 SELECT * FROM minmax_idx1 WHERE (u64 < 2 OR u64 > 10) AND e != 'b' ORDER BY dt;
 SELECT * FROM minmax_idx2 WHERE (u64 < 2 OR u64 > 10) AND e != 'b' ORDER BY dt;
 
-DROP TABLE minmax_idx1;
-DROP TABLE minmax_idx2;
+--DROP TABLE minmax_idx1;
+--DROP TABLE minmax_idx2;

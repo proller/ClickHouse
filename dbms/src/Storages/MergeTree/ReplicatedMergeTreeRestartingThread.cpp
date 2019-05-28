@@ -44,6 +44,7 @@ ReplicatedMergeTreeRestartingThread::ReplicatedMergeTreeRestartingThread(Storage
     , log(&Logger::get(log_name))
     , active_node_identifier(generateActiveNodeIdentifier())
 {
+DUMP(__FUNCTION__);
     check_period_ms = storage.settings.zookeeper_session_expiration_check_period.totalSeconds() * 1000;
 
     /// Periodicity of checking lag of replica.
@@ -56,7 +57,10 @@ ReplicatedMergeTreeRestartingThread::ReplicatedMergeTreeRestartingThread(Storage
 void ReplicatedMergeTreeRestartingThread::run()
 {
     if (need_stop)
+{
+DUMP(__FUNCTION__);
         return;
+}
 
     try
     {
@@ -93,6 +97,7 @@ void ReplicatedMergeTreeRestartingThread::run()
                     if (first_time)
                         storage.startup_event.set();
                     task->scheduleAfter(retry_period_ms);
+DUMP(__FUNCTION__);
                     return;
                 }
 
@@ -101,7 +106,10 @@ void ReplicatedMergeTreeRestartingThread::run()
                     if (first_time)
                         storage.startup_event.set();
                     task->scheduleAfter(retry_period_ms);
+{
+DUMP(__FUNCTION__);
                     return;
+}
                 }
 
                 if (first_time)
@@ -111,7 +119,10 @@ void ReplicatedMergeTreeRestartingThread::run()
             }
 
             if (need_stop)
+{
+DUMP(__FUNCTION__);
                 return;
+}
 
             bool old_val = true;
             if (storage.is_readonly.compare_exchange_strong(old_val, false))
@@ -155,7 +166,10 @@ void ReplicatedMergeTreeRestartingThread::run()
     {
         storage.startup_event.set();
         tryLogCurrentException(log, __PRETTY_FUNCTION__);
+DUMP(__FUNCTION__);
     }
+
+DUMP(__FUNCTION__);
 
     task->scheduleAfter(check_period_ms);
 }

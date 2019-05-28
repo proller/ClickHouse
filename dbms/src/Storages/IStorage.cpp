@@ -22,6 +22,7 @@ namespace ErrorCodes
 
 IStorage::IStorage(ColumnsDescription columns_)
 {
+DUMP(__FUNCTION__);
     setColumns(std::move(columns_));
 }
 

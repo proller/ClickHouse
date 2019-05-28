@@ -63,20 +63,29 @@ void ReplicatedMergeTreeAlterThread::run()
         String columns_path = storage.zookeeper_path + "/columns";
         auto columns_znode = zk_node_cache.get(columns_path, task->getWatchCallback());
         if (!columns_znode.exists)
+{
+DUMP(__FUNCTION__); 
             throw Exception(columns_path + " doesn't exist", ErrorCodes::NOT_FOUND_NODE);
+}
         int32_t columns_version = columns_znode.stat.version;
 
         String metadata_path = storage.zookeeper_path + "/metadata";
         auto metadata_znode = zk_node_cache.get(metadata_path, task->getWatchCallback());
         if (!metadata_znode.exists)
+{
+DUMP(__FUNCTION__); 
             throw Exception(metadata_path + " doesn't exist", ErrorCodes::NOT_FOUND_NODE);
+}
         int32_t metadata_version = metadata_znode.stat.version;
 
         const bool changed_columns_version = (columns_version != storage.columns_version);
         const bool changed_metadata_version = (metadata_version != storage.metadata_version);
 
         if (!(changed_columns_version || changed_metadata_version || force_recheck_parts))
+{
+DUMP(__FUNCTION__); 
             return;
+}
 
         const String & columns_str = columns_znode.contents;
         auto columns_in_zk = ColumnsDescription::parse(columns_str);
@@ -185,7 +194,10 @@ void ReplicatedMergeTreeAlterThread::run()
         tryLogCurrentException(log, __PRETTY_FUNCTION__);
 
         if (e.code == Coordination::ZSESSIONEXPIRED)
+{
+DUMP(__FUNCTION__); 
             return;
+}
 
         force_recheck_parts = true;
         task->scheduleAfter(ALTER_ERROR_SLEEP_MS);

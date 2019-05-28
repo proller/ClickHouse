@@ -8,8 +8,8 @@ CURDIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ${CLICKHOUSE_CLIENT} --query="DROP TABLE IF EXISTS mutations_r1"
 ${CLICKHOUSE_CLIENT} --query="DROP TABLE IF EXISTS mutations_r2"
 
-${CLICKHOUSE_CLIENT} --query="CREATE TABLE mutations_r1(d Date, x UInt32, s String, m MATERIALIZED x + 2) ENGINE ReplicatedMergeTree('/clickhouse/tables/test/mutations', 'r1', d, intDiv(x, 10), 8192)"
-${CLICKHOUSE_CLIENT} --query="CREATE TABLE mutations_r2(d Date, x UInt32, s String, m MATERIALIZED x + 2) ENGINE ReplicatedMergeTree('/clickhouse/tables/test/mutations', 'r2', d, intDiv(x, 10), 8192)"
+${CLICKHOUSE_CLIENT} --query="CREATE TABLE mutations_r1(d Date, x UInt32, s String, m MATERIALIZED x + 2) ENGINE ReplicatedMergeTree('/clickhouse_temp/tables/test/mutations', 'r1', d, intDiv(x, 10), 8192)"
+${CLICKHOUSE_CLIENT} --query="CREATE TABLE mutations_r2(d Date, x UInt32, s String, m MATERIALIZED x + 2) ENGINE ReplicatedMergeTree('/clickhouse_temp/tables/test/mutations', 'r2', d, intDiv(x, 10), 8192)"
 
 # Test a mutation on empty table
 ${CLICKHOUSE_CLIENT} --query="ALTER TABLE mutations_r1 DELETE WHERE x = 1"
@@ -79,8 +79,8 @@ sleep 1.5
 # Check that the first mutation is cleaned
 ${CLICKHOUSE_CLIENT} --query="SELECT mutation_id, command, is_done FROM system.mutations WHERE table = 'mutations_cleaner_r2' ORDER BY mutation_id"
 
-${CLICKHOUSE_CLIENT} --query="DROP TABLE mutations_r1"
-${CLICKHOUSE_CLIENT} --query="DROP TABLE mutations_r2"
+#${CLICKHOUSE_CLIENT} --query="DROP TABLE mutations_r1"
+#${CLICKHOUSE_CLIENT} --query="DROP TABLE mutations_r2"
 
-${CLICKHOUSE_CLIENT} --query="DROP TABLE mutations_cleaner_r1"
-${CLICKHOUSE_CLIENT} --query="DROP TABLE mutations_cleaner_r2"
+#${CLICKHOUSE_CLIENT} --query="DROP TABLE mutations_cleaner_r1"
+#${CLICKHOUSE_CLIENT} --query="DROP TABLE mutations_cleaner_r2"

@@ -2856,6 +2856,7 @@ void StorageReplicatedMergeTree::startup()
 
 void StorageReplicatedMergeTree::shutdown()
 {
+DUMP(__FUNCTION__);
     /// Cancel fetches, merges and mutations to force the queue_task to finish ASAP.
     fetcher.blocker.cancelForever();
     merger_mutator.actions_blocker.cancelForever();
@@ -2871,17 +2872,20 @@ void StorageReplicatedMergeTree::shutdown()
         data_parts_exchange_endpoint_holder->getBlocker().cancelForever();
         data_parts_exchange_endpoint_holder = nullptr;
     }
+DUMP(__FUNCTION__);
 }
 
 
 StorageReplicatedMergeTree::~StorageReplicatedMergeTree()
 {
+DUMP(__FUNCTION__);
     try
     {
         shutdown();
     }
     catch (...)
     {
+DUMP(__FUNCTION__);
         tryLogCurrentException(__PRETTY_FUNCTION__);
     }
 }

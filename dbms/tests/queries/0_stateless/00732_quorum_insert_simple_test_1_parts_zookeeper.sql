@@ -3,8 +3,8 @@ SET send_logs_level = 'none';
 DROP TABLE IF EXISTS test.quorum1;
 DROP TABLE IF EXISTS test.quorum2;
 
-CREATE TABLE test.quorum1(x UInt32, y Date) ENGINE ReplicatedMergeTree('/clickhouse/tables/test/quorum', '1') ORDER BY x PARTITION BY y;
-CREATE TABLE test.quorum2(x UInt32, y Date) ENGINE ReplicatedMergeTree('/clickhouse/tables/test/quorum', '2') ORDER BY x PARTITION BY y;
+CREATE TABLE test.quorum1(x UInt32, y Date) ENGINE ReplicatedMergeTree('/clickhouse_test/tables/test/quorum', '1') ORDER BY x PARTITION BY y;
+CREATE TABLE test.quorum2(x UInt32, y Date) ENGINE ReplicatedMergeTree('/clickhouse_test/tables/test/quorum', '2') ORDER BY x PARTITION BY y;
 
 SET insert_quorum=2;
 SET select_sequential_consistency=1;
@@ -19,5 +19,5 @@ OPTIMIZE TABLE test.quorum1 PARTITION '2018-11-15' FINAL;
 
 SELECT count(*) FROM system.parts WHERE active AND database = 'test' AND table='quorum1';
 
-DROP TABLE IF EXISTS test.quorum1;
-DROP TABLE IF EXISTS test.quorum2;
+--DROP TABLE IF EXISTS test.quorum1;
+--DROP TABLE IF EXISTS test.quorum2;
