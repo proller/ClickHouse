@@ -102,10 +102,12 @@ endif ()
 option (TEST_COVERAGE "Enables flags for test coverage" OFF)
 option (ENABLE_TESTS "Enables tests" ON)
 
+include (cmake/find_musl.cmake)
+
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "amd64|x86_64")
     option (USE_INTERNAL_MEMCPY "Use internal implementation of 'memcpy' function instead of provided by libc. Only for x86_64." ON)
 
-    if (OS_LINUX AND NOT UNBUNDLED AND MAKE_STATIC_LIBRARIES AND CMAKE_VERSION VERSION_GREATER "3.9.0")
+    if (OS_LINUX AND NOT UNBUNDLED AND MAKE_STATIC_LIBRARIES AND CMAKE_VERSION VERSION_GREATER "3.9.0" AND NOT USE_MUSL)
         option (GLIBC_COMPATIBILITY "Set to TRUE to enable compatibility with older glibc libraries. Only for x86_64, Linux. Implies USE_INTERNAL_MEMCPY." ON)
     endif ()
 endif ()
@@ -187,7 +189,7 @@ include (cmake/use_libcxx.cmake)
 # This is intended for more control of what we are linking.
 
 set (DEFAULT_LIBS "")
-if (OS_LINUX AND NOT UNBUNDLED AND (GLIBC_COMPATIBILITY OR USE_LIBCXX))
+if (OS_LINUX AND NOT UNBUNDLED AND (GLIBC_COMPATIBILITY OR USE_LIBCXX OR USE_MUSL))
     # Note: this probably has no effect, but I'm not an expert in CMake.
     set (CMAKE_C_IMPLICIT_LINK_LIBRARIES "")
     set (CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "")
@@ -229,8 +231,16 @@ if (OS_LINUX AND NOT UNBUNDLED AND (GLIBC_COMPATIBILITY OR USE_LIBCXX))
         set (DEFAULT_LIBS "${DEFAULT_LIBS} ${ClickHouse_BINARY_DIR}/libs/libglibc-compatibility/libglibc-compatibility${${CMAKE_POSTFIX_VARIABLE}}.a")
     endif ()
 
-    # Add Libc. GLIBC is actually a collection of interdependent libraries.
-    set (DEFAULT_LIBS "${DEFAULT_LIBS} -lrt -ldl -lpthread -lm -lc")
+    if(USE_MUSL)
+        #set (DEFAULT_LIBS "${DEFAULT_LIBS} --sysroot=/usr/lib/x86_64-linux-musl/ ${MUSL_LIBRARIES}")
+        set(DEFAULT_LIBS "${DEFAULT_LIBS} ${MUSL_LIBRARIES}")
+        #set(CMAKE_CXX_FLAGS "--sysroot=/usr/lib/x86_64-linux-musl ${CMAKE_CXX_FLAGS}")
+        set(CMAKE_CXX_FLAGS "--target=x86_64-linux-musl ${CMAKE_CXX_FLAGS}")
+    else()
+        # Add Libc. GLIBC is actually a collection of interdependent libraries.
+        #set (DEFAULT_LIBS "${DEFAULT_LIBS} -lrt -ldl -lpthread -lm -lc")
+        set (DEFAULT_LIBS "${DEFAULT_LIBS} -lc")
+    endif()
 
     # Note: we'd rather use Musl libc library, but it's little bit more difficult to use.
 
