@@ -23,7 +23,7 @@
 #include <Common/StringUtils/StringUtils.h>
 #include <Common/ZooKeeper/ZooKeeper.h>
 #include <Common/ZooKeeper/ZooKeeperNodeCache.h>
-#include <Common/config.h>
+#include "config_core.h"
 #include <Common/getFQDNOrHostName.h>
 #include <Common/getMultipleKeysFromConfig.h>
 #include <Common/getNumberOfPhysicalCPUCores.h>
@@ -33,6 +33,7 @@
 #include <IO/UseSSL.h>
 #include <Interpreters/AsynchronousMetrics.h>
 #include <Interpreters/DDLWorker.h>
+#include <Interpreters/ExternalDictionaries.h>
 #include <Interpreters/ProcessList.h>
 #include <Interpreters/loadMetadata.h>
 #include <Interpreters/DNSCacheUpdater.h>
@@ -49,6 +50,7 @@
 #include <Common/StatusFile.h>
 #include "TCPHandlerFactory.h"
 #include "Common/config_version.h"
+#include "MySQLHandlerFactory.h"
 
 #if defined(__linux__)
 #include <Common/hasLinuxCapability.h>
@@ -309,7 +311,7 @@ int Server::main(const std::vector<std::string> & /*args*/)
     /// Initialize DateLUT early, to not interfere with running time of first query.
     LOG_DEBUG(log, "Initializing DateLUT.");
     DateLUT::instance();
-    LOG_TRACE(log, "Initialized DateLUT with time zone `" << DateLUT::instance().getTimeZone() << "'.");
+    LOG_TRACE(log, "Initialized DateLUT with time zone '" << DateLUT::instance().getTimeZone() << "'.");
 
     /// Directory with temporary data for processing of heavy queries.
     {
@@ -404,7 +406,7 @@ int Server::main(const std::vector<std::string> & /*args*/)
         main_config_zk_changed_event,
         [&](ConfigurationPtr config)
         {
-            buildLoggers(*config);
+            buildLoggers(*config, logger());
             global_context->setClustersConfig(config);
             global_context->setMacros(std::make_unique<Macros>(*config, "macros"));
         },
@@ -668,7 +670,7 @@ int Server::main(const std::vector<std::string> & /*args*/)
                         socket,
                         new Poco::Net::TCPServerParams));
 
-                    LOG_INFO(log, "Listening tcp: " + address.toString());
+                    LOG_INFO(log, "Listening for connections with native protocol (tcp): " + address.toString());
                 }
 
                 /// TCP with SSL
@@ -685,7 +687,7 @@ int Server::main(const std::vector<std::string> & /*args*/)
                         server_pool,
                         socket,
                         new Poco::Net::TCPServerParams));
-                    LOG_INFO(log, "Listening tcp_secure: " + address.toString());
+                    LOG_INFO(log, "Listening for connections with secure native protocol (tcp_secure): " + address.toString());
 #else
                     throw Exception{"SSL support for TCP protocol is disabled because Poco library was built without NetSSL support.",
                         ErrorCodes::SUPPORT_IS_DISABLED};
@@ -710,7 +712,7 @@ int Server::main(const std::vector<std::string> & /*args*/)
                         socket,
                         http_params));
 
-                    LOG_INFO(log, "Listening interserver http: " + address.toString());
+                    LOG_INFO(log, "Listening for replica communication (interserver) http://" + address.toString());
                 }
 
                 if (config().has("interserver_https_port"))
@@ -727,11 +729,26 @@ int Server::main(const std::vector<std::string> & /*args*/)
                         socket,
                         http_params));
 
-                    LOG_INFO(log, "Listening interserver https: " + address.toString());
+                    LOG_INFO(log, "Listening for secure replica communication (interserver) https://" + address.toString());
 #else
                     throw Exception{"SSL support for TCP protocol is disabled because Poco library was built without NetSSL support.",
                             ErrorCodes::SUPPORT_IS_DISABLED};
 #endif
+                }
+
+                if (config().has("mysql_port"))
+                {
+                    Poco::Net::ServerSocket socket;
+                    auto address = socket_bind_listen(socket, listen_host, config().getInt("mysql_port"), /* secure = */ true);
+                    socket.setReceiveTimeout(Poco::Timespan());
+                    socket.setSendTimeout(settings.send_timeout);
+                    servers.emplace_back(std::make_unique<Poco::Net::TCPServer>(
+                        new MySQLHandlerFactory(*this),
+                        server_pool,
+                        socket,
+                        new Poco::Net::TCPServerParams));
+
+                    LOG_INFO(log, "Listening for MySQL compatibility protocol: " + address.toString());
                 }
             }
             catch (const Poco::Exception & e)
@@ -816,7 +833,7 @@ int Server::main(const std::vector<std::string> & /*args*/)
             if (!config().getBool("dictionaries_lazy_load", true))
             {
                 global_context->tryCreateEmbeddedDictionaries();
-                global_context->tryCreateExternalDictionaries();
+                global_context->getExternalDictionaries().enableAlwaysLoadEverything(true);
             }
         }
         catch (...)
