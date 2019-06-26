@@ -28,10 +28,6 @@ if (ENABLE_EMBEDDED_COMPILER)
             if (NOT LLVM_FOUND)
                 find_package (LLVM 6 CONFIG PATHS ${LLVM_PATHS})
             endif ()
-            # upcoming
-            if (NOT LLVM_FOUND)
-                find_package (LLVM 9 CONFIG PATHS ${LLVM_PATHS})
-            endif ()
             # old and buggy
             if (NOT LLVM_FOUND)
                 find_package (LLVM 5 CONFIG PATHS ${LLVM_PATHS})
