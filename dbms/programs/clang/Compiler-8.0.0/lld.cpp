@@ -89,7 +89,12 @@ static Flavor parseProgname(StringRef Progname) {
   for (StringRef S : V)
     if (Flavor F = getFlavor(S))
       return F;
+
+#if LLVM_ON_UNIX
+  return Gnu;
+#else
   return Invalid;
+#endif
 }
 
 static Flavor parseFlavor(std::vector<const char *> &V) {
