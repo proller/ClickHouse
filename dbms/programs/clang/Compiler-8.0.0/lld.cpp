@@ -38,6 +38,8 @@ using namespace lld;
 using namespace llvm;
 using namespace llvm::sys;
 
+/*
+
 enum Flavor {
   Invalid,
   Gnu,     // -flavor gnu
@@ -90,7 +92,9 @@ static Flavor parseProgname(StringRef Progname) {
     if (Flavor F = getFlavor(S))
       return F;
 
-#if LLVM_ON_UNIX
+#if __APPLE__
+  return Darwin;
+#elif LLVM_ON_UNIX
   return Gnu;
 #else
   return Invalid;
@@ -116,6 +120,8 @@ static Flavor parseFlavor(std::vector<const char *> &V) {
   return parseProgname(Arg0);
 }
 
+*/
+
 // If this function returns true, lld calls _exit() so that it quickly
 // exits without invoking destructors of globally allocated objects.
 //
@@ -130,11 +136,14 @@ int mainEntryClickHouseLLD(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
 
   std::vector<const char *> Args(Argv, Argv + Argc);
+/*
   switch (parseFlavor(Args)) {
   case Gnu:
     if (isPETarget(Args))
       return !mingw::link(Args);
+*/
     return !elf::link(Args, canExitEarly());
+/*
   case WinLink:
     return !coff::link(Args, canExitEarly());
   case Darwin:
@@ -146,4 +155,5 @@ int mainEntryClickHouseLLD(int Argc, char **Argv) {
         "Invoke ld.lld (Unix), ld64.lld (macOS), lld-link (Windows), wasm-ld"
         " (WebAssembly) instead");
   }
+*/
 }
