@@ -195,9 +195,14 @@ struct LLVMContext
     ModulePtr module;
     std::unique_ptr<llvm::TargetMachine> machine;
     std::shared_ptr<llvm::SectionMemoryManager> memory_manager;
-    std::shared_ptr<SymbolResolver> Resolver;
+#if LLVM_VERSION_MAJOR >= 8
+    std::shared_ptr<llvm::orc::SymbolResolver> Resolver;
+    llvm::orc::LegacyRTDyldObjectLinkingLayer object_layer;
+    llvm::orc::LegacyIRCompileLayer <decltype(object_layer), llvm::orc::SimpleCompiler> compile_layer;
+#else
     llvm::orc::RTDyldObjectLinkingLayer object_layer;
     llvm::orc::IRCompileLayer<decltype(object_layer), llvm::orc::SimpleCompiler> compile_layer;
+#endif
     llvm::DataLayout layout;
     llvm::IRBuilder<> builder;
     std::unordered_map<std::string, void *> symbols;
@@ -214,8 +219,11 @@ struct LLVMContext
 #if LLVM_VERSION_MAJOR >= 7
         , object_layer(execution_session, [this](llvm::orc::VModuleKey)
         {
-            //return llvm::orc::RTDyldObjectLinkingLayer::Resources{memory_manager, wrapJITSymbolResolver(*memory_manager)};
-            return llvm::orc::RTDyldObjectLinkingLayer::Resources{std::make_shared<SectionMemoryManager>(), Resolver};
+#if LLVM_VERSION_MAJOR >= 8
+            return llvm::orc::LegacyRTDyldObjectLinkingLayer::Resources{std::make_shared<llvm::SectionMemoryManager>(), Resolver};
+#else
+            return llvm::orc::RTDyldObjectLinkingLayer::Resources{memory_manager, wrapJITSymbolResolver(*memory_manager)};
+#endif
         })
 #else
         , object_layer([this]() { return memory_manager; })
