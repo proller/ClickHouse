@@ -130,8 +130,52 @@ static llvm::TargetMachine * getNativeMachine()
     );
 }
 
-#if LLVM_VERSION_MAJOR >= 7 && LLVM_VERSION_MAJOR < 8
+#if LLVM_VERSION_MAJOR >= 8
+auto wrapJITSymbolResolver(llvm::LegacyJITSymbolResolver & jsr)
+{
+  //auto Resolver =
+  /*return
+    llvm::orc::createSymbolResolver(
+      [&](const llvm::orc::SymbolNameSet &Symbols) {
+        auto FlagsMap = jsr.lookupFlags(Symbols);
+        llvm::orc::SymbolNameSet Result;
+        for (auto &KV : FlagsMap)
+          if (!KV.second.isStrong())
+            Result.insert(KV.first);
+        return Result;
+      },
+      [&](std::shared_ptr<llvm::orc::AsynchronousSymbolQuery> Q, llvm::orc::SymbolNameSet Symbols) {
+        return lsr.legacyLookup(std::move(Q), Symbols);
+      });
+      */
+
+  //auto RS = Resolver->getResponsibilitySet(SymbolNameSet({Bar, Baz}));
+//  (void)jsr;
+//  return
+//createLegacyLookupResolver
+//llvm::orc::createSymbolResolver(//ES,
+//         [](const std::string &) -> llvm::JITSymbol { return nullptr; },
+         //[](llvm::Error) { /*cantFail(std::move(Err), "lookup failed");*/ });
+
+           return
+    llvm::orc::createSymbolResolver(
+      [&](const llvm::orc::SymbolNameSet & /*Symbols*/) {
+        llvm::orc::SymbolNameSet Result;
+        return Result;
+      },
+      [&](std::shared_ptr<llvm::orc::AsynchronousSymbolQuery> Q, llvm::orc::SymbolNameSet Symbols) {
+        return jsr.lookup(std::move(Q), Symbols);
+      });
+
+
+}
+
+#elif LLVM_VERSION_MAJOR >= 7 // && LLVM_VERSION_MAJOR < 8
+//#if LLVM_VERSION_MAJOR >= 8
+//auto wrapJITSymbolResolver(llvm::LegacyJITSymbolResolver & jsr)
+//#else
 auto wrapJITSymbolResolver(llvm::JITSymbolResolver & jsr)
+//#endif
 {
 #if USE_INTERNAL_LLVM_LIBRARY && LLVM_VERSION_PATCH == 0
     // REMOVE AFTER contrib/llvm upgrade
@@ -153,12 +197,25 @@ auto wrapJITSymbolResolver(llvm::JITSymbolResolver & jsr)
     auto flags = [&](const llvm::orc::SymbolNameSet & symbols)
     {
         llvm::orc::SymbolFlagsMap flags_map;
+#if LLVM_VERSION_MAJOR >= 8
+         jsr.lookup(symbols, [=](llvm::Expected<llvm::JITSymbolResolver::LookupResult> Result) {
+         });
+
+#else
         for (const auto & symbol : symbols)
         {
+#if LLVM_VERSION_MAJOR >= 8
+//            jsr.lookup({*symbol}, [=](llvm::Expected<llvm::JITSymbolResolver::LookupResult> Result) {
+            //});
+            //if (resolved && resolved->size())
+            //    flags_map.emplace(symbol, resolved->begin()->second);
+#else
             auto resolved = jsr.lookupFlags({*symbol});
             if (resolved && resolved->size())
                 flags_map.emplace(symbol, resolved->begin()->second);
+#endif
         }
+#endif
         return flags_map;
     };
 #endif
@@ -196,7 +253,7 @@ struct LLVMContext
     std::unique_ptr<llvm::TargetMachine> machine;
     std::shared_ptr<llvm::SectionMemoryManager> memory_manager;
 #if LLVM_VERSION_MAJOR >= 8
-    std::shared_ptr<llvm::orc::SymbolResolver> Resolver;
+    //std::shared_ptr<llvm::orc::SymbolResolver> Resolver;
     llvm::orc::LegacyRTDyldObjectLinkingLayer object_layer;
     llvm::orc::LegacyIRCompileLayer <decltype(object_layer), llvm::orc::SimpleCompiler> compile_layer;
 #else
@@ -220,7 +277,8 @@ struct LLVMContext
         , object_layer(execution_session, [this](llvm::orc::VModuleKey)
         {
 #if LLVM_VERSION_MAJOR >= 8
-            return llvm::orc::LegacyRTDyldObjectLinkingLayer::Resources{std::make_shared<llvm::SectionMemoryManager>(), Resolver};
+            //return llvm::orc::LegacyRTDyldObjectLinkingLayer::Resources{std::make_shared<llvm::SectionMemoryManager>(), Resolver};
+            return llvm::orc::LegacyRTDyldObjectLinkingLayer::Resources{memory_manager, wrapJITSymbolResolver(*memory_manager)};
 #else
             return llvm::orc::RTDyldObjectLinkingLayer::Resources{memory_manager, wrapJITSymbolResolver(*memory_manager)};
 #endif
