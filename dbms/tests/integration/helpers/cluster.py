@@ -10,9 +10,11 @@ import socket
 import subprocess
 import time
 import urllib
+import httplib
 import xml.dom.minidom
 import logging
 import docker
+import pprint
 import psycopg2
 import pymongo
 import pymysql
@@ -302,6 +304,7 @@ class ClickHouseCluster:
                 print "Can't connect to MySQL " + str(ex)
                 time.sleep(0.5)
 
+        subprocess_call(['docker-compose', 'ps', '--services', '--all'])
         raise Exception("Cannot wait MySQL container")
 
     def wait_postgres_to_start(self, timeout=60):
@@ -472,7 +475,7 @@ class ClickHouseCluster:
                 instance.client = Client(instance.ip_address, command=self.client_bin_path)
 
             self.is_up = True
-        
+
         except BaseException, e:
             print "Failed to start cluster: "
             print str(e)
@@ -504,6 +507,13 @@ class ClickHouseCluster:
         if sanitizer_assert_instance is not None:
             raise Exception("Sanitizer assert found in {} for instance {}".format(self.docker_logs_path, sanitizer_assert_instance))
 
+    def pause_container(self, instance_name):
+        subprocess_check_call(self.base_cmd + ['pause', instance_name])
+    #    subprocess_check_call(self.base_cmd + ['kill', '-s SIGSTOP', instance_name])
+
+    def unpause_container(self, instance_name):
+        subprocess_check_call(self.base_cmd + ['unpause', instance_name])
+    #    subprocess_check_call(self.base_cmd + ['kill', '-s SIGCONT', instance_name])
 
     def open_bash_shell(self, instance_name):
         os.system(' '.join(self.base_cmd + ['exec', instance_name, '/bin/bash']))
@@ -619,15 +629,15 @@ class ClickHouseInstance:
         self.with_installed_binary = with_installed_binary
 
     # Connects to the instance via clickhouse-client, sends a query (1st argument) and returns the answer
-    def query(self, sql, stdin=None, timeout=None, settings=None, user=None, ignore_error=False):
-        return self.client.query(sql, stdin, timeout, settings, user, ignore_error)
+    def query(self, sql, stdin=None, timeout=None, settings=None, user=None, password=None, ignore_error=False):
+        return self.client.query(sql, stdin, timeout, settings, user, password, ignore_error)
 
-    def query_with_retry(self, sql, stdin=None, timeout=None, settings=None, user=None, ignore_error=False,
+    def query_with_retry(self, sql, stdin=None, timeout=None, settings=None, user=None, password=None, ignore_error=False,
                          retry_count=20, sleep_time=0.5, check_callback=lambda x: True):
         result = None
         for i in range(retry_count):
             try:
-                result = self.query(sql, stdin, timeout, settings, user, ignore_error)
+                result = self.query(sql, stdin, timeout, settings, user, password, ignore_error)
                 if check_callback(result):
                     return result
                 time.sleep(sleep_time)
@@ -644,15 +654,15 @@ class ClickHouseInstance:
         return self.client.get_query_request(*args, **kwargs)
 
     # Connects to the instance via clickhouse-client, sends a query (1st argument), expects an error and return its code
-    def query_and_get_error(self, sql, stdin=None, timeout=None, settings=None, user=None):
-        return self.client.query_and_get_error(sql, stdin, timeout, settings, user)
+    def query_and_get_error(self, sql, stdin=None, timeout=None, settings=None, user=None, password=None):
+        return self.client.query_and_get_error(sql, stdin, timeout, settings, user, password)
 
     # The same as query_and_get_error but ignores successful query.
-    def query_and_get_answer_with_error(self, sql, stdin=None, timeout=None, settings=None, user=None):
-        return self.client.query_and_get_answer_with_error(sql, stdin, timeout, settings, user)
+    def query_and_get_answer_with_error(self, sql, stdin=None, timeout=None, settings=None, user=None, password=None):
+        return self.client.query_and_get_answer_with_error(sql, stdin, timeout, settings, user, password)
 
     # Connects to the instance via HTTP interface, sends a query and returns the answer
-    def http_query(self, sql, data=None, params=None, user=None):
+    def http_query(self, sql, data=None, params=None, user=None, password=None, expect_fail_and_get_error=False):
         if params is None:
             params = {}
         else:
@@ -661,12 +671,30 @@ class ClickHouseInstance:
         params["query"] = sql
 
         auth = ""
-        if user:
+        if user and password:
+            auth = "{}:{}@".format(user, password)
+        elif user:
             auth = "{}@".format(user)
 
         url = "http://" + auth + self.ip_address + ":8123/?" + urllib.urlencode(params)
 
-        return urllib.urlopen(url, data).read()
+        open_result = urllib.urlopen(url, data)
+
+        def http_code_and_message():
+            return str(open_result.getcode()) + " " + httplib.responses[open_result.getcode()] + ": " + open_result.read()
+            
+        if expect_fail_and_get_error:
+            if open_result.getcode() == 200:
+                raise Exception("ClickHouse HTTP server is expected to fail, but succeeded: " + open_result.read())
+            return http_code_and_message()
+        else:
+            if open_result.getcode() != 200:
+                raise Exception("ClickHouse HTTP server returned " + http_code_and_message())
+            return open_result.read()
+
+    # Connects to the instance via HTTP interface, sends a query, expects an error and return the error message
+    def http_query_and_get_error(self, sql, data=None, params=None, user=None, password=None):
+        return self.http_query(sql=sql, data=data, params=params, user=user, password=password, expect_fail_and_get_error=True)
 
     def kill_clickhouse(self, stop_start_wait_sec=5):
         pid = self.get_process_pid("clickhouse")
@@ -703,7 +731,16 @@ class ClickHouseInstance:
         output = output.decode('utf8')
         exit_code = self.docker_client.api.exec_inspect(exec_id)['ExitCode']
         if exit_code:
-            raise Exception('Cmd "{}" failed! Return code {}. Output: {}'.format(' '.join(cmd), exit_code, output))
+            container_info = self.docker_client.api.inspect_container(container.id)
+            image_id = container_info.get('Image')
+            image_info = self.docker_client.api.inspect_image(image_id)
+            print("Command failed in container {}: ".format(container.id))
+            pprint.pprint(container_info)
+            print("")
+            print("Container {} uses image {}: ".format(container.id, image_id))
+            pprint.pprint(image_info)
+            print("")
+            raise Exception('Cmd "{}" failed in container {}. Return code {}. Output: {}'.format(' '.join(cmd), container.id, exit_code, output))
         return output
 
     def contains_in_log(self, substring):
@@ -878,19 +915,19 @@ class ClickHouseInstance:
         # used by all utils with any config
         conf_d_dir = p.abspath(p.join(configs_dir, 'conf.d'))
         # used by server with main config.xml
-        config_d_dir = p.abspath(p.join(configs_dir, 'config.d'))
+        self.config_d_dir = p.abspath(p.join(configs_dir, 'config.d'))
         users_d_dir = p.abspath(p.join(configs_dir, 'users.d'))
         os.mkdir(conf_d_dir)
-        os.mkdir(config_d_dir)
+        os.mkdir(self.config_d_dir)
         os.mkdir(users_d_dir)
 
         # The file is named with 0_ prefix to be processed before other configuration overloads.
-        shutil.copy(p.join(HELPERS_DIR, '0_common_instance_config.xml'), config_d_dir)
+        shutil.copy(p.join(HELPERS_DIR, '0_common_instance_config.xml'), self.config_d_dir)
 
         # Generate and write macros file
         macros = self.macros.copy()
         macros['instance'] = self.name
-        with open(p.join(config_d_dir, 'macros.xml'), 'w') as macros_config:
+        with open(p.join(self.config_d_dir, 'macros.xml'), 'w') as macros_config:
             macros_config.write(self.dict_to_xml({"macros": macros}))
 
         # Put ZooKeeper config
@@ -903,7 +940,7 @@ class ClickHouseInstance:
 
         # Copy config.d configs
         for path in self.custom_main_config_paths:
-            shutil.copy(path, config_d_dir)
+            shutil.copy(path, self.config_d_dir)
 
         # Copy users.d configs
         for path in self.custom_user_config_paths:
@@ -974,7 +1011,7 @@ class ClickHouseInstance:
                 binary_volume=binary_volume,
                 odbc_bridge_volume=odbc_bridge_volume,
                 configs_dir=configs_dir,
-                config_d_dir=config_d_dir,
+                config_d_dir=self.config_d_dir,
                 db_dir=db_dir,
                 tmpfs=str(self.tmpfs),
                 logs_dir=logs_dir,
