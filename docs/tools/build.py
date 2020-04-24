@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import collections
 import datetime
 import logging
 import os
@@ -22,6 +21,7 @@ from mkdocs.commands import build as mkdocs_build
 from concatenate import concatenate
 
 import mdx_clickhouse
+import nav
 import test
 import util
 import website
@@ -39,39 +39,6 @@ class ClickHouseMarkdown(markdown.extensions.Extension):
 
 
 markdown.extensions.ClickHouseMarkdown = ClickHouseMarkdown
-
-
-def build_nav_entry(root):
-    if root.endswith('images'):
-        return None, None, None
-    result_items = []
-    index_meta, _ = util.read_md_file(os.path.join(root, 'index.md'))
-    current_title = index_meta.get('toc_folder_title', index_meta.get('toc_title', 'hidden'))
-    for filename in os.listdir(root):
-        path = os.path.join(root, filename)
-        if os.path.isdir(path):
-            prio, title, payload = build_nav_entry(path)
-            if title and payload:
-                result_items.append((prio, title, payload))
-        elif filename.endswith('.md'):
-            path = os.path.join(root, filename)
-            meta, _ = util.read_md_file(path)
-            path = path.split('/', 2)[-1]
-            title = meta.get('toc_title', 'hidden')
-            prio = meta.get('toc_priority', 9999)
-            result_items.append((prio, title, path))
-    result_items = sorted(result_items, key=lambda x: (x[0], x[1]))
-    result = collections.OrderedDict([(item[1], item[2]) for item in result_items])
-    return index_meta.get('toc_priority', 10000), current_title, result
-
-
-def build_nav(lang, args):
-    docs_dir = os.path.join(args.docs_dir, lang)
-    _, _, nav = build_nav_entry(docs_dir)
-    result = []
-    for key, value in nav.items():
-        result.append({key: value})
-    return result
 
 
 def build_for_lang(lang, args):
@@ -115,16 +82,18 @@ def build_for_lang(lang, args):
             'fr': 'Français',
             'ru': 'Русский',
             'ja': '日本語',
+            'tr': 'Türkçe',
             'fa': 'فارسی'
         }
 
         site_names = {
             'en': 'ClickHouse %s Documentation',
+            'zh': 'ClickHouse文档 %s',
             'es': 'Documentación de ClickHouse %s',
             'fr': 'Documentation ClickHouse %s',
             'ru': 'Документация ClickHouse %s',
-            'zh': 'ClickHouse文档 %s',
             'ja': 'ClickHouseドキュメント %s',
+            'tr': 'ClickHouse Belgeleri %s',
             'fa': 'مستندات %sClickHouse'
         }
 
@@ -142,6 +111,7 @@ def build_for_lang(lang, args):
             'codehilite',
             'nl2br',
             'sane_lists',
+            'pymdownx.details',
             'pymdownx.magiclink',
             'pymdownx.superfences',
             'extra',
@@ -157,8 +127,10 @@ def build_for_lang(lang, args):
         if args.htmlproofer:
             plugins.append('htmlproofer')
 
+        site_name = site_names.get(lang, site_names['en']) % args.version_prefix
+        site_name = site_name.replace('  ', ' ')
         raw_config = dict(
-            site_name=site_names.get(lang, site_names['en']) % args.version_prefix,
+            site_name=site_name,
             site_url=f'https://clickhouse.tech/docs/{lang}/',
             docs_dir=os.path.join(args.docs_dir, lang),
             site_dir=site_dir,
@@ -176,20 +148,19 @@ def build_for_lang(lang, args):
                 'stable_releases': args.stable_releases,
                 'version_prefix': args.version_prefix,
                 'single_page': False,
-                'rev':       args.rev,
+                'rev': args.rev,
                 'rev_short': args.rev_short,
-                'rev_url':   args.rev_url,
-                'events':    args.events,
-                'languages': languages
+                'rev_url': args.rev_url,
+                'events': args.events,
+                'languages': languages,
+                'includes_dir':  os.path.join(os.path.dirname(__file__), '..', '_includes')
             }
         )
 
         if os.path.exists(config_path):
-            nav = None
             raw_config['config_file'] = config_path
         else:
-            nav = build_nav(lang, args)
-            raw_config['nav'] = nav
+            raw_config['nav'] = nav.build_nav(lang, args)
 
         cfg = config.load_config(**raw_config)
 
@@ -202,7 +173,7 @@ def build_for_lang(lang, args):
             mkdocs_build.build(cfg)
 
         if not args.skip_single_page:
-            build_single_page_version(lang, args, nav, cfg)
+            build_single_page_version(lang, args, raw_config.get('nav'), cfg)
 
         mdx_clickhouse.PatchedMacrosPlugin.disabled = False
 
@@ -254,7 +225,20 @@ def build_single_page_version(lang, args, nav, cfg):
                     os.path.join(site_temp, 'single'),
                     single_page_output_path
                 )
-                
+
+                single_page_index_html = os.path.join(single_page_output_path, 'index.html')
+                single_page_content_js = os.path.join(single_page_output_path, 'content.js')
+                with open(single_page_index_html, 'r') as f:
+                    sp_prefix, sp_js, sp_suffix = f.read().split('<!-- BREAK -->')
+                with open(single_page_index_html, 'w') as f:
+                    f.write(sp_prefix)
+                    f.write(sp_suffix)
+                with open(single_page_content_js, 'w') as f:
+                    if args.minify:
+                        import jsmin
+                        sp_js = jsmin.jsmin(sp_js)
+                    f.write(sp_js)
+
                 logging.info(f'Re-building single page for {lang} pdf/test')
                 with util.temp_dir() as test_dir:
                     extra['single_page'] = False
@@ -323,13 +307,14 @@ def write_redirect_html(out_path, to_url):
     except OSError:
         pass
     with open(out_path, 'w') as f:
-        f.write(f'''<!DOCTYPE HTML>
+        f.write(f'''<!--[if IE 6]> Redirect: {to_url} <![endif]-->
+<!DOCTYPE HTML>
 <html lang="en-US">
     <head>
         <meta charset="UTF-8">
         <meta http-equiv="refresh" content="0; url={to_url}">
         <script type="text/javascript">
-            window.location.href = "{to_url}"
+            window.location.href = "{to_url}";
         </script>
         <title>Page Redirection</title>
     </head>
@@ -340,9 +325,9 @@ def write_redirect_html(out_path, to_url):
 
 
 def build_redirect_html(args, from_path, to_path):
-    for lang in ['en', 'es', 'fr', 'ja', 'fa']: # TODO: args.lang.split(','):
+    for lang in args.lang.split(','):
         out_path = os.path.join(args.docs_output_dir, lang, from_path.replace('.md', '/index.html'))
-        version_prefix = args.version_prefix + '/' if args.version_prefix else '/'
+        version_prefix = f'/{args.version_prefix}/' if args.version_prefix else '/'
         target_path = to_path.replace('.md', '/')
         to_url = f'/docs{version_prefix}{lang}/{target_path}'
         to_url = to_url.strip()
@@ -378,9 +363,12 @@ def build(args):
     build_releases(args, build_docs)
 
     if not args.skip_website:
+        website.process_benchmark_results(args)
         website.minify_website(args)
 
     for static_redirect in [
+        ('benchmark.html', '/benchmark/dbms/'),
+        ('benchmark_hardware.html', '/benchmark/hardware/'),
         ('tutorial.html', '/docs/en/getting_started/tutorial/',),
         ('reference_en.html', '/docs/en/single/', ),
         ('reference_ru.html', '/docs/ru/single/',),
@@ -396,13 +384,14 @@ if __name__ == '__main__':
     os.chdir(os.path.join(os.path.dirname(__file__), '..'))
     website_dir = os.path.join('..', 'website')
     arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument('--lang', default='en,es,fr,ru,zh,ja,fa')
+    arg_parser.add_argument('--lang', default='en,es,fr,ru,zh,ja,tr,fa')
     arg_parser.add_argument('--docs-dir', default='.')
     arg_parser.add_argument('--theme-dir', default=website_dir)
     arg_parser.add_argument('--website-dir', default=website_dir)
     arg_parser.add_argument('--output-dir', default='build')
     arg_parser.add_argument('--enable-stable-releases', action='store_true')
-    arg_parser.add_argument('--stable-releases-limit', type=int, default='10')
+    arg_parser.add_argument('--stable-releases-limit', type=int, default='4')
+    arg_parser.add_argument('--lts-releases-limit', type=int, default='2')
     arg_parser.add_argument('--version-prefix', type=str, default='')
     arg_parser.add_argument('--is-stable-release', action='store_true')
     arg_parser.add_argument('--skip-single-page', action='store_true')
@@ -435,7 +424,7 @@ if __name__ == '__main__':
 
     from build import build
     build(args)
-    
+
     if args.livereload:
         new_args = [arg for arg in sys.argv if not arg.startswith('--livereload')]
         new_args = sys.executable + ' ' + ' '.join(new_args)
