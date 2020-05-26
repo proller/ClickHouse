@@ -9,6 +9,7 @@
 #include <Interpreters/Context.h>
 #include <Common/StringUtils/StringUtils.h>
 #include <Common/quoteString.h>
+#include <Interpreters/ExpressionActions.h>
 
 #include <Processors/Executors/TreeExecutorBlockInputStream.h>
 
@@ -31,10 +32,6 @@ namespace ErrorCodes
     extern const int DEADLOCK_AVOIDED;
 }
 
-IStorage::IStorage(StorageID storage_id_, ColumnsDescription virtuals_) : storage_id(std::move(storage_id_)), columns(std::move(virtuals_))
-{
-}
-
 const ColumnsDescription & IStorage::getColumns() const
 {
     return columns;
@@ -48,18 +45,6 @@ const IndicesDescription & IStorage::getIndices() const
 const ConstraintsDescription & IStorage::getConstraints() const
 {
     return constraints;
-}
-
-NameAndTypePair IStorage::getColumn(const String & column_name) const
-{
-    /// By default, we assume that there are no virtual columns in the storage.
-    return getColumns().getPhysical(column_name);
-}
-
-bool IStorage::hasColumn(const String & column_name) const
-{
-    /// By default, we assume that there are no virtual columns in the storage.
-    return getColumns().hasPhysical(column_name);
 }
 
 Block IStorage::getSampleBlock() const
@@ -76,7 +61,9 @@ Block IStorage::getSampleBlockWithVirtuals() const
 {
     auto res = getSampleBlock();
 
-    for (const auto & column : getColumns().getVirtuals())
+    /// Virtual columns must be appended after ordinary, because user can
+    /// override them.
+    for (const auto & column : getVirtuals())
         res.insert({column.type->createColumn(), column.type, column.name});
 
     return res;
@@ -96,10 +83,16 @@ Block IStorage::getSampleBlockForColumns(const Names & column_names) const
 {
     Block res;
 
-    NamesAndTypesList all_columns = getColumns().getAll();
     std::unordered_map<String, DataTypePtr> columns_map;
+
+    NamesAndTypesList all_columns = getColumns().getAll();
     for (const auto & elem : all_columns)
         columns_map.emplace(elem.name, elem.type);
+
+    /// Virtual columns must be appended after ordinary, because user can
+    /// override them.
+    for (const auto & column : getVirtuals())
+        columns_map.emplace(column.name, column.type);
 
     for (const auto & name : column_names)
     {
@@ -110,9 +103,8 @@ Block IStorage::getSampleBlockForColumns(const Names & column_names) const
         }
         else
         {
-            /// Virtual columns.
-            NameAndTypePair elem = getColumn(name);
-            res.insert({elem.type->createColumn(), elem.type, elem.name});
+            throw Exception(
+                "Column " + backQuote(name) + " not found in table " + getStorageID().getNameForLogs(), ErrorCodes::NOT_FOUND_COLUMN_IN_BLOCK);
         }
     }
 
@@ -164,7 +156,10 @@ void IStorage::check(const Names & column_names, bool include_virtuals) const
 {
     NamesAndTypesList available_columns = getColumns().getAllPhysical();
     if (include_virtuals)
-        available_columns.splice(available_columns.end(), getColumns().getVirtuals());
+    {
+        auto virtuals = getVirtuals();
+        available_columns.insert(available_columns.end(), virtuals.begin(), virtuals.end());
+    }
 
     const String list_of_columns = listOfColumns(available_columns);
 
@@ -291,15 +286,7 @@ void IStorage::setColumns(ColumnsDescription columns_)
 {
     if (columns_.getOrdinary().empty())
         throw Exception("Empty list of columns passed", ErrorCodes::EMPTY_LIST_OF_COLUMNS_PASSED);
-    ColumnsDescription old_virtuals(columns.getVirtuals(), true);
-
     columns = std::move(columns_);
-
-    for (const auto & column : old_virtuals)
-    {
-        if (!columns.has(column.name))
-            columns.add(column);
-    }
 }
 
 void IStorage::setIndices(IndicesDescription indices_)
@@ -314,7 +301,8 @@ void IStorage::setConstraints(ConstraintsDescription constraints_)
 
 bool IStorage::isVirtualColumn(const String & column_name) const
 {
-    return getColumns().get(column_name).is_virtual;
+    /// Virtual column maybe overriden by real column
+    return !getColumns().has(column_name) && getVirtuals().contains(column_name);
 }
 
 RWLockImpl::LockHolder IStorage::tryLockTimed(
@@ -439,6 +427,118 @@ void IStorage::renameInMemory(const StorageID & new_table_id)
 {
     std::lock_guard lock(id_mutex);
     storage_id = new_table_id;
+}
+
+NamesAndTypesList IStorage::getVirtuals() const
+{
+    return {};
+}
+
+const StorageMetadataKeyField & IStorage::getPartitionKey() const
+{
+    return partition_key;
+}
+
+void IStorage::setPartitionKey(const StorageMetadataKeyField & partition_key_)
+{
+    partition_key = partition_key_;
+}
+
+bool IStorage::hasPartitionKey() const
+{
+    return partition_key.expression != nullptr;
+}
+
+Names IStorage::getColumnsRequiredForPartitionKey() const
+{
+    if (hasPartitionKey())
+        return partition_key.expression->getRequiredColumns();
+    return {};
+}
+
+const StorageMetadataKeyField & IStorage::getSortingKey() const
+{
+    return sorting_key;
+}
+
+void IStorage::setSortingKey(const StorageMetadataKeyField & sorting_key_)
+{
+    sorting_key = sorting_key_;
+}
+
+bool IStorage::hasSortingKey() const
+{
+    return sorting_key.expression != nullptr;
+}
+
+Names IStorage::getColumnsRequiredForSortingKey() const
+{
+    if (hasSortingKey())
+        return sorting_key.expression->getRequiredColumns();
+    return {};
+}
+
+Names IStorage::getSortingKeyColumns() const
+{
+    if (hasSortingKey())
+        return sorting_key.column_names;
+    return {};
+}
+
+const StorageMetadataKeyField & IStorage::getPrimaryKey() const
+{
+    return primary_key;
+}
+
+void IStorage::setPrimaryKey(const StorageMetadataKeyField & primary_key_)
+{
+    primary_key = primary_key_;
+}
+
+bool IStorage::isPrimaryKeyDefined() const
+{
+    return primary_key.definition_ast != nullptr;
+}
+
+bool IStorage::hasPrimaryKey() const
+{
+    return primary_key.expression != nullptr;
+}
+
+Names IStorage::getColumnsRequiredForPrimaryKey() const
+{
+    if (hasPrimaryKey())
+        return primary_key.expression->getRequiredColumns();
+    return {};
+}
+
+Names IStorage::getPrimaryKeyColumns() const
+{
+    if (hasSortingKey())
+        return primary_key.column_names;
+    return {};
+}
+
+const StorageMetadataKeyField & IStorage::getSamplingKey() const
+{
+    return sampling_key;
+}
+
+void IStorage::setSamplingKey(const StorageMetadataKeyField & sampling_key_)
+{
+    sampling_key = sampling_key_;
+}
+
+bool IStorage::hasSamplingKey() const
+{
+    return sampling_key.expression != nullptr;
+}
+
+Names IStorage::getColumnsRequiredForSampling() const
+{
+    if (hasSamplingKey())
+        return sampling_key.expression->getRequiredColumns();
+    return {};
 }
 
 }
