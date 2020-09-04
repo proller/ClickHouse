@@ -27,7 +27,7 @@ Block MetricLogElement::createBlock()
     {
         std::string name;
         name += "CurrentMetric_";
-        name += CurrentMetrics::getName(ProfileEvents::Event(i));
+        name += CurrentMetrics::getName(CurrentMetrics::Metric(i));
         columns_with_type_and_name.emplace_back(std::make_shared<DataTypeInt64>(), std::move(name));
     }
 
@@ -35,10 +35,8 @@ Block MetricLogElement::createBlock()
 }
 
 
-void MetricLogElement::appendToBlock(Block & block) const
+void MetricLogElement::appendToBlock(MutableColumns & columns) const
 {
-    MutableColumns columns = block.mutateColumns();
-
     size_t column_idx = 0;
 
     columns[column_idx++]->insert(DateLUT::instance().toDayNum(event_time));

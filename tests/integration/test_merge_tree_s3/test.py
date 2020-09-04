@@ -10,27 +10,14 @@ logging.getLogger().setLevel(logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler())
 
 
-# Creates S3 bucket for tests and allows anonymous read-write access to it.
-def prepare_s3_bucket(cluster):
-    minio_client = cluster.minio_client
-
-    if minio_client.bucket_exists(cluster.minio_bucket):
-        minio_client.remove_bucket(cluster.minio_bucket)
-
-    minio_client.make_bucket(cluster.minio_bucket)
-
-
 @pytest.fixture(scope="module")
 def cluster():
     try:
         cluster = ClickHouseCluster(__file__)
-        cluster.add_instance("node", config_dir="configs", with_minio=True)
+        cluster.add_instance("node", main_configs=["configs/config.d/storage_conf.xml", "configs/config.d/bg_processing_pool_conf.xml", "configs/config.d/log_conf.xml"], user_configs=[], with_minio=True)
         logging.info("Starting cluster...")
         cluster.start()
         logging.info("Cluster started")
-
-        prepare_s3_bucket(cluster)
-        logging.info("S3 bucket created")
 
         yield cluster
     finally:
@@ -39,8 +26,8 @@ def cluster():
 
 FILES_OVERHEAD = 1
 FILES_OVERHEAD_PER_COLUMN = 2  # Data and mark files
-FILES_OVERHEAD_PER_PART_WIDE = FILES_OVERHEAD_PER_COLUMN * 3 + 2 + 6
-FILES_OVERHEAD_PER_PART_COMPACT = 10
+FILES_OVERHEAD_PER_PART_WIDE = FILES_OVERHEAD_PER_COLUMN * 3 + 2 + 6 + 1
+FILES_OVERHEAD_PER_PART_COMPACT = 10 + 1
 
 
 def random_string(length):
@@ -68,7 +55,7 @@ def create_table(cluster, table_name, additional_settings=None):
         ORDER BY (dt, id)
         SETTINGS
             storage_policy='s3',
-            old_parts_lifetime=0, 
+            old_parts_lifetime=0,
             index_granularity=512
         """.format(table_name)
 
@@ -237,6 +224,10 @@ def test_move_partition_to_another_disk(cluster):
     node.query("ALTER TABLE s3_test MOVE PARTITION '2020-01-04' TO DISK 'hdd'")
     assert node.query("SELECT count(*) FROM s3_test FORMAT Values") == "(8192)"
     assert len(list(minio.list_objects(cluster.minio_bucket, 'data/'))) == FILES_OVERHEAD + FILES_OVERHEAD_PER_PART_WIDE
+
+    node.query("ALTER TABLE s3_test MOVE PARTITION '2020-01-04' TO DISK 's3'")
+    assert node.query("SELECT count(*) FROM s3_test FORMAT Values") == "(8192)"
+    assert len(list(minio.list_objects(cluster.minio_bucket, 'data/'))) == FILES_OVERHEAD + FILES_OVERHEAD_PER_PART_WIDE*2
 
 
 def test_table_manipulations(cluster):

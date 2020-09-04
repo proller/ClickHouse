@@ -13,6 +13,7 @@ class ASTFunction : public ASTWithAlias
 {
 public:
     String name;
+    ASTPtr query; // It's possible for a function to accept a query as its only argument.
     ASTPtr arguments;
     /// parameters - for parametric aggregate function. Example: quantile(0.9)(x) - what in first parens are 'parameters'.
     ASTPtr parameters;
@@ -23,6 +24,8 @@ public:
 
     ASTPtr clone() const override;
 
+    void updateTreeHashImpl(SipHash & hash_state) const override;
+
 protected:
     void formatImplWithoutAlias(const FormatSettings & settings, FormatState & state, FormatStateStacked frame) const override;
     void appendColumnNameImpl(WriteBuffer & ostr) const override;
@@ -32,7 +35,7 @@ protected:
 template <typename... Args>
 std::shared_ptr<ASTFunction> makeASTFunction(const String & name, Args &&... args)
 {
-    const auto function = std::make_shared<ASTFunction>();
+    auto function = std::make_shared<ASTFunction>();
 
     function->name = name;
     function->arguments = std::make_shared<ASTExpressionList>();

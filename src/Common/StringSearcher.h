@@ -86,7 +86,8 @@ public:
         if (0 == needle_size)
             return;
 
-        UTF8SequenceBuffer l_seq, u_seq;
+        UTF8SequenceBuffer l_seq;
+        UTF8SequenceBuffer u_seq;
 
         if (*needle < 0x80u)
         {
@@ -231,7 +232,6 @@ public:
         if (0 == needle_size)
             return haystack;
 
-
         while (haystack < haystack_end)
         {
 #ifdef __SSE4_1__
@@ -254,7 +254,7 @@ public:
                 const auto offset = __builtin_ctz(mask);
                 haystack += offset;
 
-                if (haystack < haystack_end && haystack + n <= haystack_end && pageSafe(haystack))
+                if (haystack + n <= haystack_end && pageSafe(haystack))
                 {
                     const auto v_haystack_offset = _mm_loadu_si128(reinterpret_cast<const __m128i *>(haystack));
                     const auto v_against_l_offset = _mm_cmpeq_epi8(v_haystack_offset, cachel);
@@ -463,7 +463,7 @@ public:
                 const auto offset = __builtin_ctz(mask);
                 haystack += offset;
 
-                if (haystack < haystack_end && haystack + n <= haystack_end && pageSafe(haystack))
+                if (haystack + n <= haystack_end && pageSafe(haystack))
                 {
                     const auto v_haystack_offset = _mm_loadu_si128(reinterpret_cast<const __m128i *>(haystack));
                     const auto v_against_l_offset = _mm_cmpeq_epi8(v_haystack_offset, cachel);
@@ -652,7 +652,7 @@ public:
                 const auto offset = __builtin_ctz(mask);
                 haystack += offset;
 
-                if (haystack < haystack_end && haystack + n <= haystack_end && pageSafe(haystack))
+                if (haystack + n <= haystack_end && pageSafe(haystack))
                 {
                     /// check for first 16 octets
                     const auto v_haystack_offset = _mm_loadu_si128(reinterpret_cast<const __m128i *>(haystack));

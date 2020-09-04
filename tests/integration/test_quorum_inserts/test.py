@@ -7,18 +7,15 @@ from helpers.cluster import ClickHouseCluster
 
 cluster = ClickHouseCluster(__file__)
 
-zero = cluster.add_instance("zero",
-                            config_dir="configs",
+zero = cluster.add_instance("zero", user_configs=["configs/users.d/settings.xml"],
                             macros={"cluster": "anime", "shard": "0", "replica": "zero"},
                             with_zookeeper=True)
 
-first = cluster.add_instance("first",
-                             config_dir="configs",
+first = cluster.add_instance("first", user_configs=["configs/users.d/settings.xml"],
                              macros={"cluster": "anime", "shard": "0", "replica": "first"},
                              with_zookeeper=True)
 
-second = cluster.add_instance("second",
-                              config_dir="configs",
+second = cluster.add_instance("second", user_configs=["configs/users.d/settings.xml"],
                               macros={"cluster": "anime", "shard": "0", "replica": "second"},
                               with_zookeeper=True)
 
@@ -256,7 +253,7 @@ def test_insert_quorum_with_ttl(started_cluster):
                    "(a Int8, d Date) " \
                    "Engine = ReplicatedMergeTree('/clickhouse/tables/{table}', '{replica}') " \
                    "PARTITION BY d ORDER BY a " \
-                   "TTL d + INTERVAL 5 second " \
+                   "TTL d + INTERVAL 5 second DELETE WHERE toYear(d) = 2011 " \
                    "SETTINGS merge_with_ttl_timeout=2 "
 
     print("Create Replicated table with two replicas")
@@ -284,11 +281,14 @@ def test_insert_quorum_with_ttl(started_cluster):
     zero.query("INSERT INTO test_insert_quorum_with_ttl(a,d) VALUES(1, '2011-01-01')",
                                               settings={'insert_quorum_timeout' : 5000})
 
-
-    assert TSV("1\t2011-01-01\n") == TSV(first.query("SELECT * FROM test_insert_quorum_with_ttl", settings={'select_sequential_consistency' : 0}))
-    assert TSV("1\t2011-01-01\n") == TSV(first.query("SELECT * FROM test_insert_quorum_with_ttl", settings={'select_sequential_consistency' : 1}))
-
     print("Inserts should resume.")
     zero.query("INSERT INTO test_insert_quorum_with_ttl(a, d) VALUES(2, '2012-02-02')")
+
+    first.query("OPTIMIZE TABLE test_insert_quorum_with_ttl")
+    first.query("SYSTEM SYNC REPLICA test_insert_quorum_with_ttl")
+    zero.query("SYSTEM SYNC REPLICA test_insert_quorum_with_ttl")
+
+    assert TSV("2\t2012-02-02\n") == TSV(first.query("SELECT * FROM test_insert_quorum_with_ttl", settings={'select_sequential_consistency' : 0}))
+    assert TSV("2\t2012-02-02\n") == TSV(first.query("SELECT * FROM test_insert_quorum_with_ttl", settings={'select_sequential_consistency' : 1}))
 
     execute_on_all_cluster("DROP TABLE IF EXISTS test_insert_quorum_with_ttl")
