@@ -2,7 +2,7 @@
 
 #include <Core/Names.h>
 #include <Core/NamesAndTypes.h>
-#include <Core/SettingsCollection.h>
+#include <Core/SettingsEnums.h>
 #include <Parsers/ASTTablesInSelectQuery.h>
 #include <Interpreters/IJoin.h>
 #include <Interpreters/asof.h>
@@ -24,8 +24,8 @@ class DictionaryReader;
 
 struct Settings;
 
-class VolumeJBOD;
-using VolumeJBODPtr = std::shared_ptr<VolumeJBOD>;
+class IVolume;
+using VolumePtr = std::shared_ptr<IVolume>;
 
 class TableJoin
 {
@@ -41,7 +41,7 @@ class TableJoin
       * It's possible to use name `expr(t2 columns)`.
       */
 
-    friend class SyntaxAnalyzer;
+    friend class TreeRewriter;
 
     const SizeLimits size_limits;
     const size_t default_max_bytes = 0;
@@ -50,6 +50,7 @@ class TableJoin
     JoinAlgorithm join_algorithm = JoinAlgorithm::AUTO;
     const bool partial_merge_join_optimizations = false;
     const size_t partial_merge_join_rows_in_right_blocks = 0;
+    const size_t partial_merge_join_left_table_buffer_bytes = 0;
     const size_t max_files_to_merge = 0;
     const String temporary_files_codec = "LZ4";
 
@@ -70,11 +71,11 @@ class TableJoin
     /// Original name -> name. Only ranamed columns.
     std::unordered_map<String, String> renames;
 
-    VolumeJBODPtr tmp_volume;
+    VolumePtr tmp_volume;
 
 public:
     TableJoin() = default;
-    TableJoin(const Settings &, VolumeJBODPtr tmp_volume);
+    TableJoin(const Settings &, VolumePtr tmp_volume);
 
     /// for StorageJoin
     TableJoin(SizeLimits limits, bool use_nulls, ASTTableJoin::Kind kind, ASTTableJoin::Strictness strictness,
@@ -96,7 +97,7 @@ public:
     ASTTableJoin::Strictness strictness() const { return table_join.strictness; }
     bool sameStrictnessAndKind(ASTTableJoin::Strictness, ASTTableJoin::Kind) const;
     const SizeLimits & sizeLimits() const { return size_limits; }
-    VolumeJBODPtr getTemporaryVolume() { return tmp_volume; }
+    VolumePtr getTemporaryVolume() { return tmp_volume; }
     bool allowMergeJoin() const;
     bool allowDictJoin(const String & dict_key, const Block & sample_block, Names &, NamesAndTypesList &) const;
     bool preferMergeJoin() const { return join_algorithm == JoinAlgorithm::PREFER_PARTIAL_MERGE; }
@@ -108,9 +109,11 @@ public:
     size_t defaultMaxBytes() const { return default_max_bytes; }
     size_t maxJoinedBlockRows() const { return max_joined_block_rows; }
     size_t maxRowsInRightBlock() const { return partial_merge_join_rows_in_right_blocks; }
+    size_t maxBytesInLeftBuffer() const { return partial_merge_join_left_table_buffer_bytes; }
     size_t maxFilesToMerge() const { return max_files_to_merge; }
     const String & temporaryFilesCodec() const { return temporary_files_codec; }
     bool enablePartialMergeJoinOptimizations() const { return partial_merge_join_optimizations; }
+    bool needStreamWithNonJoinedRows() const;
 
     void resetCollected();
     void addUsingKey(const ASTPtr & ast);
@@ -146,6 +149,10 @@ public:
 
     /// StorageJoin overrides key names (cause of different names qualification)
     void setRightKeys(const Names & keys) { key_names_right = keys; }
+
+    /// Split key and other columns by keys name list
+    void splitAdditionalColumns(const Block & sample_block, Block & block_keys, Block & block_others) const;
+    Block getRequiredRightKeys(const Block & right_table_keys, std::vector<String> & keys_sources) const;
 
     static bool sameJoin(const TableJoin * x, const TableJoin * y);
 };

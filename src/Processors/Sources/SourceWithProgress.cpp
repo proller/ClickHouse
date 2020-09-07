@@ -3,6 +3,12 @@
 #include <Interpreters/ProcessList.h>
 #include <Access/EnabledQuota.h>
 
+namespace ProfileEvents
+{
+    extern const Event SelectedRows;
+    extern const Event SelectedBytes;
+}
+
 namespace DB
 {
 
@@ -10,6 +16,11 @@ namespace ErrorCodes
 {
     extern const int TOO_MANY_ROWS;
     extern const int TOO_MANY_BYTES;
+}
+
+SourceWithProgress::SourceWithProgress(Block header, bool enable_auto_progress)
+    : ISourceWithProgress(header), auto_progress(enable_auto_progress)
+{
 }
 
 void SourceWithProgress::work()
@@ -24,7 +35,7 @@ void SourceWithProgress::work()
 
         ISourceWithProgress::work();
 
-        if (!was_progress_called && has_input)
+        if (auto_progress && !was_progress_called && has_input)
             progress({ current_chunk.chunk.getNumRows(), current_chunk.chunk.bytes() });
     }
 }
@@ -102,6 +113,9 @@ void SourceWithProgress::progress(const Progress & value)
         if (quota && limits.mode == LimitsMode::LIMITS_TOTAL)
             quota->used({Quota::READ_ROWS, value.read_rows}, {Quota::READ_BYTES, value.read_bytes});
     }
+
+    ProfileEvents::increment(ProfileEvents::SelectedRows, value.read_rows);
+    ProfileEvents::increment(ProfileEvents::SelectedBytes, value.read_bytes);
 }
 
 }

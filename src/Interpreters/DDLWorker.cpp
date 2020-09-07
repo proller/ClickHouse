@@ -19,6 +19,7 @@
 #include <Interpreters/AddDefaultDatabaseVisitor.h>
 #include <Interpreters/Context.h>
 #include <Access/AccessRightsElement.h>
+#include <Access/ContextAccess.h>
 #include <Common/DNSResolver.h>
 #include <Common/Macros.h>
 #include <common/getFQDNOrHostName.h>
@@ -27,7 +28,6 @@
 #include <Common/randomSeed.h>
 #include <Common/ZooKeeper/ZooKeeper.h>
 #include <Common/ZooKeeper/KeeperException.h>
-#include <Common/ZooKeeper/Lock.h>
 #include <Common/isLocalAddress.h>
 #include <Common/quoteString.h>
 #include <DataTypes/DataTypesNumber.h>
@@ -195,12 +195,101 @@ struct DDLTask
 };
 
 
-static std::unique_ptr<zkutil::Lock> createSimpleZooKeeperLock(
-    const std::shared_ptr<zkutil::ZooKeeper> & zookeeper, const String & lock_prefix, const String & lock_name, const String & lock_message)
+namespace
 {
-    auto zookeeper_holder = std::make_shared<zkutil::ZooKeeperHolder>();
-    zookeeper_holder->initFromInstance(zookeeper);
-    return std::make_unique<zkutil::Lock>(std::move(zookeeper_holder), lock_prefix, lock_name, lock_message);
+
+/** Caveats: usage of locks in ZooKeeper is incorrect in 99% of cases,
+  *  and highlights your poor understanding of distributed systems.
+  *
+  * It's only correct if all the operations that are performed under lock
+  *  are atomically checking that the lock still holds
+  *  or if we ensure that these operations will be undone if lock is lost
+  *  (due to ZooKeeper session loss) that's very difficult to achieve.
+  *
+  * It's Ok if every operation that we perform under lock is actually operation in ZooKeeper.
+  *
+  * In 1% of cases when you can correctly use Lock, the logic is complex enough, so you don't need this class.
+  *
+  * TLDR: Don't use this code.
+  * We only have a few cases of it's usage and it will be removed.
+  */
+class ZooKeeperLock
+{
+public:
+    /// lock_prefix - path where the ephemeral lock node will be created
+    /// lock_name - the name of the ephemeral lock node
+    ZooKeeperLock(
+        const zkutil::ZooKeeperPtr & zookeeper_,
+        const std::string & lock_prefix_,
+        const std::string & lock_name_,
+        const std::string & lock_message_ = "")
+    :
+        zookeeper(zookeeper_),
+        lock_path(lock_prefix_ + "/" + lock_name_),
+        lock_message(lock_message_),
+        log(&Poco::Logger::get("zkutil::Lock"))
+    {
+        zookeeper->createIfNotExists(lock_prefix_, "");
+    }
+
+    ~ZooKeeperLock()
+    {
+        try
+        {
+            unlock();
+        }
+        catch (...)
+        {
+            DB::tryLogCurrentException(__PRETTY_FUNCTION__);
+        }
+    }
+
+    void unlock()
+    {
+        Coordination::Stat stat;
+        std::string dummy;
+        bool result = zookeeper->tryGet(lock_path, dummy, &stat);
+
+        if (result && stat.ephemeralOwner == zookeeper->getClientID())
+            zookeeper->remove(lock_path, -1);
+        else
+            LOG_WARNING(log, "Lock is lost. It is normal if session was expired. Path: {}/{}", lock_path, lock_message);
+    }
+
+    bool tryLock()
+    {
+        std::string dummy;
+        Coordination::Error code = zookeeper->tryCreate(lock_path, lock_message, zkutil::CreateMode::Ephemeral, dummy);
+
+        if (code == Coordination::Error::ZNODEEXISTS)
+        {
+            return false;
+        }
+        else if (code == Coordination::Error::ZOK)
+        {
+            return true;
+        }
+        else
+        {
+            throw Coordination::Exception(code);
+        }
+    }
+
+private:
+    zkutil::ZooKeeperPtr zookeeper;
+
+    std::string lock_path;
+    std::string lock_message;
+    Poco::Logger * log;
+
+};
+
+std::unique_ptr<ZooKeeperLock> createSimpleZooKeeperLock(
+    const zkutil::ZooKeeperPtr & zookeeper, const String & lock_prefix, const String & lock_name, const String & lock_message)
+{
+    return std::make_unique<ZooKeeperLock>(zookeeper, lock_prefix, lock_name, lock_message);
+}
+
 }
 
 
@@ -220,7 +309,7 @@ static bool isSupportedAlterType(int type)
 
 
 DDLWorker::DDLWorker(const std::string & zk_root_dir, Context & context_, const Poco::Util::AbstractConfiguration * config, const String & prefix)
-    : context(context_), log(&Logger::get("DDLWorker"))
+    : context(context_), log(&Poco::Logger::get("DDLWorker"))
 {
     queue_dir = zk_root_dir;
     if (queue_dir.back() == '/')
@@ -422,7 +511,7 @@ void DDLWorker::processTasks()
             }
             catch (const Coordination::Exception & e)
             {
-                if (server_startup && e.code == Coordination::ZNONODE)
+                if (server_startup && e.code == Coordination::Error::ZNONODE)
                 {
                     LOG_WARNING(log, "ZooKeeper NONODE error during startup. Ignoring entry {} ({}) : {}", task.entry_name, task.entry.query, getCurrentExceptionMessage(true));
                 }
@@ -481,6 +570,7 @@ void DDLWorker::parseQueryAndResolveHost(DDLTask & task)
     const auto & shards = task.cluster->getShardsAddresses();
 
     bool found_exact_match = false;
+    String default_database;
     for (size_t shard_num = 0; shard_num < shards.size(); ++shard_num)
     {
         for (size_t replica_num = 0; replica_num < shards[shard_num].size(); ++replica_num)
@@ -491,14 +581,38 @@ void DDLWorker::parseQueryAndResolveHost(DDLTask & task)
             {
                 if (found_exact_match)
                 {
-                    throw Exception("There are two exactly the same ClickHouse instances " + address.readableString()
-                        + " in cluster " + task.cluster_name, ErrorCodes::INCONSISTENT_CLUSTER_DEFINITION);
+                    if (default_database == address.default_database)
+                    {
+                        throw Exception(
+                            "There are two exactly the same ClickHouse instances " + address.readableString() + " in cluster "
+                                + task.cluster_name,
+                            ErrorCodes::INCONSISTENT_CLUSTER_DEFINITION);
+                    }
+                    else
+                    {
+                        /* Circular replication is used.
+                         * It is when every physical node contains
+                         * replicas of different shards of the same table.
+                         * To distinguish one replica from another on the same node,
+                         * every shard is placed into separate database.
+                         * */
+                        is_circular_replicated = true;
+                        auto * query_with_table = dynamic_cast<ASTQueryWithTableAndOutput *>(task.query.get());
+                        if (!query_with_table || query_with_table->database.empty())
+                        {
+                            throw Exception(
+                                "For a distributed DDL on circular replicated cluster its table name must be qualified by database name.",
+                                ErrorCodes::INCONSISTENT_CLUSTER_DEFINITION);
+                        }
+                        if (default_database == query_with_table->database)
+                            return;
+                    }
                 }
-
                 found_exact_match = true;
                 task.host_shard_num = shard_num;
                 task.host_replica_num = replica_num;
                 task.address_in_cluster = address;
+                default_database = address.default_database;
             }
         }
     }
@@ -603,15 +717,15 @@ void DDLWorker::processTask(DDLTask & task, const ZooKeeperPtr & zookeeper)
 
     auto code = zookeeper->tryCreate(active_node_path, "", zkutil::CreateMode::Ephemeral, dummy);
 
-    if (code == Coordination::ZOK || code == Coordination::ZNODEEXISTS)
+    if (code == Coordination::Error::ZOK || code == Coordination::Error::ZNODEEXISTS)
     {
         // Ok
     }
-    else if (code == Coordination::ZNONODE)
+    else if (code == Coordination::Error::ZNONODE)
     {
         /// There is no parent
         createStatusDirs(task.entry_path, zookeeper);
-        if (Coordination::ZOK != zookeeper->tryCreate(active_node_path, "", zkutil::CreateMode::Ephemeral, dummy))
+        if (Coordination::Error::ZOK != zookeeper->tryCreate(active_node_path, "", zkutil::CreateMode::Ephemeral, dummy))
             throw Coordination::Exception(code, active_node_path);
     }
     else
@@ -621,6 +735,7 @@ void DDLWorker::processTask(DDLTask & task, const ZooKeeperPtr & zookeeper)
     {
         try
         {
+            is_circular_replicated = false;
             parseQueryAndResolveHost(task);
 
             ASTPtr rewritten_ast = task.query_on_cluster->getRewrittenASTWithoutOnCluster(task.address_in_cluster.default_database);
@@ -634,7 +749,7 @@ void DDLWorker::processTask(DDLTask & task, const ZooKeeperPtr & zookeeper)
                 {
                     /// It's not CREATE DATABASE
                     auto table_id = context.tryResolveStorageID(*query_with_table, Context::ResolveOrdinary);
-                    storage = DatabaseCatalog::instance().tryGetTable(table_id);
+                    storage = DatabaseCatalog::instance().tryGetTable(table_id, context);
                 }
 
                 /// For some reason we check consistency of cluster definition only
@@ -643,7 +758,7 @@ void DDLWorker::processTask(DDLTask & task, const ZooKeeperPtr & zookeeper)
                 if (storage && query_with_table->as<ASTAlterQuery>())
                     checkShardConfig(query_with_table->table, task, storage);
 
-                if (storage && taskShouldBeExecutedOnLeader(rewritten_ast, storage))
+                if (storage && taskShouldBeExecutedOnLeader(rewritten_ast, storage)  && !is_circular_replicated)
                     tryExecuteQueryOnLeaderReplica(task, storage, rewritten_query, task.entry_path, zookeeper);
                 else
                     tryExecuteQuery(rewritten_query, task, task.execution_status);
@@ -661,7 +776,7 @@ void DDLWorker::processTask(DDLTask & task, const ZooKeeperPtr & zookeeper)
             task.execution_status = ExecutionStatus::fromCurrentException("An error occurred before execution");
         }
 
-        /// We need to distinguish ZK errors occured before and after query executing
+        /// We need to distinguish ZK errors occurred before and after query executing
         task.was_executed = true;
     }
 
@@ -748,44 +863,52 @@ bool DDLWorker::tryExecuteQueryOnLeaderReplica(
     String shard_node_name = get_shard_name(task.cluster->getShardsAddresses().at(task.host_shard_num));
     String shard_path = node_path + "/shards/" + shard_node_name;
     String is_executed_path = shard_path + "/executed";
+    String tries_to_execute_path = shard_path + "/tries_to_execute";
     zookeeper->createAncestors(shard_path + "/");
 
-    auto is_already_executed = [&]() -> bool
-    {
-        String executed_by;
-        if (zookeeper->tryGet(is_executed_path, executed_by))
-        {
-            LOG_DEBUG(log, "Task {} has already been executed by leader replica ({}) of the same shard.", task.entry_name, executed_by);
-            return true;
-        }
+    /// Node exists, or we will create or we will get an exception
+    zookeeper->tryCreate(tries_to_execute_path, "0", zkutil::CreateMode::Persistent);
 
-        return false;
-    };
+    static constexpr int MAX_TRIES_TO_EXECUTE = 3;
+
+    String executed_by;
+
+    zkutil::EventPtr event = std::make_shared<Poco::Event>();
+    if (zookeeper->tryGet(is_executed_path, executed_by))
+    {
+        LOG_DEBUG(log, "Task {} has already been executed by replica ({}) of the same shard.", task.entry_name, executed_by);
+        return true;
+    }
 
     pcg64 rng(randomSeed());
 
     auto lock = createSimpleZooKeeperLock(zookeeper, shard_path, "lock", task.host_id_str);
-    static const size_t max_tries = 20;
-    bool executed_by_leader = false;
-    for (size_t num_tries = 0; num_tries < max_tries; ++num_tries)
-    {
-        if (is_already_executed())
-        {
-            executed_by_leader = true;
-            break;
-        }
 
+    bool executed_by_leader = false;
+    while (true)
+    {
         StorageReplicatedMergeTree::Status status;
         replicated_storage->getStatus(status);
 
-        /// Leader replica take lock
+        /// Any replica which is leader tries to take lock
         if (status.is_leader && lock->tryLock())
         {
-            if (is_already_executed())
+            /// In replicated merge tree we can have multiple leaders. So we can
+            /// be "leader", but another "leader" replica may already execute
+            /// this task.
+            if (zookeeper->tryGet(is_executed_path, executed_by))
             {
+                LOG_DEBUG(log, "Task {} has already been executed by replica ({}) of the same shard.", task.entry_name, executed_by);
                 executed_by_leader = true;
                 break;
             }
+
+            /// Doing it exclusively
+            size_t counter = parse<int>(zookeeper->get(tries_to_execute_path));
+            if (counter > MAX_TRIES_TO_EXECUTE)
+                break;
+
+            zookeeper->set(tries_to_execute_path, toString(counter + 1));
 
             /// If the leader will unexpectedly changed this method will return false
             /// and on the next iteration new leader will take lock
@@ -796,20 +919,30 @@ bool DDLWorker::tryExecuteQueryOnLeaderReplica(
                 break;
             }
 
+            lock->unlock();
         }
 
-        /// Does nothing if wasn't previously locked
-        lock->unlock();
-        std::this_thread::sleep_for(std::chrono::milliseconds(std::uniform_int_distribution<int>(0, 1000)(rng)));
+
+        if (event->tryWait(std::uniform_int_distribution<int>(0, 1000)(rng)))
+        {
+            executed_by_leader = true;
+            break;
+        }
+        else if (parse<int>(zookeeper->get(tries_to_execute_path)) > MAX_TRIES_TO_EXECUTE)
+        {
+            /// Nobody will try to execute query again
+            break;
+        }
     }
 
     /// Not executed by leader so was not executed at all
     if (!executed_by_leader)
     {
-        task.execution_status = ExecutionStatus(ErrorCodes::NOT_IMPLEMENTED,
-                                                "Cannot execute replicated DDL query on leader");
+        task.execution_status = ExecutionStatus(ErrorCodes::NOT_IMPLEMENTED, "Cannot execute replicated DDL query");
         return false;
     }
+
+    LOG_DEBUG(log, "Task {} has already been executed by replica ({}) of the same shard.", task.entry_name, zookeeper->get(is_executed_path));
     return true;
 }
 
@@ -876,8 +1009,8 @@ void DDLWorker::cleanupQueue(Int64 current_time_seconds, const ZooKeeperPtr & zo
 
             /// Deleting
             {
-                Strings childs = zookeeper->getChildren(node_path);
-                for (const String & child : childs)
+                Strings children = zookeeper->getChildren(node_path);
+                for (const String & child : children)
                 {
                     if (child != "lock")
                         zookeeper->tryRemoveRecursive(node_path + "/" + child);
@@ -888,13 +1021,11 @@ void DDLWorker::cleanupQueue(Int64 current_time_seconds, const ZooKeeperPtr & zo
                 ops.emplace_back(zkutil::makeRemoveRequest(lock_path, -1));
                 ops.emplace_back(zkutil::makeRemoveRequest(node_path, -1));
                 zookeeper->multi(ops);
-
-                lock->unlockAssumeLockNodeRemovedManually();
             }
         }
         catch (...)
         {
-            LOG_INFO(log, "An error occured while checking and cleaning task {} from queue: {}", node_name, getCurrentExceptionMessage(false));
+            LOG_INFO(log, "An error occurred while checking and cleaning task {} from queue: {}", node_name, getCurrentExceptionMessage(false));
         }
     }
 }
@@ -915,8 +1046,9 @@ void DDLWorker::createStatusDirs(const std::string & node_path, const ZooKeeperP
         ops.emplace_back(std::make_shared<Coordination::CreateRequest>(std::move(request)));
     }
     Coordination::Responses responses;
-    int code = zookeeper->tryMulti(ops, responses);
-    if (code && code != Coordination::ZNODEEXISTS)
+    Coordination::Error code = zookeeper->tryMulti(ops, responses);
+    if (code != Coordination::Error::ZOK
+        && code != Coordination::Error::ZNODEEXISTS)
         throw Coordination::Exception(code);
 }
 
@@ -1013,7 +1145,7 @@ void DDLWorker::runMainThread()
                     }
                 }
             }
-            else if (e.code == Coordination::ZNONODE)
+            else if (e.code == Coordination::Error::ZNONODE)
             {
                 LOG_ERROR(log, "ZooKeeper error: {}", getCurrentExceptionMessage(true));
             }
@@ -1073,7 +1205,7 @@ class DDLQueryStatusInputStream : public IBlockInputStream
 public:
 
     DDLQueryStatusInputStream(const String & zk_node_path, const DDLLogEntry & entry, const Context & context_)
-        : node_path(zk_node_path), context(context_), watch(CLOCK_MONOTONIC_COARSE), log(&Logger::get("DDLQueryStatusInputStream"))
+        : node_path(zk_node_path), context(context_), watch(CLOCK_MONOTONIC_COARSE), log(&Poco::Logger::get("DDLQueryStatusInputStream"))
     {
         sample = Block{
             {std::make_shared<DataTypeString>(),    "host"},
@@ -1201,8 +1333,8 @@ private:
     static Strings getChildrenAllowNoNode(const std::shared_ptr<zkutil::ZooKeeper> & zookeeper, const String & node_path)
     {
         Strings res;
-        int code = zookeeper->tryGetChildren(node_path, res);
-        if (code && code != Coordination::ZNONODE)
+        Coordination::Error code = zookeeper->tryGetChildren(node_path, res);
+        if (code != Coordination::Error::ZOK && code != Coordination::Error::ZNONODE)
             throw Coordination::Exception(code, node_path);
         return res;
     }
@@ -1235,7 +1367,7 @@ private:
     String node_path;
     const Context & context;
     Stopwatch watch;
-    Logger * log;
+    Poco::Logger * log;
 
     Block sample;
 
@@ -1252,7 +1384,7 @@ private:
 };
 
 
-BlockIO executeDDLQueryOnCluster(const ASTPtr & query_ptr_, const Context & context, AccessRightsElements && query_required_access)
+BlockIO executeDDLQueryOnCluster(const ASTPtr & query_ptr_, const Context & context, AccessRightsElements && query_requires_access, bool query_requires_grant_option)
 {
     /// Remove FORMAT <fmt> and INTO OUTFILE <file> if exists
     ASTPtr query_ptr = query_ptr_->clone();
@@ -1297,10 +1429,10 @@ BlockIO executeDDLQueryOnCluster(const ASTPtr & query_ptr_, const Context & cont
     /// the local current database or a shard's default database.
     bool need_replace_current_database
         = (std::find_if(
-               query_required_access.begin(),
-               query_required_access.end(),
+               query_requires_access.begin(),
+               query_requires_access.end(),
                [](const AccessRightsElement & elem) { return elem.isEmptyDatabase(); })
-           != query_required_access.end());
+           != query_requires_access.end());
 
     if (need_replace_current_database)
     {
@@ -1329,29 +1461,31 @@ BlockIO executeDDLQueryOnCluster(const ASTPtr & query_ptr_, const Context & cont
             AddDefaultDatabaseVisitor visitor(current_database);
             visitor.visitDDL(query_ptr);
 
-            query_required_access.replaceEmptyDatabase(current_database);
+            query_requires_access.replaceEmptyDatabase(current_database);
         }
         else
         {
-            size_t old_num_elements = query_required_access.size();
-            for (size_t i = 0; i != old_num_elements; ++i)
+            for (size_t i = 0; i != query_requires_access.size();)
             {
-                auto & element = query_required_access[i];
+                auto & element = query_requires_access[i];
                 if (element.isEmptyDatabase())
                 {
-                    element.setDatabase(shard_default_databases[0]);
-                    for (size_t j = 1; j != shard_default_databases.size(); ++j)
-                    {
-                        query_required_access.push_back(element);
-                        query_required_access.back().setDatabase(shard_default_databases[j]);
-                    }
+                    query_requires_access.insert(query_requires_access.begin() + i + 1, shard_default_databases.size() - 1, element);
+                    for (size_t j = 0; j != shard_default_databases.size(); ++j)
+                        query_requires_access[i + j].replaceEmptyDatabase(shard_default_databases[j]);
+                    i += shard_default_databases.size();
                 }
+                else
+                    ++i;
             }
         }
     }
 
     /// Check access rights, assume that all servers have the same users config
-    context.checkAccess(query_required_access);
+    if (query_requires_grant_option)
+        context.getAccess()->checkGrantOption(query_requires_access);
+    else
+        context.checkAccess(query_requires_access);
 
     DDLLogEntry entry;
     entry.hosts = std::move(hosts);
@@ -1368,6 +1502,10 @@ BlockIO executeDDLQueryOnCluster(const ASTPtr & query_ptr_, const Context & cont
     return io;
 }
 
+BlockIO executeDDLQueryOnCluster(const ASTPtr & query_ptr, const Context & context, const AccessRightsElements & query_requires_access, bool query_requires_grant_option)
+{
+    return executeDDLQueryOnCluster(query_ptr, context, AccessRightsElements{query_requires_access}, query_requires_grant_option);
+}
 
 BlockIO executeDDLQueryOnCluster(const ASTPtr & query_ptr_, const Context & context)
 {

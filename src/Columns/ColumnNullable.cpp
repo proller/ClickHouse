@@ -14,7 +14,6 @@ namespace DB
 
 namespace ErrorCodes
 {
-    extern const int NOT_IMPLEMENTED;
     extern const int LOGICAL_ERROR;
     extern const int ILLEGAL_COLUMN;
     extern const int SIZES_OF_NESTED_COLUMNS_ARE_INCONSISTENT;
@@ -64,6 +63,12 @@ void ColumnNullable::updateWeakHash32(WeakHash32 & hash) const
             hash_data[row] = old_hash_data[row];
 }
 
+void ColumnNullable::updateHashFast(SipHash & hash) const
+{
+    null_map->updateHashFast(hash);
+    nested_column->updateHashFast(hash);
+}
+
 MutableColumnPtr ColumnNullable::cloneResized(size_t new_size) const
 {
     MutableColumnPtr new_nested_col = getNestedColumn().cloneResized(new_size);
@@ -97,11 +102,6 @@ void ColumnNullable::get(size_t n, Field & res) const
         res = Null();
     else
         getNestedColumn().get(n, res);
-}
-
-StringRef ColumnNullable::getDataAt(size_t /*n*/) const
-{
-    throw Exception{"Method getDataAt is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED};
 }
 
 void ColumnNullable::insertData(const char * pos, size_t length)
@@ -246,6 +246,14 @@ int ColumnNullable::compareAt(size_t n, size_t m, const IColumn & rhs_, int null
 
     const IColumn & nested_rhs = nullable_rhs.getNestedColumn();
     return getNestedColumn().compareAt(n, m, nested_rhs, null_direction_hint);
+}
+
+void ColumnNullable::compareColumn(const IColumn & rhs, size_t rhs_row_num,
+                                   PaddedPODArray<UInt64> * row_indexes, PaddedPODArray<Int8> & compare_results,
+                                   int direction, int nan_direction_hint) const
+{
+    return doCompareColumn<ColumnNullable>(assert_cast<const ColumnNullable &>(rhs), rhs_row_num, row_indexes,
+                                           compare_results, direction, nan_direction_hint);
 }
 
 void ColumnNullable::getPermutation(bool reverse, size_t limit, int null_direction_hint, Permutation & res) const
@@ -553,7 +561,6 @@ void ColumnNullable::applyNullMap(const ColumnNullable & other)
 {
     applyNullMap(other.getNullMapColumn());
 }
-
 
 void ColumnNullable::checkConsistency() const
 {

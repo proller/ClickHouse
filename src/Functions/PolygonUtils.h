@@ -179,9 +179,9 @@ private:
     {
         inner,                                  /// The cell is completely inside polygon.
         outer,                                  /// The cell is completely outside of polygon.
-        singleLine,                             /// The cell is splitted to inner/outer part by a single line.
-        pairOfLinesSingleConvexPolygon,         /// The cell is splitted to inner/outer part by a polyline of two sections and inner part is convex.
-        pairOfLinesSingleNonConvexPolygons,     /// The cell is splitted to inner/outer part by a polyline of two sections and inner part is non convex.
+        singleLine,                             /// The cell is split to inner/outer part by a single line.
+        pairOfLinesSingleConvexPolygon,         /// The cell is split to inner/outer part by a polyline of two sections and inner part is convex.
+        pairOfLinesSingleNonConvexPolygons,     /// The cell is split to inner/outer part by a polyline of two sections and inner part is non convex.
         pairOfLinesDifferentPolygons,           /// The cell is spliited by two lines to three different parts.
         complexPolygon                          /// Generic case.
     };
@@ -315,7 +315,7 @@ void PointInPolygonWithGrid<CoordinateType>::buildGrid()
     if (has_empty_bound)
         return;
 
-    cells.assign(grid_size * grid_size, {});
+    cells.assign(size_t(grid_size) * grid_size, {});
 
     const Point & min_corner = box.min_corner();
 
@@ -356,6 +356,9 @@ template <typename CoordinateType>
 bool PointInPolygonWithGrid<CoordinateType>::contains(CoordinateType x, CoordinateType y) const
 {
     if (has_empty_bound)
+        return false;
+
+    if (std::isnan(x) || std::isnan(y))
         return false;
 
     CoordinateType float_row = (y + y_shift) * y_scale;

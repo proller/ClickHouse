@@ -1,5 +1,3 @@
-#include <iomanip>
-
 #include <Poco/Net/NetException.h>
 #include <Core/Defines.h>
 #include <Compression/CompressedReadBuffer.h>
@@ -24,6 +22,7 @@
 #include <Processors/Pipe.h>
 #include <Processors/ISink.h>
 #include <Processors/Executors/PipelineExecutor.h>
+#include <Processors/ConcatProcessor.h>
 
 #if !defined(ARCADIA_BUILD)
 #    include <Common/config_version.h>
@@ -377,7 +376,8 @@ void Connection::sendQuery(
         if (method == "ZSTD")
             level = settings->network_zstd_compression_level;
 
-        compression_codec = CompressionCodecFactory::instance().get(method, level, !settings->allow_suspicious_codecs);
+        CompressionCodecFactory::instance().validateCodec(method, level, !settings->allow_suspicious_codecs);
+        compression_codec = CompressionCodecFactory::instance().get(method, level);
     }
     else
         compression_codec = CompressionCodecFactory::instance().getDefaultCodec();
@@ -399,9 +399,9 @@ void Connection::sendQuery(
     /// Per query settings.
     if (settings)
     {
-        auto settings_format = (server_revision >= DBMS_MIN_REVISION_WITH_SETTINGS_SERIALIZED_AS_STRINGS) ? SettingsBinaryFormat::STRINGS
-                                                                                                          : SettingsBinaryFormat::OLD;
-        settings->serialize(*out, settings_format);
+        auto settings_format = (server_revision >= DBMS_MIN_REVISION_WITH_SETTINGS_SERIALIZED_AS_STRINGS) ? SettingsWriteFormat::STRINGS_WITH_FLAGS
+                                                                                                          : SettingsWriteFormat::BINARY;
+        settings->write(*out, settings_format);
     }
     else
         writeStringBinary("" /* empty string is a marker of the end of settings */, *out);
@@ -508,18 +508,18 @@ void Connection::sendScalarsData(Scalars & data)
             "Sent data for {} scalars, total {} rows in {} sec., {} rows/sec., {} ({}/sec.), compressed {} times to {} ({}/sec.)",
             data.size(), rows, elapsed,
             static_cast<size_t>(rows / watch.elapsedSeconds()),
-            formatReadableSizeWithBinarySuffix(maybe_compressed_out_bytes),
-            formatReadableSizeWithBinarySuffix(maybe_compressed_out_bytes / watch.elapsedSeconds()),
+            ReadableSize(maybe_compressed_out_bytes),
+            ReadableSize(maybe_compressed_out_bytes / watch.elapsedSeconds()),
             static_cast<double>(maybe_compressed_out_bytes) / out_bytes,
-            formatReadableSizeWithBinarySuffix(out_bytes),
-            formatReadableSizeWithBinarySuffix(out_bytes / watch.elapsedSeconds()));
+            ReadableSize(out_bytes),
+            ReadableSize(out_bytes / watch.elapsedSeconds()));
     else
         LOG_DEBUG(log_wrapper.get(),
             "Sent data for {} scalars, total {} rows in {} sec., {} rows/sec., {} ({}/sec.), no compression.",
             data.size(), rows, elapsed,
             static_cast<size_t>(rows / watch.elapsedSeconds()),
-            formatReadableSizeWithBinarySuffix(maybe_compressed_out_bytes),
-            formatReadableSizeWithBinarySuffix(maybe_compressed_out_bytes / watch.elapsedSeconds()));
+            ReadableSize(maybe_compressed_out_bytes),
+            ReadableSize(maybe_compressed_out_bytes / watch.elapsedSeconds()));
 }
 
 namespace
@@ -583,10 +583,13 @@ void Connection::sendExternalTablesData(ExternalTablesData & data)
         PipelineExecutorPtr executor;
         auto on_cancel = [& executor]() { executor->cancel(); };
 
-        auto sink = std::make_shared<ExternalTableDataSink>(elem->pipe->getHeader(), *this, *elem, std::move(on_cancel));
-        DB::connect(elem->pipe->getPort(), sink->getPort());
+        if (elem->pipe->numOutputPorts() > 1)
+            elem->pipe->addTransform(std::make_shared<ConcatProcessor>(elem->pipe->getHeader(), elem->pipe->numOutputPorts()));
 
-        auto processors = std::move(*elem->pipe).detachProcessors();
+        auto sink = std::make_shared<ExternalTableDataSink>(elem->pipe->getHeader(), *this, *elem, std::move(on_cancel));
+        DB::connect(*elem->pipe->getOutputPort(0), sink->getPort());
+
+        auto processors = Pipe::detachProcessors(std::move(*elem->pipe));
         processors.push_back(sink);
 
         executor = std::make_shared<PipelineExecutor>(processors);
@@ -612,18 +615,18 @@ void Connection::sendExternalTablesData(ExternalTablesData & data)
             "Sent data for {} external tables, total {} rows in {} sec., {} rows/sec., {} ({}/sec.), compressed {} times to {} ({}/sec.)",
             data.size(), rows, elapsed,
             static_cast<size_t>(rows / watch.elapsedSeconds()),
-            formatReadableSizeWithBinarySuffix(maybe_compressed_out_bytes),
-            formatReadableSizeWithBinarySuffix(maybe_compressed_out_bytes / watch.elapsedSeconds()),
+            ReadableSize(maybe_compressed_out_bytes),
+            ReadableSize(maybe_compressed_out_bytes / watch.elapsedSeconds()),
             static_cast<double>(maybe_compressed_out_bytes) / out_bytes,
-            formatReadableSizeWithBinarySuffix(out_bytes),
-            formatReadableSizeWithBinarySuffix(out_bytes / watch.elapsedSeconds()));
+            ReadableSize(out_bytes),
+            ReadableSize(out_bytes / watch.elapsedSeconds()));
     else
         LOG_DEBUG(log_wrapper.get(),
             "Sent data for {} external tables, total {} rows in {} sec., {} rows/sec., {} ({}/sec.), no compression.",
             data.size(), rows, elapsed,
             static_cast<size_t>(rows / watch.elapsedSeconds()),
-            formatReadableSizeWithBinarySuffix(maybe_compressed_out_bytes),
-            formatReadableSizeWithBinarySuffix(maybe_compressed_out_bytes / watch.elapsedSeconds()));
+            ReadableSize(maybe_compressed_out_bytes),
+            ReadableSize(maybe_compressed_out_bytes / watch.elapsedSeconds()));
 }
 
 std::optional<Poco::Net::SocketAddress> Connection::getResolvedAddress() const

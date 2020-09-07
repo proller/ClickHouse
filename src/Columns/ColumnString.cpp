@@ -1,4 +1,3 @@
-#include <Core/Defines.h>
 #include <Common/Arena.h>
 #include <Common/memcmpSmall.h>
 #include <Common/assert_cast.h>
@@ -20,6 +19,22 @@ namespace ErrorCodes
     extern const int PARAMETER_OUT_OF_BOUND;
     extern const int SIZES_OF_COLUMNS_DOESNT_MATCH;
     extern const int LOGICAL_ERROR;
+}
+
+
+ColumnString::ColumnString(const ColumnString & src)
+    : COWHelper<IColumn, ColumnString>(src),
+    offsets(src.offsets.begin(), src.offsets.end()),
+    chars(src.chars.begin(), src.chars.end())
+{
+    if (!offsets.empty())
+    {
+        Offset last_offset = offsets.back();
+
+        /// This will also prevent possible overflow in offset.
+        if (chars.size() != last_offset)
+            throw Exception("String offsets has data inconsistent with chars array", ErrorCodes::LOGICAL_ERROR);
+    }
 }
 
 
@@ -260,6 +275,14 @@ ColumnPtr ColumnString::indexImpl(const PaddedPODArray<Type> & indexes, size_t l
     return res;
 }
 
+void ColumnString::compareColumn(
+    const IColumn & rhs, size_t rhs_row_num,
+    PaddedPODArray<UInt64> * row_indexes, PaddedPODArray<Int8> & compare_results,
+    int direction, int nan_direction_hint) const
+{
+    return doCompareColumn<ColumnString>(assert_cast<const ColumnString &>(rhs), rhs_row_num, row_indexes,
+                                         compare_results, direction, nan_direction_hint);
+}
 
 template <bool positive>
 struct ColumnString::less

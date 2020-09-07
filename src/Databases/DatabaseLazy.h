@@ -24,7 +24,7 @@ public:
 
     void loadStoredObjects(
         Context & context,
-        bool has_force_restore_data_flag) override;
+        bool has_force_restore_data_flag, bool force_attach) override;
 
     void createTable(
         const Context & context,
@@ -42,7 +42,8 @@ public:
         const String & table_name,
         IDatabase & to_database,
         const String & to_table_name,
-        bool exchange) override;
+        bool exchange,
+        bool dictionary) override;
 
     void alterTable(
         const Context & context,
@@ -51,13 +52,15 @@ public:
 
     time_t getObjectMetadataModificationTime(const String & table_name) const override;
 
-    bool isTableExist(const String & table_name) const override;
+    bool isTableExist(const String & table_name, const Context &) const override { return isTableExist(table_name); }
+    bool isTableExist(const String & table_name) const;
 
-    StoragePtr tryGetTable(const String & table_name) const override;
+    StoragePtr tryGetTable(const String & table_name, const Context &) const override { return tryGetTable(table_name); }
+    StoragePtr tryGetTable(const String & table_name) const;
 
     bool empty() const override;
 
-    DatabaseTablesIteratorPtr getTablesIterator(const FilterByNameFunction & filter_by_table_name) override;
+    DatabaseTablesIteratorPtr getTablesIterator(const Context & context, const FilterByNameFunction & filter_by_table_name) override;
 
     void attachTable(const String & table_name, const StoragePtr & table, const String & relative_table_path) override;
 

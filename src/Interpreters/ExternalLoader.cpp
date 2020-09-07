@@ -100,7 +100,7 @@ namespace
 class ExternalLoader::LoadablesConfigReader : private boost::noncopyable
 {
 public:
-    LoadablesConfigReader(const String & type_name_, Logger * log_)
+    LoadablesConfigReader(const String & type_name_, Poco::Logger * log_)
         : type_name(type_name_), log(log_)
     {
     }
@@ -290,18 +290,27 @@ private:
                     continue;
                 }
 
-                String object_name = file_contents.getString(key + "." + settings.external_name);
+                /// Use uuid as name if possible
+                String object_uuid = file_contents.getString(key + "." + settings.external_uuid, "");
+                String object_name;
+                if (object_uuid.empty())
+                    object_name = file_contents.getString(key + "." + settings.external_name);
+                else
+                    object_name = object_uuid;
                 if (object_name.empty())
                 {
                     LOG_WARNING(log, "{}: node '{}' defines {} with an empty name. It's not allowed", path, key, type_name);
                     continue;
                 }
 
-                String database;
-                if (!settings.external_database.empty())
-                    database = file_contents.getString(key + "." + settings.external_database, "");
-                if (!database.empty())
-                    object_name = database + "." + object_name;
+                if (object_uuid.empty())
+                {
+                    String database;
+                    if (!settings.external_database.empty())
+                        database = file_contents.getString(key + "." + settings.external_database, "");
+                    if (!database.empty())
+                        object_name = database + "." + object_name;
+                }
 
                 objects.emplace(object_name, key);
             }
@@ -366,7 +375,7 @@ private:
     }
 
     const String type_name;
-    Logger * log;
+    Poco::Logger * log;
 
     std::mutex mutex;
     ExternalLoaderConfigSettings settings;
@@ -389,7 +398,7 @@ public:
     LoadingDispatcher(
         const CreateObjectFunction & create_object_function_,
         const String & type_name_,
-        Logger * log_)
+        Poco::Logger * log_)
         : create_object(create_object_function_)
         , type_name(type_name_)
         , log(log_)
@@ -1140,7 +1149,7 @@ private:
 
     const CreateObjectFunction create_object;
     const String type_name;
-    Logger * log;
+    Poco::Logger * log;
 
     mutable std::mutex mutex;
     std::condition_variable event;
@@ -1220,7 +1229,7 @@ private:
 };
 
 
-ExternalLoader::ExternalLoader(const String & type_name_, Logger * log_)
+ExternalLoader::ExternalLoader(const String & type_name_, Poco::Logger * log_)
     : config_files_reader(std::make_unique<LoadablesConfigReader>(type_name_, log_))
     , loading_dispatcher(std::make_unique<LoadingDispatcher>(
           [this](auto && a, auto && b, auto && c) { return createObject(a, b, c); },

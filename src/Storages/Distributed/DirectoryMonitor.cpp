@@ -8,8 +8,11 @@
 #include <Common/quoteString.h>
 #include <Common/hex.h>
 #include <common/StringRef.h>
+#include <Common/ActionBlocker.h>
 #include <Interpreters/Context.h>
+#include <Interpreters/Cluster.h>
 #include <Storages/Distributed/DirectoryMonitor.h>
+#include <Storages/StorageDistributed.h>
 #include <IO/ReadBufferFromFile.h>
 #include <IO/ReadBufferFromString.h>
 #include <IO/WriteBufferFromFile.h>
@@ -88,9 +91,10 @@ StorageDistributedDirectoryMonitor::StorageDistributedDirectoryMonitor(
     , default_sleep_time{storage.global_context->getSettingsRef().distributed_directory_monitor_sleep_time_ms.totalMilliseconds()}
     , sleep_time{default_sleep_time}
     , max_sleep_time{storage.global_context->getSettingsRef().distributed_directory_monitor_max_sleep_time_ms.totalMilliseconds()}
-    , log{&Logger::get(getLoggerName())}
+    , log{&Poco::Logger::get(getLoggerName())}
     , monitor_blocker(monitor_blocker_)
     , bg_pool(bg_pool_)
+    , metric_pending_files(CurrentMetrics::DistributedFilesToInsert, 0)
 {
     task_handle = bg_pool.createTask(getLoggerName() + "/Bg", [this]{ run(); });
     task_handle->activateAndSchedule();
@@ -108,10 +112,18 @@ StorageDistributedDirectoryMonitor::~StorageDistributedDirectoryMonitor()
 
 void StorageDistributedDirectoryMonitor::flushAllData()
 {
-    if (!quit)
+    if (quit)
+        return;
+
+    std::unique_lock lock{mutex};
+
+    const auto & files = getFiles();
+    if (!files.empty())
     {
-        std::unique_lock lock{mutex};
-        processFiles();
+        processFiles(files);
+
+        /// Update counters
+        getFiles();
     }
 }
 
@@ -135,20 +147,31 @@ void StorageDistributedDirectoryMonitor::run()
     while (!quit)
     {
         do_sleep = true;
+
+        const auto & files = getFiles();
+        if (files.empty())
+            break;
+
         if (!monitor_blocker.isCancelled())
         {
             try
             {
-                do_sleep = !processFiles();
+                do_sleep = !processFiles(files);
+
+                std::unique_lock metrics_lock(metrics_mutex);
+                last_exception = std::exception_ptr{};
             }
             catch (...)
             {
+                std::unique_lock metrics_lock(metrics_mutex);
+
                 do_sleep = true;
                 ++error_count;
                 sleep_time = std::min(
                     std::chrono::milliseconds{Int64(default_sleep_time.count() * std::exp2(error_count))},
                     max_sleep_time);
                 tryLogCurrentException(getLoggerName().data());
+                last_exception = std::current_exception();
             }
         }
         else
@@ -159,6 +182,8 @@ void StorageDistributedDirectoryMonitor::run()
         const auto now = std::chrono::system_clock::now();
         if (now - last_decrease_time > decrease_error_count_period)
         {
+            std::unique_lock metrics_lock(metrics_mutex);
+
             error_count /= 2;
             last_decrease_time = now;
         }
@@ -166,6 +191,9 @@ void StorageDistributedDirectoryMonitor::run()
         if (do_sleep)
             break;
     }
+
+    /// Update counters
+    getFiles();
 
     if (!quit && do_sleep)
         task_handle->scheduleAfter(sleep_time.count());
@@ -222,9 +250,10 @@ ConnectionPoolPtr StorageDistributedDirectoryMonitor::createPool(const std::stri
 }
 
 
-bool StorageDistributedDirectoryMonitor::processFiles()
+std::map<UInt64, std::string> StorageDistributedDirectoryMonitor::getFiles()
 {
     std::map<UInt64, std::string> files;
+    size_t new_bytes_count = 0;
 
     Poco::DirectoryIterator end;
     for (Poco::DirectoryIterator it{path}; it != end; ++it)
@@ -233,14 +262,24 @@ bool StorageDistributedDirectoryMonitor::processFiles()
         Poco::Path file_path{file_path_str};
 
         if (!it->isDirectory() && startsWith(file_path.getExtension(), "bin"))
+        {
             files[parse<UInt64>(file_path.getBaseName())] = file_path_str;
+            new_bytes_count += Poco::File(file_path).getSize();
+        }
     }
 
-    if (files.empty())
-        return false;
+    metric_pending_files.changeTo(files.size());
 
-    CurrentMetrics::Increment metric_increment{CurrentMetrics::DistributedFilesToInsert, CurrentMetrics::Value(files.size())};
+    {
+        std::unique_lock metrics_lock(metrics_mutex);
+        files_count = files.size();
+        bytes_count = new_bytes_count;
+    }
 
+    return files;
+}
+bool StorageDistributedDirectoryMonitor::processFiles(const std::map<UInt64, std::string> & files)
+{
     if (should_batch_inserts)
     {
         processFilesWithBatching(files);
@@ -263,7 +302,6 @@ void StorageDistributedDirectoryMonitor::processFile(const std::string & file_pa
 {
     LOG_TRACE(log, "Started processing `{}`", file_path);
     auto timeouts = ConnectionTimeouts::getTCPTimeoutsWithFailover(storage.global_context->getSettingsRef());
-    auto connection = pool->get(timeouts);
 
     try
     {
@@ -274,7 +312,10 @@ void StorageDistributedDirectoryMonitor::processFile(const std::string & file_pa
         Settings insert_settings;
         std::string insert_query;
         ClientInfo client_info;
+
         readHeader(in, insert_settings, insert_query, client_info, log);
+
+        auto connection = pool->get(timeouts, &insert_settings);
 
         RemoteBlockOutputStream remote{*connection, timeouts, insert_query, insert_settings, client_info};
 
@@ -289,12 +330,13 @@ void StorageDistributedDirectoryMonitor::processFile(const std::string & file_pa
     }
 
     Poco::File{file_path}.remove();
+    metric_pending_files.sub();
 
     LOG_TRACE(log, "Finished processing `{}`", file_path);
 }
 
 void StorageDistributedDirectoryMonitor::readHeader(
-    ReadBuffer & in, Settings & insert_settings, std::string & insert_query, ClientInfo & client_info, Logger * log)
+    ReadBuffer & in, Settings & insert_settings, std::string & insert_query, ClientInfo & client_info, Poco::Logger * log)
 {
     UInt64 query_size;
     readVarUInt(query_size, in);
@@ -321,7 +363,7 @@ void StorageDistributedDirectoryMonitor::readHeader(
         }
 
         readStringBinary(insert_query, header_buf);
-        insert_settings.deserialize(header_buf);
+        insert_settings.read(header_buf);
 
         if (header_buf.hasPendingData())
             client_info.read(header_buf, initiator_revision);
@@ -335,7 +377,7 @@ void StorageDistributedDirectoryMonitor::readHeader(
 
     if (query_size == DBMS_DISTRIBUTED_SIGNATURE_HEADER_OLD_FORMAT)
     {
-        insert_settings.deserialize(in, SettingsBinaryFormat::OLD);
+        insert_settings.read(in, SettingsWriteFormat::BINARY);
         readStringBinary(insert_query, in);
         return;
     }
@@ -535,7 +577,7 @@ public:
         : in(file_name)
         , decompressing_in(in)
         , block_in(decompressing_in, ClickHouseRevision::get())
-        , log{&Logger::get("DirectoryMonitorBlockInputStream")}
+        , log{&Poco::Logger::get("DirectoryMonitorBlockInputStream")}
     {
         Settings insert_settings;
         String insert_query;
@@ -569,7 +611,7 @@ private:
     Block first_block;
     Block header;
 
-    Logger * log;
+    Poco::Logger * log;
 };
 
 BlockInputStreamPtr StorageDistributedDirectoryMonitor::createStreamFromFile(const String & file_name)
@@ -584,6 +626,20 @@ bool StorageDistributedDirectoryMonitor::scheduleAfter(size_t ms)
     return task_handle->scheduleAfter(ms, false);
 }
 
+StorageDistributedDirectoryMonitor::Status StorageDistributedDirectoryMonitor::getStatus() const
+{
+    std::unique_lock metrics_lock(metrics_mutex);
+
+    return Status{
+        path,
+        last_exception,
+        error_count,
+        files_count,
+        bytes_count,
+        monitor_blocker.isCancelled(),
+    };
+}
+
 void StorageDistributedDirectoryMonitor::processFilesWithBatching(const std::map<UInt64, std::string> & files)
 {
     std::unordered_set<UInt64> file_indices_to_skip;
@@ -596,6 +652,7 @@ void StorageDistributedDirectoryMonitor::processFilesWithBatching(const std::map
         batch.readText(in);
         file_indices_to_skip.insert(batch.file_indices.begin(), batch.file_indices.end());
         batch.send();
+        metric_pending_files.sub(batch.file_indices.size());
     }
 
     std::unordered_map<BatchHeader, Batch, BatchHeader::Hash> header_to_batch;
@@ -656,13 +713,17 @@ void StorageDistributedDirectoryMonitor::processFilesWithBatching(const std::map
         batch.total_bytes += total_bytes;
 
         if (batch.isEnoughSize())
+        {
             batch.send();
+            metric_pending_files.sub(batch.file_indices.size());
+        }
     }
 
     for (auto & kv : header_to_batch)
     {
         Batch & batch = kv.second;
         batch.send();
+        metric_pending_files.sub(batch.file_indices.size());
     }
 
     /// current_batch.txt will not exist if there was no send
@@ -714,11 +775,13 @@ std::string StorageDistributedDirectoryMonitor::getLoggerName() const
 
 void StorageDistributedDirectoryMonitor::updatePath(const std::string & new_path)
 {
+    task_handle->deactivate();
     std::lock_guard lock{mutex};
 
-    task_handle->deactivate();
-
-    path = new_path;
+    {
+        std::unique_lock metrics_lock(metrics_mutex);
+        path = new_path;
+    }
     current_batch_file_path = path + "current_batch.txt";
 
     task_handle->activateAndSchedule();

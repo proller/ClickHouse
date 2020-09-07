@@ -5,9 +5,9 @@
 #include <Common/StackTrace.h>
 #include <Common/TraceCollector.h>
 #include <Common/thread_local_rng.h>
-#include <common/StringRef.h>
 #include <common/logger_useful.h>
 #include <common/phdr_cache.h>
+#include <common/errnoToString.h>
 
 #include <random>
 
@@ -79,7 +79,7 @@ namespace ErrorCodes
 
 template <typename ProfilerImpl>
 QueryProfilerBase<ProfilerImpl>::QueryProfilerBase(const UInt64 thread_id, const int clock_type, UInt32 period, const int pause_signal_)
-    : log(&Logger::get("QueryProfiler"))
+    : log(&Poco::Logger::get("QueryProfiler"))
     , pause_signal(pause_signal_)
 {
 #if USE_UNWIND

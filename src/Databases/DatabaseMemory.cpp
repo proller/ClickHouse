@@ -16,8 +16,8 @@ namespace ErrorCodes
     extern const int UNKNOWN_TABLE;
 }
 
-DatabaseMemory::DatabaseMemory(const String & name_)
-    : DatabaseWithOwnTablesBase(name_, "DatabaseMemory(" + name_ + ")")
+DatabaseMemory::DatabaseMemory(const String & name_, const Context & context)
+    : DatabaseWithOwnTablesBase(name_, "DatabaseMemory(" + name_ + ")", context)
     , data_path("data/" + escapeForFileName(database_name) + "/")
 {}
 
@@ -58,17 +58,17 @@ void DatabaseMemory::dropTable(
 ASTPtr DatabaseMemory::getCreateDatabaseQuery() const
 {
     auto create_query = std::make_shared<ASTCreateQuery>();
-    create_query->database = database_name;
+    create_query->database = getDatabaseName();
     create_query->set(create_query->storage, std::make_shared<ASTStorage>());
     create_query->storage->set(create_query->storage->engine, makeASTFunction(getEngineName()));
     return create_query;
 }
 
-ASTPtr DatabaseMemory::getCreateTableQueryImpl(const String & table_name, bool throw_on_error) const
+ASTPtr DatabaseMemory::getCreateTableQueryImpl(const String & table_name, const Context &, bool throw_on_error) const
 {
     std::lock_guard lock{mutex};
     auto it = create_queries.find(table_name);
-    if (it == create_queries.end())
+    if (it == create_queries.end() || !it->second)
     {
         if (throw_on_error)
             throw Exception("There is no metadata of table " + table_name + " in database " + database_name, ErrorCodes::UNKNOWN_TABLE);
@@ -80,7 +80,7 @@ ASTPtr DatabaseMemory::getCreateTableQueryImpl(const String & table_name, bool t
 
 UUID DatabaseMemory::tryGetTableUUID(const String & table_name) const
 {
-    if (auto table = tryGetTable(table_name))
+    if (auto table = tryGetTable(table_name, global_context))
         return table->getStorageID().uuid;
     return UUIDHelpers::Nil;
 }

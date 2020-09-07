@@ -18,13 +18,14 @@ def started_cluster():
     global instance
     try:
         cluster = ClickHouseCluster(__file__)
-        cluster.add_instance('ch1', config_dir="configs")
+        cluster.add_instance('ch1', main_configs=["configs/config.d/clusters_config.xml", "configs/config.d/query_log.xml"],
+            dictionaries=["configs/dictionaries/dictionary_clickhouse_cache.xml", "configs/dictionaries/dictionary_clickhouse_flat.xml"])
         cluster.start()
 
         instance = cluster.instances['ch1']
         instance.query('CREATE DATABASE dictionaries ENGINE = Dictionary')
         instance.query('CREATE TABLE dictionary_source (id UInt64, value UInt8) ENGINE = Memory')
-        #print instance.query('SELECT * FROM system.dictionaries FORMAT Vertical')
+        print instance.query('SELECT * FROM system.dictionaries FORMAT Vertical')
         print "Started ", instance.ip_address
 
         yield cluster
@@ -90,22 +91,30 @@ def test_RELOAD_CONFIG_AND_MACROS(started_cluster):
 
     instance.exec_in_container(['bash', '-c', create_macros], privileged=True, user='root')
     instance.query("SYSTEM RELOAD CONFIG")
-    assert TSV(instance.query("select * from system.macros")) == TSV("mac\tro\n")
+    assert TSV(instance.query("select * from system.macros")) == TSV("instance\tch1\nmac\tro\n")
 
 
 def test_SYSTEM_FLUSH_LOGS(started_cluster):
     instance = cluster.instances['ch1']
+    instance.query('''
+        SET log_queries = 0;
+        SYSTEM FLUSH LOGS;
+        TRUNCATE TABLE system.query_log;
+    ''')
     for i in range(4):
         # Sleep to execute flushing from background thread at first query
         # by expiration of flush_interval_millisecond and test probable race condition.
         time.sleep(0.5)
         result = instance.query('''
-            SET log_queries = 1;
             SELECT 1 FORMAT Null;
             SET log_queries = 0;
             SYSTEM FLUSH LOGS;
             SELECT count() FROM system.query_log;''')
-        instance.query('TRUNCATE TABLE system.query_log')
+        instance.query('''
+            SET log_queries = 0;
+            SYSTEM FLUSH LOGS;
+            TRUNCATE TABLE system.query_log;
+        ''')
         assert TSV(result) == TSV('4')
 
 

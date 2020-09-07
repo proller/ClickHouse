@@ -28,6 +28,7 @@ namespace ErrorCodes
 {
     extern const int ALIAS_REQUIRED;
     extern const int AMBIGUOUS_COLUMN_NAME;
+    extern const int LOGICAL_ERROR;
 }
 
 namespace
@@ -181,13 +182,14 @@ StoragePtr JoinedTables::getLeftTableStorage()
     }
 
     /// Read from table. Even without table expression (implicit SELECT ... FROM system.one).
-    return DatabaseCatalog::instance().getTable(table_id);
+    return DatabaseCatalog::instance().getTable(table_id, context);
 }
 
 bool JoinedTables::resolveTables()
 {
     tables_with_columns = getDatabaseAndTablesWithColumns(table_expressions, context);
-    assert(tables_with_columns.size() == table_expressions.size());
+    if (tables_with_columns.size() != table_expressions.size())
+        throw Exception("Unexpected tables count", ErrorCodes::LOGICAL_ERROR);
 
     const auto & settings = context.getSettingsRef();
     if (settings.joined_subquery_requires_alias && tables_with_columns.size() > 1)
@@ -207,11 +209,11 @@ bool JoinedTables::resolveTables()
     return !tables_with_columns.empty();
 }
 
-void JoinedTables::makeFakeTable(StoragePtr storage, const Block & source_header)
+void JoinedTables::makeFakeTable(StoragePtr storage, const StorageMetadataPtr & metadata_snapshot, const Block & source_header)
 {
     if (storage)
     {
-        const ColumnsDescription & storage_columns = storage->getColumns();
+        const ColumnsDescription & storage_columns = metadata_snapshot->getColumns();
         tables_with_columns.emplace_back(DatabaseAndTableWithAlias{}, storage_columns.getOrdinary());
 
         auto & table = tables_with_columns.back();
@@ -261,7 +263,7 @@ std::shared_ptr<TableJoin> JoinedTables::makeTableJoin(const ASTSelectQuery & se
     if (table_to_join.database_and_table_name)
     {
         auto joined_table_id = context.resolveStorageID(table_to_join.database_and_table_name);
-        StoragePtr table = DatabaseCatalog::instance().tryGetTable(joined_table_id);
+        StoragePtr table = DatabaseCatalog::instance().tryGetTable(joined_table_id, context);
         if (table)
         {
             if (dynamic_cast<StorageJoin *>(table.get()) ||
